@@ -1,0 +1,96 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-surface: oklch(0.2 0.02 260);
+  --color-surface-alt: oklch(0.25 0.02 260);
+  --color-surface-hover: oklch(0.28 0.02 260);
+  --color-border: oklch(0.35 0.02 260);
+  --color-text: oklch(0.9 0.01 260);
+  --color-text-dim: oklch(0.6 0.01 260);
+  --color-accent: oklch(0.7 0.15 200);
+  --color-accent-hover: oklch(0.75 0.15 200);
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+html {
+  font-size: 21px;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+mark {
+  background: oklch(0.6 0.2 80 / 0.4);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Type badges */
+.badge {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--color-surface-hover);
+  color: var(--color-text-dim);
+}
+
+.badge-tweet { background: oklch(0.3 0.1 220); color: oklch(0.75 0.1 220); }
+.badge-speech, .badge-address, .badge-remarks { background: oklch(0.3 0.1 150); color: oklch(0.75 0.1 150); }
+.badge-executive_order, .badge-proclamation { background: oklch(0.3 0.1 30); color: oklch(0.75 0.1 30); }
+.badge-press_conference, .badge-press_gaggle { background: oklch(0.3 0.1 300); color: oklch(0.75 0.1 300); }
+.badge-memo, .badge-letter, .badge-statement { background: oklch(0.3 0.05 260); color: oklch(0.7 0.05 260); }
+
+/* Thread cards */
+.thread-card {
+  display: block;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  transition: border-color 0.15s, background 0.15s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.thread-card:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-hover);
+}
+
+.thread-topic {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+.thread-span {
+  font-size: 0.65rem;
+  color: var(--color-text-dim);
+  margin-bottom: 0.6rem;
+}
+
+.thread-teaser {
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--color-text-dim);
+  margin-bottom: 0.75rem;
+}
+
+.thread-cta {
+  font-size: 0.65rem;
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }

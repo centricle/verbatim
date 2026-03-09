@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verbatim — 250 years of American political speech</title>
+  <meta name="description" content="Search 43,000+ records from 50 speakers across 250 years. The founders, the presidents, one index.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a2e'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='%2366b2b2'>V</text></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-border px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="/" class="text-lg font-semibold tracking-tight hover:text-accent transition-colors">Verbatim</a>
+      <span class="text-text-dim text-sm" id="corpus-total"></span>
+    </div>
+    <nav class="flex items-center gap-4">
+      <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
+    </nav>
+  </header>
+
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-72 shrink-0 border-r border-border p-4 h-[calc(100vh-3.75rem)] overflow-y-auto hidden md:block">
+      <div id="stats-speakers" class="mb-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-3">Speakers</h2>
+        <div id="speaker-list" class="space-y-0.5"></div>
+      </div>
+      <div id="stats-types" class="mb-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-3">Types</h2>
+        <div id="type-list" class="space-y-0.5"></div>
+      </div>
+      <div id="stats-sources">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-3">Sources</h2>
+        <div id="source-list" class="space-y-0.5"></div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-6 h-[calc(100vh-3.75rem)] overflow-y-auto">
+      <!-- Search bar -->
+      <form id="search-form" class="flex flex-wrap gap-3 mb-6">
+        <input type="text" id="search-input" placeholder="Search 250 years of American speech…"
+          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent">
+        <select id="filter-speaker" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All speakers</option>
+        </select>
+        <select id="filter-type" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All types</option>
+        </select>
+        <input type="date" id="filter-date-from" placeholder="From" title="From date"
+          class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+        <input type="date" id="filter-date-to" placeholder="To" title="To date"
+          class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+        <button type="submit" class="bg-accent hover:bg-accent-hover text-surface font-semibold rounded-lg px-5 py-2 text-sm transition-colors">
+          Search
+        </button>
+      </form>
+
+      <!-- Results info -->
+      <div id="results-info" class="text-sm text-text-dim mb-4 hidden"></div>
+
+      <!-- Results -->
+      <div id="results" class="space-y-3"></div>
+
+      <!-- Pagination -->
+      <div id="pagination" class="flex items-center justify-center gap-4 mt-6 hidden">
+        <button id="prev-page" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          Previous
+        </button>
+        <span id="page-info" class="text-sm text-text-dim"></span>
+        <button id="next-page" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          Next
+        </button>
+      </div>
+
+      <!-- Empty state: topic threads -->
+      <div id="empty-state" class="py-8">
+        <div class="text-center mb-8">
+          <p class="text-text-dim text-sm">Or explore a thread across 250 years</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+
+          <a href="/?q=tariff" class="thread-card" data-search="tariff">
+            <div class="thread-topic">Tariffs</div>
+            <div class="thread-span">1791 &ndash; 2025</div>
+            <p class="thread-teaser">Hamilton argued for protective tariffs in 1791. The structural argument is identical 230 years later. The vocabulary changed. The argument didn't.</p>
+            <span class="thread-cta">Search &rarr;</span>
+          </a>
+
+          <a href="/?q=foreign" class="thread-card" data-search="foreign">
+            <div class="thread-topic">Foreign influence</div>
+            <div class="thread-span">1787 &ndash; 2025</div>
+            <p class="thread-teaser">Washington warned against it. Hamilton designed the Electoral College to prevent it. The anxiety is a continuous thread from the founding to the latest executive order.</p>
+            <span class="thread-cta">Search &rarr;</span>
+          </a>
+
+          <a href="/?q=faction" class="thread-card" data-search="faction">
+            <div class="thread-topic">Faction &amp; party</div>
+            <div class="thread-span">1787 &ndash; present</div>
+            <p class="thread-teaser">Madison called it the mortal disease of republics in Federalist 10. The modern corpus is entirely organized by factional output. The disease became the operating system.</p>
+            <span class="thread-cta">Search &rarr;</span>
+          </a>
+
+          <a href="/?q=executive+power" class="thread-card" data-search="executive power">
+            <div class="thread-topic">Executive power</div>
+            <div class="thread-span">Article I vs. Article II</div>
+            <p class="thread-teaser">The Constitution puts Congress first. The corpus is 99.8% executive branch output. Two centuries of that priority quietly reversing, documented in their own words.</p>
+            <span class="thread-cta">Search &rarr;</span>
+          </a>
+
+          <a href="/?q=the+people" class="thread-card" data-search="the people">
+            <div class="thread-topic">&ldquo;The People&rdquo;</div>
+            <div class="thread-span">1776 &ndash; present</div>
+            <p class="thread-teaser">Every document in this corpus claims its authority from popular sovereignty. The mechanism changed. The rhetorical move is identical. &ldquo;I speak for you.&rdquo;</p>
+            <span class="thread-cta">Search &rarr;</span>
+          </a>
+
+        </div>
+
+        <div class="text-center mt-10 text-text-dim text-xs" id="corpus-summary"></div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="border-t border-border px-6 py-4 flex items-center justify-center gap-2 text-xs text-text-dim">
+    <span>made by</span>
+    <a href="https://centricle.com" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 hover:text-text transition-colors">
+      <img src="https://centricle.com/brand/avatar-sm.jpg" alt="ksmith" class="w-5 h-5 rounded-full">
+      <span>ksmith</span>
+    </a>
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

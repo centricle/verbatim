@@ -1,0 +1,10 @@
+corpus.jsonl
+corpus/
+corpus.db
+sources.json
+__pycache__/
+*.pyc
+CLAUDE.md
+ROADMAP.md
+tmp/
+node_modules/

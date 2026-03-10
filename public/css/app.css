@@ -1,16 +1,17 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-surface: oklch(0.2 0.02 260);
-  --color-surface-alt: oklch(0.25 0.02 260);
-  --color-surface-hover: oklch(0.28 0.02 260);
-  --color-border: oklch(0.35 0.02 260);
-  --color-text: oklch(0.9 0.01 260);
-  --color-text-dim: oklch(0.6 0.01 260);
-  --color-accent: oklch(0.7 0.15 200);
-  --color-accent-hover: oklch(0.75 0.15 200);
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-surface: oklch(0.96 0.02 85);
+  --color-surface-alt: oklch(0.93 0.025 80);
+  --color-surface-hover: oklch(0.90 0.03 80);
+  --color-border: oklch(0.82 0.03 75);
+  --color-text: oklch(0.20 0.02 50);
+  --color-text-dim: oklch(0.45 0.03 60);
+  --color-accent: oklch(0.45 0.12 30);
+  --color-accent-hover: oklch(0.40 0.14 30);
+  --font-serif: 'Charter', 'Bitstream Charter', 'Sitka Text', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: var(--font-serif);
 }
 
 html {
@@ -21,10 +22,11 @@ html {
 body {
   background: var(--color-surface);
   color: var(--color-text);
+  font-family: var(--font-serif);
 }
 
 mark {
-  background: oklch(0.6 0.2 80 / 0.4);
+  background: oklch(0.85 0.12 85 / 0.5);
   color: inherit;
   padding: 0 2px;
   border-radius: 2px;
@@ -42,11 +44,20 @@ mark {
   color: var(--color-text-dim);
 }
 
-.badge-tweet { background: oklch(0.3 0.1 220); color: oklch(0.75 0.1 220); }
-.badge-speech, .badge-address, .badge-remarks { background: oklch(0.3 0.1 150); color: oklch(0.75 0.1 150); }
-.badge-executive_order, .badge-proclamation { background: oklch(0.3 0.1 30); color: oklch(0.75 0.1 30); }
-.badge-press_conference, .badge-press_gaggle { background: oklch(0.3 0.1 300); color: oklch(0.75 0.1 300); }
-.badge-memo, .badge-letter, .badge-statement { background: oklch(0.3 0.05 260); color: oklch(0.7 0.05 260); }
+/* Speech/address/remarks: sage green */
+.badge-speech, .badge-address, .badge-remarks { background: oklch(0.92 0.05 145); color: oklch(0.35 0.08 145); }
+/* Executive orders/proclamations: warm amber */
+.badge-executive_order, .badge-proclamation { background: oklch(0.90 0.07 75); color: oklch(0.40 0.10 60); }
+/* Press conferences: dusty rose */
+.badge-press_conference, .badge-press_gaggle { background: oklch(0.90 0.04 10); color: oklch(0.42 0.08 10); }
+/* Tweets: slate blue (cooler — modern outlier) */
+.badge-tweet { background: oklch(0.90 0.03 250); color: oklch(0.40 0.07 250); }
+/* Founding documents/essays: deep parchment gold */
+.badge-founding_document, .badge-essay { background: oklch(0.88 0.08 80); color: oklch(0.38 0.10 65); }
+/* Memos/letters/statements: warm gray */
+.badge-memo, .badge-letter, .badge-statement { background: oklch(0.90 0.015 70); color: oklch(0.45 0.02 60); }
+/* Interview: warm gray */
+.badge-interview { background: oklch(0.90 0.015 70); color: oklch(0.45 0.02 60); }
 
 /* Thread cards */
 .thread-card {

@@ -180,47 +180,48 @@ def import_constitution():
 
 
 def import_bill_of_rights():
-    """Import the Bill of Rights as a separate searchable record."""
-    print("\nLoading Bill of Rights / Amendments...")
-    raw = read_local_or_fetch("constitution.txt", "https://www.gutenberg.org/cache/epub/5/pg5.txt")
+    """Import the Bill of Rights from Gutenberg eBook #2."""
+    print("\nLoading Bill of Rights...")
+    raw = read_local_or_fetch("bill_of_rights.txt", "https://www.gutenberg.org/cache/epub/2/pg2.txt")
 
-    # Try to extract amendments section
-    amendments_start = re.search(r'(ARTICLES?\s+IN\s+ADDITION|AMENDMENT\s+[I1][\.\s])', raw, re.IGNORECASE)
-    if amendments_start:
-        text = raw[amendments_start.start():].strip()
-        # Trim Gutenberg footer
-        for marker in ["*** END OF THE PROJECT GUTENBERG", "*** END OF THIS PROJECT GUTENBERG"]:
-            pos = text.find(marker)
-            if pos != -1:
-                text = text[:pos].strip()
+    # Extract from "Amendments to the Constitution" to Gutenberg footer
+    start = raw.find("Amendments to the Constitution")
+    if start == -1:
+        start = raw.find("The Ten Original Amendments")
+    if start == -1:
+        print("  WARNING: Could not find Bill of Rights text start marker")
+        return []
 
-        # Just the Bill of Rights (first 10)
-        # Find where Amendment XI starts
-        amend_11 = re.search(r'AMENDMENT\s+XI', text, re.IGNORECASE)
-        if amend_11:
-            bill_text = text[:amend_11.start()].strip()
-        else:
-            bill_text = text
+    end = len(raw)
+    for marker in ["*** END OF THE PROJECT GUTENBERG", "*** END OF THIS PROJECT GUTENBERG"]:
+        pos = raw.find(marker, start)
+        if pos != -1:
+            end = pos
+            break
 
-        if len(bill_text) > 200:
-            record = {
-                "id": make_id("constitutional-convention", bill_text),
-                "speaker": "constitutional-convention",
-                "date": "1791-12-15",
-                "type": "founding_document",
-                "source_url": "https://www.gutenberg.org/ebooks/5",
-                "source_name": "project_gutenberg",
-                "text": bill_text,
-                "title": "The Bill of Rights (Amendments I-X)",
-            }
-            result = add_record(record)
-            if result:
-                print(f"  Added: Bill of Rights ({len(bill_text)} chars)")
-                return [record]
-            else:
-                print("  Skipped (duplicate or invalid)")
+    text = raw[start:end].strip()
 
-    print("  WARNING: Could not extract Bill of Rights section")
+    if len(text) < 200:
+        print(f"  WARNING: Bill of Rights text suspiciously short ({len(text)} chars)")
+        return []
+
+    record = {
+        "id": make_id("constitutional-convention", text),
+        "speaker": "constitutional-convention",
+        "date": "1791-12-15",
+        "type": "founding_document",
+        "source_url": "https://www.gutenberg.org/ebooks/2",
+        "source_name": "project_gutenberg",
+        "text": text,
+        "title": "The Bill of Rights (Amendments I-X)",
+    }
+
+    result = add_record(record)
+    if result:
+        print(f"  Added: Bill of Rights ({len(text)} chars)")
+        return [record]
+    else:
+        print("  Skipped (duplicate or invalid)")
     return []
 
 

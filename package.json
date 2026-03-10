@@ -4,10 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n api,vite -c blue,green \"node server.js\" \"vite\"",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "server": "node server.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.0",
     "better-sqlite3": "^11.8.1",
     "express": "^5.1.0"
   },

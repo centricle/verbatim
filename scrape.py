@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Scrapers for public speech sources."""
+"""Scrapers for public speech sources.
+
+NOTE: The Rev.com and UCSB scrapers are included for reference but may violate
+those sites' terms of service. The Twitter archive scraper uses a public GitHub
+mirror of already-released data. The primary corpus is built from the Miller
+Center bulk download, Federal Register API, and Project Gutenberg — all explicitly
+public and permissively licensed.
+"""
 
 import argparse
 import json

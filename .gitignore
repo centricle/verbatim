@@ -8,3 +8,7 @@ CLAUDE.md
 ROADMAP.md
 tmp/
 node_modules/
+dist/
+
+# Local Netlify folder
+.netlify

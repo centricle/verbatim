@@ -1,121 +1,81 @@
 # Verbatim
 
-Private research tool. Collects publicly available speech transcripts and posts into a searchable local corpus. Any public figure: presidents, CEOs, founders, civil rights leaders.
+**250 years of American political speech, searchable.**
 
-**Content constraint:** Public domain only. All presidential speeches are public domain (17 U.S.C. § 105 — government works). No copyrighted full text.
+43,000+ records from 50 speakers spanning 1776 to 2025. The Federalist Papers, the Constitution, the Bill of Rights, the Declaration of Independence, presidential speeches, executive orders, proclamations, press conferences, and yes, tweets. One full-text search index.
 
-## Setup
+**Live:** [verbatim.fyi](https://verbatim.fyi)
 
-```bash
-pip install -r requirements.txt
-```
+## Why
 
-## Bulk Import (recommended for initial population)
+The founding documents are the most time-tested political texts in the American tradition. The confusion is the interpretation layer. The clarity is the actual words.
 
-### Miller Center (UVA) — All Presidents
+Search "tariffs" and get Hamilton in 1791 next to executive orders from 2025 making the same structural argument. Search "foreign" and Washington's Farewell Address sits alongside modern proclamations. The anxiety about external manipulation is a continuous thread from the founding to this week.
 
-Downloads structured JSON of ~1,000-2,000 presidential speeches, Washington through present.
+The tool exists because the builder needed it.
 
-```bash
-python import_miller.py --inspect          # Inspect JSON structure
-python import_miller.py --dry-run          # Preview what would be imported
-python import_miller.py                    # Full import
-```
+## Stack
 
-### Federal Register API — Executive Orders & Proclamations
+- **Frontend:** Vanilla JS + Tailwind 4 + Vite
+- **Database:** Supabase (Postgres with tsvector FTS + GIN index)
+- **Hosting:** Netlify (static deploy)
+- **Data pipeline:** Python (scrape/import → local SQLite → sync to Supabase)
 
-Free API, no auth key. ~6,000 documents from 1937 to present.
+No framework. No server. Browser talks directly to Supabase.
 
-```bash
-python import_federal_register.py --dry-run                          # Preview all
-python import_federal_register.py --type executive_order             # EOs only
-python import_federal_register.py --type proclamation                # Proclamations only
-python import_federal_register.py --type all                         # Everything
-python import_federal_register.py --type all --since 2026-03-01      # Incremental update
-```
+## Corpus Sources
 
-## Scraping
+| Source | Records | Content |
+|--------|---------|---------|
+| Trump Tweet Archive (GitHub) | 36,167 | Trump tweets 2009-2018 |
+| Federal Register API | 5,885 | Executive orders + proclamations |
+| Miller Center (UVA) | 1,052 | Presidential speeches (all 45 presidents) |
+| Project Gutenberg | 88 | Federalist Papers, Constitution, Bill of Rights, Declaration |
 
-```bash
-python scrape.py --source rev --speaker donald-trump       # Rev.com transcripts
-python scrape.py --source rev --speaker barack-obama       # Different speaker
-python scrape.py --source twitter                          # Trump Twitter archive (Trump only)
-python scrape.py --source ucsb --speaker donald-trump      # UCSB Presidency Project (slow)
-python scrape.py --dry-run --source rev --speaker donald-trump  # Preview without fetching
-```
+Tweets are opt-in via toggle. Default view shows the 7,025-record non-tweet corpus.
 
-## Loading
+## Local Development
 
 ```bash
-python ingest.py                     # Load corpus.jsonl into SQLite
-python ingest.py somefile.json       # Import external JSON/JSONL file
+npm install
+npm run dev          # Vite dev server on port 8033
 ```
 
-Records must include a `speaker` field (slug format, e.g. `donald-trump`).
+The frontend connects directly to the production Supabase instance. No local server needed for browsing.
 
-## Searching
+### Data Pipeline (corpus curation)
+
+Requires Python 3.9+ and `pip install -r requirements.txt`.
 
 ```bash
-python search.py "tariffs"                                  # Full-text search
-python search.py --speaker donald-trump "tariffs"           # Filter by speaker
-python search.py --speaker george-washington                # Browse a speaker
-python search.py --date 2025 "tariffs"                     # Filter by year
-python search.py --type executive_order                     # Filter by type
-python search.py --count "tariffs"                         # Result count only
-python search.py --export results.json "tariffs"           # Export to JSON
-python search.py --speakers                                 # List speakers in corpus
-python search.py --stats                                    # Corpus statistics
+# Import from sources
+python import_miller.py                    # Miller Center presidential speeches
+python import_federal_register.py          # Federal Register EOs + proclamations
+python import_founding.py                  # Founding documents from Gutenberg
+
+# Sync local SQLite → Supabase
+SUPABASE_SERVICE_KEY=... python sync_to_supabase.py
 ```
 
-## Speaker Slugs
+The pipeline writes to local `corpus.db` (SQLite) for curation, then syncs to Supabase for production. The DB file is gitignored (118MB, regenerable).
 
-Speakers are identified by slug (lowercase, hyphenated). Full presidential roster built in. Examples:
-
-- `george-washington`, `john-adams`, `thomas-jefferson`
-- `abraham-lincoln`, `theodore-roosevelt`, `franklin-d-roosevelt`
-- `barack-obama`, `donald-trump`, `joe-biden`
-
-Any slug works for manual imports. The built-in display name table covers all 46 presidents.
-
-## Sources
-
-| Source | Method | Coverage | Records (est.) |
-|--------|--------|----------|---------------|
-| Miller Center (UVA) | Bulk JSON download | All presidents, 1789-present | ~1,000-2,000 |
-| Federal Register API | REST API w/ pagination | EOs & proclamations, 1937-present | ~6,000 |
-| Twitter Archive | GitHub JSON mirrors | Trump only, 2017-2020 | ~25,000 |
-| Rev.com | HTML scraping | Targeted transcripts | Varies |
-| UCSB Presidency Project | HTML scraping | Presidential documents | Slow (10s delay) |
-
-## Ongoing Updates
-
-No cron, no automation. Federal Register API supports date filtering:
-
-```bash
-python import_federal_register.py --type all --since 2026-03-01
-```
-
-Run weekly, monthly, whenever. The corpus doesn't need real-time freshness.
-
-## Data
-
-- `corpus.jsonl` — append-only raw records (gitignored)
-- `corpus.db` — SQLite + FTS5 for querying (gitignored)
-- `sources.json` — scraping log (gitignored)
-
-## Record Shape
+## Record Schema
 
 ```json
 {
-  "id": "<sha256 of speaker + text>",
-  "speaker": "donald-trump",
-  "date": "2025-01-20",
-  "type": "speech",
-  "source_url": "https://...",
-  "source_name": "miller_center",
+  "id": "<sha256 of speaker:text>",
+  "speaker": "alexander-hamilton",
+  "date": "1787-10-27",
+  "type": "essay",
+  "source_url": "https://www.gutenberg.org/ebooks/1404",
+  "source_name": "project_gutenberg",
   "text": "...",
-  "title": "Inaugural Address"
+  "title": "Federalist No. 1"
 }
 ```
 
-Valid types: `tweet`, `truth_social`, `speech`, `interview`, `press_gaggle`, `statement`, `remarks`, `press_conference`, `earnings_call`, `memo`, `letter`, `executive_order`, `proclamation`, `address`.
+Types: `tweet`, `speech`, `address`, `remarks`, `press_conference`, `press_gaggle`, `interview`, `statement`, `executive_order`, `proclamation`, `memo`, `letter`, `founding_document`, `essay`
+
+## License
+
+Code: MIT. Corpus data is public domain (US government works, Project Gutenberg, public tweet archives).

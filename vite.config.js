@@ -6,6 +6,8 @@ export default defineConfig({
   root: 'public',
   plugins: [tailwindcss()],
   build: {
+    outDir: resolve(__dirname, 'dist'),
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'public/index.html'),
@@ -17,8 +19,5 @@ export default defineConfig({
     port: 8033,
     strictPort: true,
     allowedHosts: true,
-    proxy: {
-      '/api': 'http://localhost:7033',
-    },
   },
 });

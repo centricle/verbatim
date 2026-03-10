@@ -1,7 +1,91 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://ycqvvjyplboqpmqnqenh.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljcXZ2anlwbGJvcXBtcW5xZW5oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjA5ODksImV4cCI6MjA4ODY5Njk4OX0.oFNNH-q4UvObejsL2efvjQz5qP6KfV9oJ5H7JBWrh5Y'
+);
+
+const SPEAKERS = {
+  'george-washington': 'George Washington',
+  'john-adams': 'John Adams',
+  'thomas-jefferson': 'Thomas Jefferson',
+  'james-madison': 'James Madison',
+  'james-monroe': 'James Monroe',
+  'john-quincy-adams': 'John Quincy Adams',
+  'andrew-jackson': 'Andrew Jackson',
+  'martin-van-buren': 'Martin Van Buren',
+  'william-henry-harrison': 'William Henry Harrison',
+  'john-tyler': 'John Tyler',
+  'james-k-polk': 'James K. Polk',
+  'zachary-taylor': 'Zachary Taylor',
+  'millard-fillmore': 'Millard Fillmore',
+  'franklin-pierce': 'Franklin Pierce',
+  'james-buchanan': 'James Buchanan',
+  'abraham-lincoln': 'Abraham Lincoln',
+  'andrew-johnson': 'Andrew Johnson',
+  'ulysses-s-grant': 'Ulysses S. Grant',
+  'rutherford-b-hayes': 'Rutherford B. Hayes',
+  'james-a-garfield': 'James A. Garfield',
+  'chester-a-arthur': 'Chester A. Arthur',
+  'grover-cleveland': 'Grover Cleveland',
+  'benjamin-harrison': 'Benjamin Harrison',
+  'william-mckinley': 'William McKinley',
+  'theodore-roosevelt': 'Theodore Roosevelt',
+  'william-howard-taft': 'William Howard Taft',
+  'woodrow-wilson': 'Woodrow Wilson',
+  'warren-g-harding': 'Warren G. Harding',
+  'calvin-coolidge': 'Calvin Coolidge',
+  'herbert-hoover': 'Herbert Hoover',
+  'franklin-d-roosevelt': 'Franklin D. Roosevelt',
+  'harry-s-truman': 'Harry S. Truman',
+  'dwight-d-eisenhower': 'Dwight D. Eisenhower',
+  'john-f-kennedy': 'John F. Kennedy',
+  'lyndon-b-johnson': 'Lyndon B. Johnson',
+  'richard-nixon': 'Richard Nixon',
+  'gerald-ford': 'Gerald Ford',
+  'jimmy-carter': 'Jimmy Carter',
+  'ronald-reagan': 'Ronald Reagan',
+  'george-h-w-bush': 'George H. W. Bush',
+  'bill-clinton': 'Bill Clinton',
+  'george-w-bush': 'George W. Bush',
+  'barack-obama': 'Barack Obama',
+  'donald-trump': 'Donald Trump',
+  'joe-biden': 'Joe Biden',
+  'alexander-hamilton': 'Alexander Hamilton',
+  'john-jay': 'John Jay',
+  'constitutional-convention': 'Constitutional Convention',
+  'continental-congress': 'Continental Congress',
+};
+
+const TYPE_LABELS = {
+  tweet: 'Tweet',
+  speech: 'Speech',
+  address: 'Address',
+  remarks: 'Remarks',
+  press_conference: 'Press Conference',
+  press_gaggle: 'Press Gaggle',
+  interview: 'Interview',
+  statement: 'Statement',
+  executive_order: 'Executive Order',
+  proclamation: 'Proclamation',
+  memo: 'Memo',
+  letter: 'Letter',
+  founding_document: 'Founding Document',
+  essay: 'Essay',
+};
+
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-const state = { page: 1, q: '', speaker: '', type: '', dateFrom: '', dateTo: '' };
+const state = {
+  page: 1,
+  q: '',
+  speaker: '',
+  type: '',
+  dateFrom: '',
+  dateTo: '',
+  tweets: false,
+};
 
 // --- Init ---
 
@@ -18,6 +102,18 @@ async function init() {
 
   $('#prev-page').addEventListener('click', () => { state.page--; search(); });
   $('#next-page').addEventListener('click', () => { state.page++; search(); });
+
+  // Tweet toggle
+  $('#tweet-toggle').addEventListener('change', (e) => {
+    state.tweets = e.target.checked;
+    state.page = 1;
+    loadStats();
+    loadSpeakers();
+    // If already searching, re-search
+    if (state.q || state.speaker || state.type) {
+      search();
+    }
+  });
 
   // Thread card clicks
   $$('.thread-card').forEach((card) => {
@@ -39,15 +135,15 @@ async function init() {
     });
   });
 
-  // Corpus summary line (use stats already loaded in header)
-  const totalText = $('#corpus-total').textContent;
-  const summary = $('#corpus-summary');
-  if (summary && totalText) {
-    summary.textContent = totalText + ' \u00b7 50 speakers \u00b7 1776\u20132025';
-  }
-
   // Check URL params for initial search
   const params = new URLSearchParams(location.search);
+  if (params.get('tweets') === '1') {
+    state.tweets = true;
+    $('#tweet-toggle').checked = true;
+    // Reload stats/speakers with tweets included
+    await loadStats();
+    await loadSpeakers();
+  }
   if (params.get('q') || params.get('speaker') || params.get('type')) {
     state.q = params.get('q') || '';
     state.speaker = params.get('speaker') || '';
@@ -61,6 +157,8 @@ async function init() {
     $('#filter-date-to').value = state.dateTo;
     search();
   }
+
+  updateCorpusSummary();
 }
 
 function readFilters() {
@@ -71,32 +169,44 @@ function readFilters() {
   state.dateTo = $('#filter-date-to').value;
 }
 
-// --- API ---
-
-async function fetchJSON(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
-}
+// --- Supabase API ---
 
 async function loadStats() {
-  const stats = await fetchJSON('/api/stats');
-  $('#corpus-total').textContent = `${stats.total.toLocaleString()} records`;
+  const { data, error } = await supabase.rpc('get_stats', {
+    exclude_tweets: !state.tweets,
+  });
+
+  if (error) {
+    console.error('Stats error:', error);
+    return;
+  }
+
+  $('#corpus-total').textContent = `${data.total.toLocaleString()} records`;
 
   // Types dropdown
   const typeSelect = $('#filter-type');
-  stats.by_type.forEach((t) => {
+  // Preserve current selection
+  const currentType = typeSelect.value;
+  // Clear existing options (except first)
+  while (typeSelect.options.length > 1) typeSelect.remove(1);
+
+  data.by_type.forEach((t) => {
+    const label = TYPE_LABELS[t.type] || t.type;
     const opt = document.createElement('option');
     opt.value = t.type;
-    opt.textContent = `${t.label} (${t.count.toLocaleString()})`;
+    opt.textContent = `${label} (${t.count.toLocaleString()})`;
     typeSelect.appendChild(opt);
   });
+  typeSelect.value = currentType;
 
   // Sidebar types
-  $('#type-list').innerHTML = stats.by_type
-    .map((t) => `<button class="sidebar-btn w-full text-left px-2 py-1 rounded text-sm hover:bg-surface-hover transition-colors flex justify-between" data-type="${t.type}">
-      <span>${t.label}</span><span class="text-text-dim">${t.count.toLocaleString()}</span>
-    </button>`).join('');
+  $('#type-list').innerHTML = data.by_type
+    .map((t) => {
+      const label = TYPE_LABELS[t.type] || t.type;
+      return `<button class="sidebar-btn w-full text-left px-2 py-1 rounded text-sm hover:bg-surface-hover transition-colors flex justify-between" data-type="${t.type}">
+      <span>${label}</span><span class="text-text-dim">${t.count.toLocaleString()}</span>
+    </button>`;
+    }).join('');
 
   $$('#type-list .sidebar-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -108,28 +218,45 @@ async function loadStats() {
   });
 
   // Sidebar sources
-  $('#source-list').innerHTML = stats.by_source
+  $('#source-list').innerHTML = data.by_source
     .map((s) => `<div class="px-2 py-1 text-sm flex justify-between">
       <span class="text-text-dim">${s.source_name}</span><span class="text-text-dim">${s.count.toLocaleString()}</span>
     </div>`).join('');
+
+  updateCorpusSummary();
 }
 
 async function loadSpeakers() {
-  const speakers = await fetchJSON('/api/speakers');
-  const select = $('#filter-speaker');
-
-  speakers.forEach((s) => {
-    const opt = document.createElement('option');
-    opt.value = s.slug;
-    opt.textContent = `${s.name} (${s.count.toLocaleString()})`;
-    select.appendChild(opt);
+  const { data, error } = await supabase.rpc('get_speakers', {
+    exclude_tweets: !state.tweets,
   });
 
+  if (error) {
+    console.error('Speakers error:', error);
+    return;
+  }
+
+  const select = $('#filter-speaker');
+  const currentSpeaker = select.value;
+  while (select.options.length > 1) select.remove(1);
+
+  data.forEach((s) => {
+    const name = SPEAKERS[s.slug] || s.slug;
+    const opt = document.createElement('option');
+    opt.value = s.slug;
+    opt.textContent = `${name} (${s.count.toLocaleString()})`;
+    select.appendChild(opt);
+  });
+  select.value = currentSpeaker;
+
   // Sidebar speaker list
-  $('#speaker-list').innerHTML = speakers
-    .map((s) => `<button class="sidebar-btn w-full text-left px-2 py-1 rounded text-sm hover:bg-surface-hover transition-colors flex justify-between" data-speaker="${s.slug}">
-      <span>${s.name}</span><span class="text-text-dim">${s.count.toLocaleString()}</span>
-    </button>`).join('');
+  $('#speaker-list').innerHTML = data
+    .map((s) => {
+      const name = SPEAKERS[s.slug] || s.slug;
+      return `<button class="sidebar-btn w-full text-left px-2 py-1 rounded text-sm hover:bg-surface-hover transition-colors flex justify-between" data-speaker="${s.slug}">
+      <span>${name}</span><span class="text-text-dim">${s.count.toLocaleString()}</span>
+    </button>`;
+    }).join('');
 
   $$('#speaker-list .sidebar-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -142,22 +269,46 @@ async function loadSpeakers() {
 }
 
 async function search() {
-  const params = new URLSearchParams();
-  if (state.q) params.set('q', state.q);
-  if (state.speaker) params.set('speaker', state.speaker);
-  if (state.type) params.set('type', state.type);
-  if (state.dateFrom) params.set('dateFrom', state.dateFrom);
-  if (state.dateTo) params.set('dateTo', state.dateTo);
-  params.set('page', state.page);
-  params.set('limit', 25);
-
-  // Update URL without reload
-  const urlParams = new URLSearchParams(params);
-  urlParams.delete('limit');
+  // Update URL
+  const urlParams = new URLSearchParams();
+  if (state.q) urlParams.set('q', state.q);
+  if (state.speaker) urlParams.set('speaker', state.speaker);
+  if (state.type) urlParams.set('type', state.type);
+  if (state.dateFrom) urlParams.set('dateFrom', state.dateFrom);
+  if (state.dateTo) urlParams.set('dateTo', state.dateTo);
+  if (state.tweets) urlParams.set('tweets', '1');
+  urlParams.set('page', state.page);
   history.replaceState(null, '', `?${urlParams}`);
 
-  const data = await fetchJSON(`/api/search?${params}`);
-  renderResults(data);
+  // If type is explicitly tweet, don't exclude tweets regardless of toggle
+  const excludeTweets = state.type === 'tweet' ? false : !state.tweets;
+
+  const { data, error } = await supabase.rpc('search_statements', {
+    search_query: state.q || null,
+    filter_speaker: state.speaker || null,
+    filter_type: state.type || null,
+    filter_date_from: state.dateFrom || null,
+    filter_date_to: state.dateTo || null,
+    exclude_tweets: excludeTweets,
+    page_num: state.page,
+    page_size: 25,
+  });
+
+  if (error) {
+    console.error('Search error:', error);
+    return;
+  }
+
+  const total = data.length > 0 ? data[0].total_count : 0;
+  const pages = Math.ceil(total / 25);
+
+  const results = data.map((r) => ({
+    ...r,
+    speaker_name: SPEAKERS[r.speaker] || r.speaker,
+    type_label: TYPE_LABELS[r.type] || r.type,
+  }));
+
+  renderResults({ results, total, page: state.page, pages });
 }
 
 // --- Render ---
@@ -208,8 +359,15 @@ function renderResults(data) {
     pagination.classList.add('hidden');
   }
 
-  // Scroll to top
   $('main').scrollTo({ top: 0 });
+}
+
+function updateCorpusSummary() {
+  const totalText = $('#corpus-total').textContent;
+  const summary = $('#corpus-summary');
+  if (summary && totalText) {
+    summary.textContent = totalText + ' · 50 speakers · 1776–2025';
+  }
 }
 
 function escapeHtml(str) {

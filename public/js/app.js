@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  'https://ycqvvjyplboqpmqnqenh.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljcXZ2anlwbGJvcXBtcW5xZW5oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjA5ODksImV4cCI6MjA4ODY5Njk4OX0.oFNNH-q4UvObejsL2efvjQz5qP6KfV9oJ5H7JBWrh5Y'
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
 const SPEAKERS = {

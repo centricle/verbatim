@@ -9,6 +9,8 @@ ROADMAP.md
 tmp/
 node_modules/
 dist/
+.env
+.env.local
 
 # Local Netlify folder
 .netlify

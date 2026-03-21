@@ -7,6 +7,7 @@ export default defineConfig({
   root: 'public',
   envDir: resolve(__dirname),
   plugins: [tailwindcss(), react()],
+  publicDir: resolve(__dirname, 'public/static'),
   build: {
     outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,

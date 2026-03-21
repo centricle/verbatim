@@ -20,9 +20,10 @@
       <a href="/compas/" class="text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
       <a href="/trades/" class="text-sm text-text-dim hover:text-text transition-colors">Trades</a>
       <a href="/1033/" class="text-sm text-text-dim hover:text-text transition-colors">1033</a>
-      <a href="/shootings/" class="text-sm text-text">Shootings</a>
+      <a href="/incidents/" class="text-sm text-text">Incidents</a>
       <a href="/ppp/" class="text-sm text-text-dim hover:text-text transition-colors">PPP</a>
       <a href="/finance/" class="text-sm text-text-dim hover:text-text transition-colors">Finance</a>
+      <a href="/vs/" class="text-sm text-text-dim hover:text-text transition-colors">Vs.</a>
       <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
     </nav>
   </header>
@@ -75,8 +76,8 @@
 
     <!-- Filters -->
     <section class="mb-6">
-      <form id="shootings-search-form" class="flex flex-wrap gap-3">
-        <input type="text" id="shootings-search" placeholder="Search by name, city, or state..."
+      <form id="incidents-search-form" class="flex flex-wrap gap-3">
+        <input type="text" id="incidents-search" placeholder="Search by name, city, or state..."
           class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent">
         <select id="filter-state" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
           <option value="">All states</option>
@@ -117,7 +118,7 @@
       </form>
     </section>
 
-    <div id="shootings-results-info" class="text-sm text-text-dim mb-4"></div>
+    <div id="incidents-results-info" class="text-sm text-text-dim mb-4"></div>
 
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -133,14 +134,14 @@
             <th class="pb-2">Camera</th>
           </tr>
         </thead>
-        <tbody id="shootings-results" class="divide-y divide-border"></tbody>
+        <tbody id="incidents-results" class="divide-y divide-border"></tbody>
       </table>
     </div>
 
-    <div id="shootings-pagination" class="flex items-center justify-center gap-4 mt-6 hidden">
-      <button id="shootings-prev" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
-      <span id="shootings-page-info" class="text-sm text-text-dim"></span>
-      <button id="shootings-next" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+    <div id="incidents-pagination" class="flex items-center justify-center gap-4 mt-6 hidden">
+      <button id="incidents-prev" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
+      <span id="incidents-page-info" class="text-sm text-text-dim"></span>
+      <button id="incidents-next" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
     </div>
   </main>
 
@@ -152,6 +153,6 @@
     </a>
   </footer>
 
-  <script type="module" src="/shootings/app.js"></script>
+  <script type="module" src="/incidents/app.js"></script>
 </body>
 </html>

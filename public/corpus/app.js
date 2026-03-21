@@ -55,6 +55,8 @@ const SPEAKERS = {
   'john-jay': 'John Jay',
   'constitutional-convention': 'Constitutional Convention',
   'continental-congress': 'Continental Congress',
+  'winston-churchill': 'Winston Churchill',
+  'mark-twain': 'Mark Twain',
 };
 
 const TYPE_LABELS = {

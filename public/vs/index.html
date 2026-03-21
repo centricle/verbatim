@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vs. — Verbatim</title>
+  <meta name="description" content="Curated debates using real quotes. Churchill vs. Twain, Lincoln vs. Jefferson — side by side, verbatim.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f5edd6' stroke='%23d4c9a8' stroke-width='1'/><g transform='translate(4,4)' fill='none' stroke='%232d2418' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 12h-5'/><path d='M15 8h-5'/><path d='M19 17V5a2 2 0 0 0-2-2H4'/><path d='M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3'/></g></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-border px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="/" class="flex items-center gap-2 hover:text-accent transition-colors"><div class="w-8 h-8 rounded-lg bg-surface-alt border border-border flex items-center justify-center"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg></div><span class="text-lg font-semibold tracking-tight">Verbatim</span></a>
+      <span class="text-text-dim text-sm">/</span>
+      <span class="text-sm font-medium">Vs.</span>
+    </div>
+    <nav class="flex items-center gap-4">
+      <a href="/corpus/" class="text-sm text-text-dim hover:text-text transition-colors">Corpus</a>
+      <a href="/compas/" class="text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
+      <a href="/trades/" class="text-sm text-text-dim hover:text-text transition-colors">Trades</a>
+      <a href="/1033/" class="text-sm text-text-dim hover:text-text transition-colors">1033</a>
+      <a href="/incidents/" class="text-sm text-text-dim hover:text-text transition-colors">Incidents</a>
+      <a href="/ppp/" class="text-sm text-text-dim hover:text-text transition-colors">PPP</a>
+      <a href="/finance/" class="text-sm text-text-dim hover:text-text transition-colors">Finance</a>
+      <a href="/vs/" class="text-sm text-text">Vs.</a>
+      <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <!-- Explainer -->
+    <section class="mb-8">
+      <h1 class="text-2xl font-semibold mb-3">Vs.</h1>
+      <p class="text-text-dim text-sm leading-relaxed max-w-3xl">
+        Curated debates using real quotes. Two voices, one topic, side by side.
+        Every quote is verbatim. The curation is editorial; the words are not.
+      </p>
+    </section>
+
+    <!-- Pairing selector -->
+    <section class="mb-8">
+      <div class="flex flex-wrap gap-2" id="pairing-tabs"></div>
+    </section>
+
+    <!-- Topic selector -->
+    <section class="mb-8">
+      <div class="flex flex-wrap gap-2" id="topic-tabs"></div>
+    </section>
+
+    <!-- Speaker columns -->
+    <section class="mb-10" id="debate-container">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div id="speaker-a" class="space-y-4"></div>
+        <div id="speaker-b" class="space-y-4"></div>
+      </div>
+    </section>
+
+    <!-- Corpus links -->
+    <section class="border-t border-border pt-6" id="corpus-links">
+      <p class="text-text-dim text-sm">
+        Search the full corpus:
+        <span id="corpus-link-a"></span>
+        <span class="mx-2">&middot;</span>
+        <span id="corpus-link-b"></span>
+      </p>
+    </section>
+  </main>
+
+  <footer class="border-t border-border px-6 py-4 flex items-center justify-center gap-2 text-xs text-text-dim">
+    <span>made by</span>
+    <a href="https://centricle.com" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 hover:text-text transition-colors">
+      <img src="https://centricle.com/brand/avatar-sm.jpg" alt="ksmith" class="w-5 h-5 rounded-full">
+      <span>ksmith</span>
+    </a>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

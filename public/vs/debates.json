@@ -1,0 +1,228 @@
+{
+  "default": ["winston-churchill", "mark-twain"],
+  "speakers": {
+    "winston-churchill": "Winston Churchill",
+    "mark-twain": "Mark Twain",
+    "abraham-lincoln": "Abraham Lincoln",
+    "thomas-jefferson": "Thomas Jefferson",
+    "theodore-roosevelt": "Theodore Roosevelt",
+    "franklin-d-roosevelt": "Franklin D. Roosevelt"
+  },
+  "pairings": [
+    {
+      "id": "churchill-twain",
+      "speakers": ["winston-churchill", "mark-twain"],
+      "topics": [
+        {
+          "name": "War",
+          "quotes": [
+            {
+              "speaker": "winston-churchill",
+              "text": "We shall fight on the beaches, we shall fight on the landing grounds, we shall fight in the fields and in the streets, we shall fight in the hills; we shall never surrender.",
+              "source": "We Shall Fight on the Beaches",
+              "date": "1940-06-04"
+            },
+            {
+              "speaker": "winston-churchill",
+              "text": "I have nothing to offer but blood, toil, tears and sweat. We have before us an ordeal of the most grievous kind. We have before us many, many long months of struggle and of suffering.",
+              "source": "Blood, Toil, Tears and Sweat",
+              "date": "1940-05-13"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "O Lord our Father, our young patriots, idols of our hearts, go forth to battle -- be Thou near them! With them, in spirit, we also go forth from the sweet peace of our beloved firesides to smite the foe. O Lord our God, help us to tear their soldiers to bloody shreds with our shells.",
+              "source": "The War Prayer",
+              "date": "1905"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "An inglorious peace is better than a dishonorable war.",
+              "source": "Glances at History",
+              "date": "1906"
+            }
+          ]
+        },
+        {
+          "name": "Democracy",
+          "quotes": [
+            {
+              "speaker": "winston-churchill",
+              "text": "The liberties of the individual must be safeguarded, and in defending those liberties we shall defend not only ourselves but the cause of freedom throughout the world.",
+              "source": "Liberalism and Socialism",
+              "date": "1908"
+            },
+            {
+              "speaker": "winston-churchill",
+              "text": "This is no war of chieftains or of princes, of dynasties or national ambition; it is a war of peoples and of causes. There are vast numbers, not only in this Island but in every land, who will render faithful service in this war, but whose names will never be known.",
+              "source": "Their Finest Hour",
+              "date": "1940-06-18"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "Loyalty to the country always. Loyalty to the government when it deserves it.",
+              "source": "The Czar's Soliloquy",
+              "date": "1905"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "In the beginning of a change, the Patriot is a scarce man, and brave, and hated and scorned. When his cause succeeds, the timid join him, for then it costs nothing to be a Patriot.",
+              "source": "Mark Twain's Notebook",
+              "date": "1904"
+            }
+          ]
+        },
+        {
+          "name": "Human Nature",
+          "quotes": [
+            {
+              "speaker": "winston-churchill",
+              "text": "Men occasionally stumble over the truth, but most of them pick themselves up and hurry off as if nothing had happened.",
+              "source": "Attributed, various speeches",
+              "date": "1936"
+            },
+            {
+              "speaker": "winston-churchill",
+              "text": "You have enemies? Good. That means you've stood up for something, sometime in your life.",
+              "source": "Attributed",
+              "date": null
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "It is by the goodness of God that in our country we have those three unspeakably precious things: freedom of speech, freedom of conscience, and the prudence never to practice either of them.",
+              "source": "Following the Equator",
+              "date": "1897"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "The human race has one really effective weapon, and that is laughter.",
+              "source": "Mark Twain's Speeches",
+              "date": "1900"
+            }
+          ]
+        },
+        {
+          "name": "Courage",
+          "quotes": [
+            {
+              "speaker": "winston-churchill",
+              "text": "Never give in, never give in, never, never, never -- in nothing, great or small, large or petty -- never give in except to convictions of honour and good sense.",
+              "source": "Harrow School Address",
+              "date": "1941-10-29"
+            },
+            {
+              "speaker": "winston-churchill",
+              "text": "Now this is not the end. It is not even the beginning of the end. But it is, perhaps, the end of the beginning.",
+              "source": "The End of the Beginning",
+              "date": "1942-11-10"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "Courage is resistance to fear, mastery of fear -- not absence of fear.",
+              "source": "Pudd'nhead Wilson",
+              "date": "1894"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "Twenty years from now you will be more disappointed by the things you didn't do than by the ones you did do. So throw off the bowlines. Sail away from the safe harbor.",
+              "source": "Attributed",
+              "date": null
+            }
+          ]
+        },
+        {
+          "name": "Truth & Lies",
+          "quotes": [
+            {
+              "speaker": "winston-churchill",
+              "text": "In wartime, truth is so precious that she should always be attended by a bodyguard of lies.",
+              "source": "The Second World War",
+              "date": "1943"
+            },
+            {
+              "speaker": "winston-churchill",
+              "text": "A lie gets halfway around the world before the truth has a chance to get its pants on.",
+              "source": "Attributed",
+              "date": null
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "If you tell the truth, you don't have to remember anything.",
+              "source": "Mark Twain's Notebook",
+              "date": "1894"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "A man is never more truthful than when he acknowledges himself a liar.",
+              "source": "Mark Twain's Speeches",
+              "date": "1882"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lincoln-jefferson",
+      "speakers": ["abraham-lincoln", "thomas-jefferson"],
+      "topics": [
+        {
+          "name": "Liberty",
+          "quotes": [
+            {
+              "speaker": "abraham-lincoln",
+              "text": "Those who deny freedom to others deserve it not for themselves, and, under a just God, cannot long retain it.",
+              "source": "Letter to H.L. Pierce",
+              "date": "1859-04-06"
+            },
+            {
+              "speaker": "abraham-lincoln",
+              "text": "A house divided against itself cannot stand. I believe this government cannot endure permanently half slave and half free.",
+              "source": "House Divided Speech",
+              "date": "1858-06-16"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.",
+              "source": "Declaration of Independence",
+              "date": "1776-07-04"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "The tree of liberty must be refreshed from time to time with the blood of patriots and tyrants.",
+              "source": "Letter to William Stephens Smith",
+              "date": "1787-11-13"
+            }
+          ]
+        },
+        {
+          "name": "Government",
+          "quotes": [
+            {
+              "speaker": "abraham-lincoln",
+              "text": "Government of the people, by the people, for the people, shall not perish from the earth.",
+              "source": "Gettysburg Address",
+              "date": "1863-11-19"
+            },
+            {
+              "speaker": "abraham-lincoln",
+              "text": "The legitimate object of government is to do for a community of people whatever they need to have done, but cannot do at all, or cannot so well do, for themselves, in their separate and individual capacities.",
+              "source": "Fragment on Government",
+              "date": "1854"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "That government is best which governs least.",
+              "source": "Attributed (paraphrase of inaugural themes)",
+              "date": "1801"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Whenever the people are well-informed, they can be trusted with their own government.",
+              "source": "Letter to Richard Price",
+              "date": "1789-01-08"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

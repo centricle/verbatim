@@ -8,18 +8,18 @@ const supabase = createClient(
 let currentPage = 1;
 const PAGE_SIZE = 50;
 
-const form = document.getElementById('shootings-search-form');
-const searchInput = document.getElementById('shootings-search');
+const form = document.getElementById('incidents-search-form');
+const searchInput = document.getElementById('incidents-search');
 const filterState = document.getElementById('filter-state');
 const filterRace = document.getElementById('filter-race');
 const filterArmed = document.getElementById('filter-armed');
 const filterYear = document.getElementById('filter-year');
-const resultsBody = document.getElementById('shootings-results');
-const resultsInfo = document.getElementById('shootings-results-info');
-const pagination = document.getElementById('shootings-pagination');
-const prevBtn = document.getElementById('shootings-prev');
-const nextBtn = document.getElementById('shootings-next');
-const pageInfo = document.getElementById('shootings-page-info');
+const resultsBody = document.getElementById('incidents-results');
+const resultsInfo = document.getElementById('incidents-results-info');
+const pagination = document.getElementById('incidents-pagination');
+const prevBtn = document.getElementById('incidents-prev');
+const nextBtn = document.getElementById('incidents-next');
+const pageInfo = document.getElementById('incidents-page-info');
 
 const raceLabels = { W: 'White', B: 'Black', H: 'Hispanic', A: 'Asian', N: 'Native Am.', O: 'Other' };
 

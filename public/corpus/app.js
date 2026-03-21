@@ -57,6 +57,10 @@ const SPEAKERS = {
   'continental-congress': 'Continental Congress',
   'winston-churchill': 'Winston Churchill',
   'mark-twain': 'Mark Twain',
+  'frederick-douglass': 'Frederick Douglass',
+  'benjamin-franklin': 'Benjamin Franklin',
+  'susan-b-anthony': 'Susan B. Anthony',
+  'elizabeth-cady-stanton': 'Elizabeth Cady Stanton',
 };
 
 const TYPE_LABELS = {

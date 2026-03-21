@@ -15,6 +15,8 @@ export default defineConfig({
         main: resolve(__dirname, 'public/index.html'),
         about: resolve(__dirname, 'public/about.html'),
         compas: resolve(__dirname, 'public/compas/index.html'),
+        trades: resolve(__dirname, 'public/trades/index.html'),
+        leso: resolve(__dirname, 'public/1033/index.html'),
       },
     },
   },

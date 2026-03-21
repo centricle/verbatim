@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Senate Stock Trades — Verbatim</title>
+  <meta name="description" content="Explore U.S. Senate stock trades disclosed under the STOCK Act. 8,000+ transactions, 53 senators, 2014–2020. Search, filter, see the patterns.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f5edd6'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='%232d2418'>V</text></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-border px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="/" class="text-lg font-semibold tracking-tight hover:text-accent transition-colors">Verbatim</a>
+      <span class="text-text-dim text-sm">/</span>
+      <span class="text-sm font-medium">Senate Stock Trades</span>
+    </div>
+    <nav class="flex items-center gap-4">
+      <a href="/" class="text-sm text-text-dim hover:text-text transition-colors">Corpus</a>
+      <a href="/compas/" class="text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
+      <a href="/trades/" class="text-sm text-text">Trades</a>
+      <a href="/1033/" class="text-sm text-text-dim hover:text-text transition-colors">1033</a>
+      <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <!-- Explainer -->
+    <section class="mb-10">
+      <h1 class="text-2xl font-semibold mb-3">Your Senators' Stock Trades</h1>
+      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+        The STOCK Act (2012) requires members of Congress to publicly disclose stock trades within 45 days.
+        The Senate publishes these as structured electronic filings. The House publishes PDFs.
+      </p>
+      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+        This is the Senate data. 8,031 transactions from 53 senators, 2014&ndash;2020.
+        Every purchase, every sale, every ticker. Search it. Filter it. See who's trading what.
+      </p>
+      <details class="text-text-dim text-sm leading-relaxed max-w-3xl mt-4">
+        <summary class="cursor-pointer text-accent hover:text-accent-hover transition-colors font-medium">Why Senate only?</summary>
+        <div class="mt-3 space-y-2 pl-4 border-l-2 border-border">
+          <p>
+            Same law, two implementations. The Senate files electronically — structured data,
+            machine-readable, downloadable. The House files paper forms as PDFs. To get the same
+            information, you'd need to download thousands of individual PDFs and parse them.
+          </p>
+          <p>
+            The one project that did this work (House Stock Watcher) went offline. Its data is gone.
+            The Senate's trading activity is searchable by anyone with a browser. The House's trading
+            activity is searchable by anyone with a PDF parsing pipeline and cloud infrastructure.
+          </p>
+          <p>
+            Whether this is incompetence or design is left as an exercise for the reader.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- Visualizations (React + D3 mount points) -->
+    <section class="mb-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div id="viz-trades-by-year" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-top-traders" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div id="viz-top-tickers" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-amount-distribution" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+      </div>
+    </section>
+
+    <!-- Search and filters -->
+    <section class="mb-6">
+      <form id="trades-search-form" class="flex flex-wrap gap-3">
+        <input type="text" id="trades-search" placeholder="Search by senator, ticker, or description..."
+          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent">
+        <select id="filter-senator" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All senators</option>
+        </select>
+        <select id="filter-type" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All types</option>
+          <option value="Purchase">Purchase</option>
+          <option value="Sale (Full)">Sale (Full)</option>
+          <option value="Sale (Partial)">Sale (Partial)</option>
+          <option value="Exchange">Exchange</option>
+        </select>
+        <select id="filter-year" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All years</option>
+          <option value="2020">2020</option>
+          <option value="2019">2019</option>
+          <option value="2018">2018</option>
+          <option value="2017">2017</option>
+          <option value="2016">2016</option>
+          <option value="2015">2015</option>
+          <option value="2014">2014</option>
+        </select>
+        <button type="submit" class="bg-accent hover:bg-accent-hover text-surface font-semibold rounded-lg px-5 py-2 text-sm transition-colors">
+          Filter
+        </button>
+      </form>
+    </section>
+
+    <!-- Results info -->
+    <div id="trades-results-info" class="text-sm text-text-dim mb-4"></div>
+
+    <!-- Results table -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border text-left text-text-dim text-xs uppercase tracking-wider">
+            <th class="pb-2 pr-3">Date</th>
+            <th class="pb-2 pr-3">Senator</th>
+            <th class="pb-2 pr-3">Ticker</th>
+            <th class="pb-2 pr-3">Asset</th>
+            <th class="pb-2 pr-3">Type</th>
+            <th class="pb-2 pr-3">Amount</th>
+            <th class="pb-2">Owner</th>
+          </tr>
+        </thead>
+        <tbody id="trades-results" class="divide-y divide-border"></tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div id="trades-pagination" class="flex items-center justify-center gap-4 mt-6 hidden">
+      <button id="trades-prev" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+        Previous
+      </button>
+      <span id="trades-page-info" class="text-sm text-text-dim"></span>
+      <button id="trades-next" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+        Next
+      </button>
+    </div>
+  </main>
+
+  <footer class="border-t border-border px-6 py-4 flex items-center justify-center gap-2 text-xs text-text-dim">
+    <span>made by</span>
+    <a href="https://centricle.com" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 hover:text-text transition-colors">
+      <img src="https://centricle.com/brand/avatar-sm.jpg" alt="ksmith" class="w-5 h-5 rounded-full">
+      <span>ksmith</span>
+    </a>
+  </footer>
+
+  <script type="module" src="/trades/app.js"></script>
+</body>
+</html>

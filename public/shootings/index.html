@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fatal Police Shootings — Verbatim</title>
+  <meta name="description" content="The Washington Post's Fatal Force database: 10,430 fatal police shootings, 2015–2024. Searchable, filterable. All data from the Post's public dataset.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f5edd6'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='%232d2418'>V</text></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-border px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="/" class="text-lg font-semibold tracking-tight hover:text-accent transition-colors">Verbatim</a>
+      <span class="text-text-dim text-sm">/</span>
+      <span class="text-sm font-medium">Fatal Police Shootings</span>
+    </div>
+    <nav class="flex items-center gap-4">
+      <a href="/" class="text-sm text-text-dim hover:text-text transition-colors">Corpus</a>
+      <a href="/compas/" class="text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
+      <a href="/trades/" class="text-sm text-text-dim hover:text-text transition-colors">Trades</a>
+      <a href="/1033/" class="text-sm text-text-dim hover:text-text transition-colors">1033</a>
+      <a href="/shootings/" class="text-sm text-text">Shootings</a>
+      <a href="/ppp/" class="text-sm text-text-dim hover:text-text transition-colors">PPP</a>
+      <a href="/finance/" class="text-sm text-text-dim hover:text-text transition-colors">Finance</a>
+      <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <section class="mb-10">
+      <h1 class="text-2xl font-semibold mb-3">Washington Post Fatal Force Database</h1>
+      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+        Starting in 2015, the Washington Post compiled a record of every fatal shooting by an
+        on-duty police officer in the United States. The resulting dataset covers 10,430 incidents
+        through 2024.
+      </p>
+      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+        This is a searchable interface to that public dataset. Each record includes date, location,
+        demographics, armed status, and whether a body camera was present. All data is from the
+        Post's <a href="https://github.com/washingtonpost/data-police-shootings" target="_blank" rel="noopener" class="text-accent hover:text-accent-hover">published GitHub repository</a>.
+        Verbatim does not editorialize.
+      </p>
+      <details class="text-text-dim text-sm leading-relaxed max-w-3xl mt-4">
+        <summary class="cursor-pointer text-accent hover:text-accent-hover transition-colors font-medium">About this dataset</summary>
+        <div class="mt-3 space-y-2 pl-4 border-l-2 border-border">
+          <p>
+            The Washington Post's database includes every fatal shooting by a police officer in the line
+            of duty since Jan. 1, 2015. It does not include deaths in police custody, fatal shootings by
+            off-duty officers, or non-shooting deaths.
+          </p>
+          <p>
+            The data is compiled from news reports, law enforcement websites, social media, and
+            independent databases such as Fatal Encounters and the Killed by Police project.
+            The Post stopped updating in January 2025.
+          </p>
+          <p>
+            Race codes: W = White, B = Black, H = Hispanic, A = Asian, N = Native American, O = Other.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- Visualizations -->
+    <section class="mb-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div id="viz-by-year" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-by-state" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div id="viz-by-armed" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-by-race" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+      </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="mb-6">
+      <form id="shootings-search-form" class="flex flex-wrap gap-3">
+        <input type="text" id="shootings-search" placeholder="Search by name, city, or state..."
+          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent">
+        <select id="filter-state" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All states</option>
+        </select>
+        <select id="filter-race" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All races</option>
+          <option value="W">White</option>
+          <option value="B">Black</option>
+          <option value="H">Hispanic</option>
+          <option value="A">Asian</option>
+          <option value="N">Native American</option>
+          <option value="O">Other</option>
+        </select>
+        <select id="filter-armed" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All</option>
+          <option value="gun">Gun</option>
+          <option value="knife">Knife</option>
+          <option value="unarmed">Unarmed</option>
+          <option value="vehicle">Vehicle</option>
+          <option value="replica">Replica</option>
+        </select>
+        <select id="filter-year" class="bg-surface-alt border border-border rounded-lg px-3 py-2 text-sm text-text">
+          <option value="">All years</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+          <option value="2020">2020</option>
+          <option value="2019">2019</option>
+          <option value="2018">2018</option>
+          <option value="2017">2017</option>
+          <option value="2016">2016</option>
+          <option value="2015">2015</option>
+        </select>
+        <button type="submit" class="bg-accent hover:bg-accent-hover text-surface font-semibold rounded-lg px-5 py-2 text-sm transition-colors">
+          Filter
+        </button>
+      </form>
+    </section>
+
+    <div id="shootings-results-info" class="text-sm text-text-dim mb-4"></div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border text-left text-text-dim text-xs uppercase tracking-wider">
+            <th class="pb-2 pr-3">Date</th>
+            <th class="pb-2 pr-3">Name</th>
+            <th class="pb-2 pr-3">Age</th>
+            <th class="pb-2 pr-3">Race</th>
+            <th class="pb-2 pr-3">City, State</th>
+            <th class="pb-2 pr-3">Armed</th>
+            <th class="pb-2 pr-3">Flee</th>
+            <th class="pb-2">Camera</th>
+          </tr>
+        </thead>
+        <tbody id="shootings-results" class="divide-y divide-border"></tbody>
+      </table>
+    </div>
+
+    <div id="shootings-pagination" class="flex items-center justify-center gap-4 mt-6 hidden">
+      <button id="shootings-prev" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
+      <span id="shootings-page-info" class="text-sm text-text-dim"></span>
+      <button id="shootings-next" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+    </div>
+  </main>
+
+  <footer class="border-t border-border px-6 py-4 flex items-center justify-center gap-2 text-xs text-text-dim">
+    <span>made by</span>
+    <a href="https://centricle.com" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 hover:text-text transition-colors">
+      <img src="https://centricle.com/brand/avatar-sm.jpg" alt="ksmith" class="w-5 h-5 rounded-full">
+      <span>ksmith</span>
+    </a>
+  </footer>
+
+  <script type="module" src="/shootings/app.js"></script>
+</body>
+</html>

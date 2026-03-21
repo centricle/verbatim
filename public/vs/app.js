@@ -1,11 +1,10 @@
-let data = null;
+import debates from './debates.json';
+
+let data = debates;
 let currentPairing = null;
 let currentTopic = null;
 
-async function init() {
-  const resp = await fetch('/vs/debates.json');
-  data = await resp.json();
-
+function init() {
   renderPairingTabs();
   selectPairing(data.pairings[0].id);
 }

@@ -66,7 +66,7 @@ async function search() {
       <td class="py-2 pr-3 font-medium">${titleCase(d.cand_name)}</td>
       <td class="py-2 pr-3 text-xs"><span class="inline-block px-1.5 py-0.5 rounded text-white" style="background:${partyColors[d.party] || '#6b7280'}">${d.party || '—'}</span></td>
       <td class="py-2 pr-3 text-xs">${d.office || '—'}</td>
-      <td class="py-2 pr-3 text-xs">${d.cand_state || '—'}${d.cand_district ? '-' + d.cand_district : ''}</td>
+      <td class="py-2 pr-3 text-xs">${d.office === 'House' && d.cand_state ? d.cand_state + '-' + (d.cand_district || '00') : d.office === 'Senate' && d.cand_state ? d.cand_state : '—'}</td>
       <td class="py-2 pr-3 text-right tabular-nums">${fmtMoney(d.total_receipts)}</td>
       <td class="py-2 pr-3 text-right tabular-nums text-xs">${fmtMoney(d.total_disbursements)}</td>
       <td class="py-2 pr-3 text-right tabular-nums text-xs">${fmtMoney(d.cash_on_hand)}</td>
@@ -93,7 +93,7 @@ nextBtn.addEventListener('click', () => { currentPage++; search(); });
 
 function populateDropdowns(stats) {
   if (stats.state_list) {
-    stats.state_list.forEach(s => {
+    stats.state_list.filter(s => s.state !== '00').forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.state;
       opt.textContent = s.state;

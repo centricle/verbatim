@@ -7,7 +7,7 @@ function FECByState({ stats }) {
 
   useEffect(() => {
     if (!stats.by_state) return;
-    const data = stats.by_state.slice(0, 15);
+    const data = stats.by_state.filter(d => d.state !== '00').slice(0, 15);
 
     const margin = { top: 30, right: 60, bottom: 20, left: 30 };
     const width = 440 - margin.left - margin.right;

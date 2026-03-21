@@ -13,6 +13,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'public/index.html'),
+        corpus: resolve(__dirname, 'public/corpus/index.html'),
         about: resolve(__dirname, 'public/about.html'),
         compas: resolve(__dirname, 'public/compas/index.html'),
         trades: resolve(__dirname, 'public/trades/index.html'),

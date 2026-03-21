@@ -1,5 +1,5 @@
 corpus.jsonl
-corpus/
+/corpus/
 corpus.db
 sources.json
 __pycache__/

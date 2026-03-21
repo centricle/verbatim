@@ -18,15 +18,17 @@
   <link rel="canonical" href="https://verbatim.fyi/vs/">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f5edd6' stroke='%23d4c9a8' stroke-width='1'/><g transform='translate(4,4)' fill='none' stroke='%232d2418' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 12h-5'/><path d='M15 8h-5'/><path d='M19 17V5a2 2 0 0 0-2-2H4'/><path d='M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3'/></g></svg>">
   <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/nav.js" defer></script>
 </head>
 <body class="min-h-screen">
-  <header class="border-b border-border px-6 py-4 flex items-center justify-between">
+  <header class="border-b border-border px-6 py-4">
+    <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
       <a href="/" class="flex items-center gap-2 hover:text-accent transition-colors"><div class="w-8 h-8 rounded-lg bg-surface-alt border border-border flex items-center justify-center"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg></div><span class="text-lg font-semibold tracking-tight">Verbatim</span></a>
       <span class="text-text-dim text-sm">/</span>
       <span class="text-sm font-medium">Vs.</span>
     </div>
-    <nav class="flex items-center gap-4">
+    <nav class="hidden md:flex items-center gap-4">
       <a href="/corpus/" class="text-sm text-text-dim hover:text-text transition-colors">Corpus</a>
       <a href="/compas/" class="text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
       <a href="/trades/" class="text-sm text-text-dim hover:text-text transition-colors">Trades</a>
@@ -36,6 +38,22 @@
       <a href="/finance/" class="text-sm text-text-dim hover:text-text transition-colors">Finance</a>
       <a href="/vs/" class="text-sm text-text">Vs.</a>
       <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
+    </nav>
+      <button id="mobile-menu-button" class="md:hidden p-2 text-text-dim hover:text-text transition-colors" aria-label="Open menu" aria-expanded="false">
+        <svg class="icon-menu w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        <svg class="icon-close hidden w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <nav id="mobile-menu" class="hidden md:hidden border-t border-border mt-4 pt-2">
+      <a href="/corpus/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Corpus</a>
+      <a href="/compas/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
+      <a href="/trades/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Trades</a>
+      <a href="/1033/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">1033</a>
+      <a href="/incidents/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Incidents</a>
+      <a href="/ppp/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">PPP</a>
+      <a href="/finance/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Finance</a>
+      <a href="/vs/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Vs.</a>
+      <a href="/about.html" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">About</a>
     </nav>
   </header>
 

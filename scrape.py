@@ -140,7 +140,7 @@ def classify_type(title):
     if "rally" in title_lower:
         return "speech"
     if "debate" in title_lower:
-        return "speech"
+        return "debate"
     if "statement" in title_lower:
         return "statement"
     if "memo" in title_lower or "memorandum" in title_lower:

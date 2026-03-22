@@ -10,7 +10,7 @@ import sys
 CORPUS_JSONL = os.path.join(os.path.dirname(__file__), "corpus.jsonl")
 CORPUS_DB = os.path.join(os.path.dirname(__file__), "corpus.db")
 
-VALID_TYPES = {"tweet", "truth_social", "speech", "interview", "press_gaggle", "statement", "press_conference", "remarks", "earnings_call", "memo", "letter", "executive_order", "proclamation", "address", "founding_document", "essay"}
+VALID_TYPES = {"tweet", "truth_social", "speech", "interview", "press_gaggle", "statement", "press_conference", "remarks", "earnings_call", "memo", "letter", "executive_order", "proclamation", "address", "founding_document", "essay", "debate", "floor_speech", "opinion"}
 
 
 def make_id(speaker, text):

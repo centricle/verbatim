@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Civil Asset Forfeiture: Property Seized by Law Enforcement — Verbatim</title>
+  <meta name="description" content="Property-level civil asset forfeiture records from 24 states, 1986–2019. 350,000+ seized properties. Search it. See the patterns.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://verbatim.fyi/og-image.webp">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Verbatim">
+  <meta property="og:title" content="Civil Asset Forfeiture: Property Seized by Law Enforcement — Verbatim">
+  <meta property="og:description" content="Property-level civil asset forfeiture records from 24 states, 1986–2019. 350,000+ seized properties. Search it. See the patterns.">
+  <meta property="og:url" content="https://verbatim.fyi/forfeiture/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://verbatim.fyi/og-image.webp">
+  <link rel="canonical" href="https://verbatim.fyi/forfeiture/">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f5edd6' stroke='%23d4c9a8' stroke-width='1'/><g transform='translate(4,4)' fill='none' stroke='%232d2418' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 12h-5'/><path d='M15 8h-5'/><path d='M19 17V5a2 2 0 0 0-2-2H4'/><path d='M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3'/></g></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/nav.js" defer></script>
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-border px-6 py-4">
+    <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="/" class="flex items-center gap-2 hover:text-accent transition-colors"><div class="w-8 h-8 rounded-lg bg-surface-alt border border-border flex items-center justify-center"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg></div><span class="text-lg font-semibold tracking-tight">Verbatim</span></a>
+      <span class="text-text-dim text-sm">/</span>
+      <span class="text-sm font-medium">Forfeiture</span>
+    </div>
+    <nav class="hidden md:flex items-center gap-4">
+      <a href="/corpus/" class="text-sm text-text-dim hover:text-text transition-colors">Corpus</a>
+      <a href="/compas/" class="text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
+      <a href="/trades/" class="text-sm text-text-dim hover:text-text transition-colors">Trades</a>
+      <a href="/1033/" class="text-sm text-text-dim hover:text-text transition-colors">Pentagon to Police</a>
+      <a href="/incidents/" class="text-sm text-text-dim hover:text-text transition-colors">Incidents</a>
+      <a href="/ppp/" class="text-sm text-text-dim hover:text-text transition-colors">PPP</a>
+      <a href="/finance/" class="text-sm text-text-dim hover:text-text transition-colors">Finance</a>
+      <a href="/qi/" class="text-sm text-text-dim hover:text-text transition-colors">Immunity</a>
+      <a href="/forfeiture/" class="text-sm text-text">Forfeiture</a>
+      <a href="/vs/" class="text-sm text-text-dim hover:text-text transition-colors">Vs.</a>
+      <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
+    </nav>
+      <button id="mobile-menu-button" class="md:hidden p-2 text-text-dim hover:text-text transition-colors cursor-pointer" aria-label="Open menu" aria-expanded="false">
+        <svg class="icon-menu w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        <svg class="icon-close hidden w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <nav id="mobile-menu" class="hidden md:hidden border-t border-border mt-4 pt-2">
+      <a href="/corpus/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Corpus</a>
+      <a href="/compas/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
+      <a href="/trades/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Trades</a>
+      <a href="/1033/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Pentagon to Police</a>
+      <a href="/incidents/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Incidents</a>
+      <a href="/ppp/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">PPP</a>
+      <a href="/finance/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Finance</a>
+      <a href="/qi/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Immunity</a>
+      <a href="/forfeiture/" class="block px-3 py-3 text-sm text-text">Forfeiture</a>
+      <a href="/vs/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Vs.</a>
+      <a href="/about.html" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">About</a>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <!-- Explainer -->
+    <section class="mb-10">
+      <h1 class="text-2xl font-semibold mb-3">Civil Asset Forfeiture: Property Seized by Law Enforcement</h1>
+      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+        Civil asset forfeiture allows law enforcement to seize property suspected of being connected to criminal activity.
+        Unlike criminal forfeiture, civil forfeiture does not require a criminal conviction. The property itself is the defendant.
+        Data collected by the Institute for Justice as part of their
+        <a href="https://ij.org/report/policing-for-profit-3/" target="_blank" rel="noopener" class="text-accent hover:text-accent-hover transition-colors">Policing for Profit</a> report.
+      </p>
+      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+        This is property-level forfeiture data from 24 states that provided individual records, 1986&ndash;2019.
+        Each row represents a single seized property: currency, vehicles, real property, or other assets.
+        Search it. Filter it. See the patterns.
+      </p>
+      <details class="text-text-dim text-sm leading-relaxed max-w-3xl mt-4">
+        <summary class="cursor-pointer text-accent hover:text-accent-hover transition-colors font-medium">What do the proceeding types mean?</summary>
+        <div class="mt-3 space-y-2 pl-4 border-l-2 border-border">
+          <p>
+            <strong class="text-text">Civil</strong> and <strong class="text-text">Civil Judicial</strong> = proceedings filed in court against the property, not the owner.
+            <strong class="text-text">Administrative</strong> = handled by the seizing agency without court involvement.
+            <strong class="text-text">Criminal</strong> = tied to a criminal prosecution.
+          </p>
+          <p>
+            <strong class="text-text">Summary</strong> = expedited forfeiture, typically for lower-value property.
+            <strong class="text-text">Contested</strong> / <strong class="text-text">Uncontested</strong> = whether the owner challenged the seizure.
+          </p>
+        </div>
+      </details>
+      <details class="text-text-dim text-sm leading-relaxed max-w-3xl mt-3">
+        <summary class="cursor-pointer text-accent hover:text-accent-hover transition-colors font-medium">What about conviction status?</summary>
+        <div class="mt-3 space-y-2 pl-4 border-l-2 border-border">
+          <p>
+            97% of property-level records have no conviction status recorded.
+            The absence of data is itself informative: most states do not systematically track
+            whether a criminal conviction was associated with a forfeiture.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- Visualizations -->
+    <section class="mb-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div id="viz-by-state" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-by-year" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div id="viz-by-type" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-conviction" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+      </div>
+    </section>
+
+    <!-- Search and filters -->
+    <section class="mb-6">
+      <form id="forfeiture-search-form" class="flex flex-wrap gap-3">
+        <input type="text" id="forfeiture-search" placeholder="Search by case number..."
+          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent">
+        <select id="filter-state" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+          <option value="">All states</option>
+        </select>
+        <select id="filter-prop-type" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+          <option value="">All property types</option>
+          <option value="currency">Currency</option>
+          <option value="vehicles">Vehicles</option>
+          <option value="real property">Real Property</option>
+          <option value="other">Other</option>
+        </select>
+        <select id="filter-proceeding" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+          <option value="">All proceedings</option>
+          <option value="civil">Civil</option>
+          <option value="civil judicial">Civil Judicial</option>
+          <option value="criminal">Criminal</option>
+          <option value="administrative">Administrative</option>
+          <option value="summary">Summary</option>
+          <option value="contested">Contested</option>
+          <option value="uncontested">Uncontested</option>
+        </select>
+        <select id="filter-conviction" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+          <option value="">All conviction statuses</option>
+          <option value="conviction">Conviction</option>
+          <option value="no conviction">No Conviction</option>
+        </select>
+        <button type="submit" class="bg-accent hover:bg-accent-hover text-surface font-semibold rounded-lg px-5 py-2 text-sm transition-colors">
+          Filter
+        </button>
+      </form>
+    </section>
+
+    <!-- Results info -->
+    <div id="forfeiture-results-info" class="text-sm text-text-dim mb-4"></div>
+
+    <!-- Results table -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border text-left text-text-dim text-xs uppercase tracking-wider">
+            <th class="pb-2 pr-3">Year</th>
+            <th class="pb-2 pr-3">State</th>
+            <th class="pb-2 pr-3">Property Type</th>
+            <th class="pb-2 pr-3 text-right">Value</th>
+            <th class="pb-2 pr-3">Proceeding</th>
+            <th class="pb-2 pr-3">Conviction</th>
+            <th class="pb-2">Case No.</th>
+          </tr>
+        </thead>
+        <tbody id="forfeiture-results" class="divide-y divide-border"></tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div id="forfeiture-pagination" class="flex items-center justify-center gap-4 mt-6 hidden">
+      <button id="forfeiture-prev" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+        Previous
+      </button>
+      <span id="forfeiture-page-info" class="text-sm text-text-dim"></span>
+      <button id="forfeiture-next" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+        Next
+      </button>
+    </div>
+  </main>
+
+  <footer class="border-t border-border px-6 py-4 flex items-center justify-center gap-2 text-xs text-text-dim">
+    <span>made by</span>
+    <a href="https://centricle.com" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 hover:text-text transition-colors">
+      <img src="https://centricle.com/brand/avatar-sm.jpg" alt="ksmith" class="w-5 h-5 rounded-full">
+      <span>ksmith</span>
+    </a>
+  </footer>
+
+  <script type="module" src="/forfeiture/app.js"></script>
+</body>
+</html>

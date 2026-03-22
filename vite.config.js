@@ -23,6 +23,8 @@ export default defineConfig({
         ppp: resolve(__dirname, 'public/ppp/index.html'),
         finance: resolve(__dirname, 'public/finance/index.html'),
         vs: resolve(__dirname, 'public/vs/index.html'),
+        qi: resolve(__dirname, 'public/qi/index.html'),
+        forfeiture: resolve(__dirname, 'public/forfeiture/index.html'),
       },
     },
   },

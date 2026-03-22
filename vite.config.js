@@ -25,6 +25,8 @@ export default defineConfig({
         vs: resolve(__dirname, 'public/vs/index.html'),
         qi: resolve(__dirname, 'public/qi/index.html'),
         forfeiture: resolve(__dirname, 'public/forfeiture/index.html'),
+        welfare: resolve(__dirname, 'public/welfare/index.html'),
+        tri: resolve(__dirname, 'public/tri/index.html'),
       },
     },
   },

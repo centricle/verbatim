@@ -9,8 +9,8 @@ function QiByViolation({ stats }) {
     if (!stats.by_violation) return;
     const data = stats.by_violation.slice(0, 12);
 
-    const margin = { top: 30, right: 50, bottom: 20, left: 120 };
-    const width = 440 - margin.left - margin.right;
+    const margin = { top: 30, right: 50, bottom: 20, left: 140 };
+    const width = 500 - margin.left - margin.right;
     const barHeight = 24;
     const height = data.length * barHeight;
 
@@ -49,7 +49,7 @@ function QiByViolation({ stats }) {
       .attr('text-anchor', 'end')
       .text(d => {
         const label = d.violation_type || 'unknown';
-        return label.length > 18 ? label.slice(0, 18) + '...' : label;
+        return label.length > 22 ? label.slice(0, 22) + '...' : label;
       })
       .style('fill', '#8a7e6b')
       .style('font-size', '9px');

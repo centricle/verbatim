@@ -9,9 +9,9 @@ function QiByCircuit({ stats }) {
     if (!stats.by_circuit) return;
     const data = stats.by_circuit;
 
-    const margin = { top: 30, right: 50, bottom: 20, left: 55 };
-    const width = 440 - margin.left - margin.right;
-    const height = 260 - margin.top - margin.bottom;
+    const margin = { top: 30, right: 50, bottom: 20, left: 150 };
+    const width = 540 - margin.left - margin.right;
+    const height = 280 - margin.top - margin.bottom;
 
     d3.select(svgRef.current).selectAll('*').remove();
 

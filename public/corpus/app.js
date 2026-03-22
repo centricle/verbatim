@@ -372,7 +372,7 @@ function updateCorpusSummary() {
   const totalText = $('#corpus-total').textContent;
   const summary = $('#corpus-summary');
   if (summary && totalText) {
-    summary.textContent = totalText + ' · 50 speakers · 1776–2025';
+    summary.textContent = totalText + ' · 91 speakers · 1776–2025';
   }
 }
 

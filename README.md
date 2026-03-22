@@ -2,7 +2,7 @@
 
 **250 years of American political speech, searchable.**
 
-43,000+ records from 50 speakers spanning 1776 to 2025. The Federalist Papers, the Constitution, the Bill of Rights, the Declaration of Independence, presidential speeches, executive orders, proclamations, press conferences, and yes, tweets. One full-text search index.
+43,990+ records from 91 speakers spanning 1776 to 2025. The Federalist Papers, the Constitution, the Bill of Rights, the Declaration of Independence, presidential speeches, executive orders, proclamations, press conferences, and yes, tweets. One full-text search index.
 
 **Live:** [verbatim.fyi](https://verbatim.fyi)
 

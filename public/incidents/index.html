@@ -21,6 +21,7 @@
   <script src="/js/nav.js" defer></script>
 </head>
 <body class="min-h-screen">
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <header class="border-b border-border px-6 py-4">
     <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
@@ -61,7 +62,7 @@
     </nav>
   </header>
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-6 py-8">
     <section class="mb-10">
       <h1 class="text-2xl font-semibold mb-3">Washington Post Fatal Force Database</h1>
       <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
@@ -98,24 +99,24 @@
     <!-- Visualizations -->
     <section class="mb-10">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div id="viz-by-year" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-        <div id="viz-by-state" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-by-year" role="img" aria-label="Shootings by year chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-by-state" role="img" aria-label="Shootings by state chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div id="viz-by-armed" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-        <div id="viz-by-race" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-by-armed" role="img" aria-label="Armed status chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-by-race" role="img" aria-label="Race demographics chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
       </div>
     </section>
 
     <!-- Filters -->
     <section class="mb-6">
       <form id="incidents-search-form" class="flex flex-wrap gap-3">
-        <input type="text" id="incidents-search" placeholder="Search by name, city, or state..."
-          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent">
-        <select id="filter-state" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+        <input type="text" id="incidents-search" aria-label="Search incidents" placeholder="Search by name, city, or state..."
+          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:border-accent">
+        <select id="filter-state" aria-label="Filter by state" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
           <option value="">All states</option>
         </select>
-        <select id="filter-race" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+        <select id="filter-race" aria-label="Filter by race" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
           <option value="">All races</option>
           <option value="W">White</option>
           <option value="B">Black</option>
@@ -124,7 +125,7 @@
           <option value="N">Native American</option>
           <option value="O">Other</option>
         </select>
-        <select id="filter-armed" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+        <select id="filter-armed" aria-label="Filter by armed status" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
           <option value="">All</option>
           <option value="gun">Gun</option>
           <option value="knife">Knife</option>
@@ -132,7 +133,7 @@
           <option value="vehicle">Vehicle</option>
           <option value="replica">Replica</option>
         </select>
-        <select id="filter-year" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+        <select id="filter-year" aria-label="Filter by year" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
           <option value="">All years</option>
           <option value="2024">2024</option>
           <option value="2023">2023</option>
@@ -151,20 +152,20 @@
       </form>
     </section>
 
-    <div id="incidents-results-info" class="text-sm text-text-dim mb-4"></div>
+    <div id="incidents-results-info" aria-live="polite" class="text-sm text-text-dim mb-4"></div>
 
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-border text-left text-text-dim text-xs uppercase tracking-wider">
-            <th class="pb-2 pr-3">Date</th>
-            <th class="pb-2 pr-3">Name</th>
-            <th class="pb-2 pr-3">Age</th>
-            <th class="pb-2 pr-3">Race</th>
-            <th class="pb-2 pr-3">City, State</th>
-            <th class="pb-2 pr-3">Armed</th>
-            <th class="pb-2 pr-3">Flee</th>
-            <th class="pb-2">Camera</th>
+            <th scope="col" class="pb-2 pr-3">Date</th>
+            <th scope="col" class="pb-2 pr-3">Name</th>
+            <th scope="col" class="pb-2 pr-3">Age</th>
+            <th scope="col" class="pb-2 pr-3">Race</th>
+            <th scope="col" class="pb-2 pr-3">City, State</th>
+            <th scope="col" class="pb-2 pr-3">Armed</th>
+            <th scope="col" class="pb-2 pr-3">Flee</th>
+            <th scope="col" class="pb-2">Camera</th>
           </tr>
         </thead>
         <tbody id="incidents-results" class="divide-y divide-border"></tbody>

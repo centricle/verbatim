@@ -21,6 +21,7 @@
   <script src="/js/nav.js" defer></script>
 </head>
 <body class="min-h-screen">
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <header class="border-b border-border px-6 py-4">
     <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
@@ -61,7 +62,7 @@
     </nav>
   </header>
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+  <main id="main-content" class="max-w-6xl mx-auto px-6 py-8">
     <!-- Explainer -->
     <section class="mb-10">
       <h1 class="text-2xl font-semibold mb-3">Your Senators’ Stock Trades</h1>
@@ -96,31 +97,31 @@
     <!-- Visualizations (React + D3 mount points) -->
     <section class="mb-10">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div id="viz-trades-by-year" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-        <div id="viz-top-traders" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-trades-by-year" role="img" aria-label="Trades by year chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-top-traders" role="img" aria-label="Top traders chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div id="viz-top-tickers" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-        <div id="viz-amount-distribution" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-top-tickers" role="img" aria-label="Top tickers chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
+        <div id="viz-amount-distribution" role="img" aria-label="Amount distribution chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
       </div>
     </section>
 
     <!-- Search and filters -->
     <section class="mb-6">
       <form id="trades-search-form" class="flex flex-wrap gap-3">
-        <input type="text" id="trades-search" placeholder="Search by senator, ticker, or description..."
-          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:outline-none focus:border-accent">
-        <select id="filter-senator" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+        <input type="text" id="trades-search" aria-label="Search trades" placeholder="Search by senator, ticker, or description..."
+          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:border-accent">
+        <select id="filter-senator" aria-label="Filter by senator" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
           <option value="">All senators</option>
         </select>
-        <select id="filter-type" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+        <select id="filter-type" aria-label="Filter by trade type" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
           <option value="">All types</option>
           <option value="Purchase">Purchase</option>
           <option value="Sale (Full)">Sale (Full)</option>
           <option value="Sale (Partial)">Sale (Partial)</option>
           <option value="Exchange">Exchange</option>
         </select>
-        <select id="filter-year" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
+        <select id="filter-year" aria-label="Filter by year" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
           <option value="">All years</option>
           <option value="2020">2020</option>
           <option value="2019">2019</option>
@@ -137,20 +138,20 @@
     </section>
 
     <!-- Results info -->
-    <div id="trades-results-info" class="text-sm text-text-dim mb-4"></div>
+    <div id="trades-results-info" aria-live="polite" class="text-sm text-text-dim mb-4"></div>
 
     <!-- Results table -->
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-border text-left text-text-dim text-xs uppercase tracking-wider">
-            <th class="pb-2 pr-3">Date</th>
-            <th class="pb-2 pr-3">Senator</th>
-            <th class="pb-2 pr-3">Ticker</th>
-            <th class="pb-2 pr-3">Asset</th>
-            <th class="pb-2 pr-3">Type</th>
-            <th class="pb-2 pr-3">Amount</th>
-            <th class="pb-2">Owner</th>
+            <th scope="col" class="pb-2 pr-3">Date</th>
+            <th scope="col" class="pb-2 pr-3">Senator</th>
+            <th scope="col" class="pb-2 pr-3">Ticker</th>
+            <th scope="col" class="pb-2 pr-3">Asset</th>
+            <th scope="col" class="pb-2 pr-3">Type</th>
+            <th scope="col" class="pb-2 pr-3">Amount</th>
+            <th scope="col" class="pb-2">Owner</th>
           </tr>
         </thead>
         <tbody id="trades-results" class="divide-y divide-border"></tbody>

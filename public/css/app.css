@@ -138,6 +138,23 @@ select {
   transform: rotate(45deg);
 }
 
+/* Header nav — single-line, scrollable when overflowing */
+header a, header > div > div > span {
+  white-space: nowrap;
+}
+header > div > div:first-child {
+  flex-shrink: 0;
+}
+header nav:not(#mobile-menu) {
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+  margin-left: 1.5rem;
+}
+header nav:not(#mobile-menu)::-webkit-scrollbar {
+  display: none;
+}
+
 /* Skip link */
 .skip-link {
   position: absolute;

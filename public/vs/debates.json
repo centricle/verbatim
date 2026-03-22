@@ -6,7 +6,11 @@
     "abraham-lincoln": "Abraham Lincoln",
     "thomas-jefferson": "Thomas Jefferson",
     "theodore-roosevelt": "Theodore Roosevelt",
-    "franklin-d-roosevelt": "Franklin D. Roosevelt"
+    "franklin-d-roosevelt": "Franklin D. Roosevelt",
+    "george-washington": "George Washington",
+    "alexander-hamilton": "Alexander Hamilton",
+    "james-madison": "James Madison",
+    "john-adams": "John Adams"
   },
   "pairings": [
     {
@@ -213,6 +217,518 @@
               "text": "That government is best which governs least.",
               "source": "Attributed (paraphrase of inaugural themes)",
               "date": "1801"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Whenever the people are well-informed, they can be trusted with their own government.",
+              "source": "Letter to Richard Price",
+              "date": "1789-01-08"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "roosevelt-twain",
+      "speakers": ["theodore-roosevelt", "mark-twain"],
+      "topics": [
+        {
+          "name": "Empire",
+          "quotes": [
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "We have become a great nation, forced by the fact of its greatness into relations with the other nations of the earth, and we must behave as beseems a people with such responsibilities.",
+              "source": "Inaugural Address",
+              "date": "1905-03-04"
+            },
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "We may either fall greatly or succeed greatly; but we can not avoid the endeavor from which either great failure or great success must come. Even if we would, we can not play a small part. If we should try, all that would follow would be that we should play a large part ignobly and shamefully.",
+              "source": "Second Annual Message",
+              "date": "1902-12-02"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "I think that England sinned when she got herself into a war in South Africa which she could have avoided, just as we sinned in getting into a similar war in the Philippines.",
+              "source": "China and the Philippines",
+              "date": "1900"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "And how unselfishly England has wrought for the open door for all! And how piously America has wrought for that open door in all cases where it was not her own!",
+              "source": "China and the Philippines",
+              "date": "1900"
+            }
+          ]
+        },
+        {
+          "name": "Character",
+          "quotes": [
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "Ours is not the creed of the weakling and the coward; ours is the gospel of hope and of triumphant endeavor. We do not shrink from the struggle before us.",
+              "source": "Second Annual Message",
+              "date": "1902-12-02"
+            },
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "Much has been given us, and much will rightfully be expected from us. We have duties to others and duties to ourselves; and we can shirk neither.",
+              "source": "Inaugural Address",
+              "date": "1905-03-04"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "It is by the goodness of God that in our country we have those three unspeakably precious things: freedom of speech, freedom of conscience, and the prudence never to practice either of them.",
+              "source": "Following the Equator",
+              "date": "1897"
+            },
+            {
+              "speaker": "mark-twain",
+              "text": "Loyalty to the country always. Loyalty to the government when it deserves it.",
+              "source": "The Czar's Soliloquy",
+              "date": "1905"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "churchill-fdr",
+      "speakers": ["winston-churchill", "franklin-d-roosevelt"],
+      "topics": [
+        {
+          "name": "War Leadership",
+          "quotes": [
+            {
+              "speaker": "winston-churchill",
+              "text": "I have nothing to offer but blood, toil, tears and sweat. We have before us an ordeal of the most grievous kind. You ask, what is our policy? I will say: It is to wage war, by sea, land and air, with all our might and with all the strength that God can give us.",
+              "source": "Blood, Toil, Tears and Sweat",
+              "date": "1940-05-13"
+            },
+            {
+              "speaker": "winston-churchill",
+              "text": "We shall fight on the beaches, we shall fight on the landing grounds, we shall fight in the fields and in the streets, we shall fight in the hills; we shall never surrender.",
+              "source": "We Shall Fight on the Beaches",
+              "date": "1940-06-04"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "Yesterday, December 7, 1941—a date which will live in infamy—the United States of America was suddenly and deliberately attacked by naval and air forces of the Empire of Japan.",
+              "source": "Address to Congress Requesting a Declaration of War",
+              "date": "1941-12-08"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "We must be the great arsenal of democracy. For us this is an emergency as serious as war itself. We must apply ourselves to our task with the same resolution, the same sense of urgency, the same spirit of patriotism and sacrifice as we would show were we at war.",
+              "source": "Fireside Chat 16: On the \"Arsenal of Democracy\"",
+              "date": "1940-12-29"
+            }
+          ]
+        },
+        {
+          "name": "Democracy Under Threat",
+          "quotes": [
+            {
+              "speaker": "winston-churchill",
+              "text": "If we open a quarrel between the past and the present, we shall find that we have lost the future.",
+              "source": "Their Finest Hour",
+              "date": "1940-06-18"
+            },
+            {
+              "speaker": "winston-churchill",
+              "text": "Victory at all costs, victory in spite of all terror, victory, however long and hard the road may be; for without victory, there is no survival.",
+              "source": "Blood, Toil, Tears and Sweat",
+              "date": "1940-05-13"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "The first is freedom of speech and expression—everywhere in the world. The second is freedom of every person to worship God in his own way—everywhere in the world. The third is freedom from want. The fourth is freedom from fear.",
+              "source": "State of the Union (Four Freedoms)",
+              "date": "1941-01-06"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "No, democracy is not dying. We know it because we have seen it revive—and grow. We know it cannot die—because it is built on the unhampered initiative of individual men and women joined together in a common enterprise.",
+              "source": "Third Inaugural Address",
+              "date": "1941-01-20"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lincoln-fdr",
+      "speakers": ["abraham-lincoln", "franklin-d-roosevelt"],
+      "topics": [
+        {
+          "name": "Crisis",
+          "quotes": [
+            {
+              "speaker": "abraham-lincoln",
+              "text": "It has long been a grave question whether any government not too strong for the liberties of its people, can be strong enough to maintain its existence in great emergencies.",
+              "source": "Reply to a Serenade",
+              "date": "1864-11-10"
+            },
+            {
+              "speaker": "abraham-lincoln",
+              "text": "We can not have free government without elections; and if the rebellion could force us to forego or postpone a national election, it might fairly claim to have already conquered and ruined us.",
+              "source": "Reply to a Serenade",
+              "date": "1864-11-10"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "The only thing we have to fear is fear itself—nameless, unreasoning, unjustified terror which paralyzes needed efforts to convert retreat into advance.",
+              "source": "First Inaugural Address",
+              "date": "1933-03-04"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "This Nation asks for action, and action now. Our greatest primary task is to put people to work. This is no unsolvable problem if we face it wisely and courageously.",
+              "source": "First Inaugural Address",
+              "date": "1933-03-04"
+            }
+          ]
+        },
+        {
+          "name": "Freedom",
+          "quotes": [
+            {
+              "speaker": "abraham-lincoln",
+              "text": "I am naturally anti-slavery. If slavery is not wrong, nothing is wrong. I cannot remember when I did not so think and feel.",
+              "source": "Letter to A.G. Hodges",
+              "date": "1864-04-04"
+            },
+            {
+              "speaker": "abraham-lincoln",
+              "text": "With malice toward none, with charity for all, with firmness in the right as God gives us to see the right, let us strive on to finish the work we are in, to bind up the nation's wounds.",
+              "source": "Second Inaugural Address",
+              "date": "1865-03-04"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "We had to struggle with the old enemies of peace—business and financial monopoly, speculation, reckless banking, class antagonism, sectionalism, war profiteering. They had begun to consider the Government of the United States as a mere appendage to their own affairs. We know now that Government by organized money is just as dangerous as Government by organized mob.",
+              "source": "Speech at Madison Square Garden",
+              "date": "1936-10-31"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "In Washington's day the task of the people was to create and weld together a Nation. In Lincoln's day the task of the people was to preserve that Nation from disruption from within. In this day the task of the people is to save that Nation and its institutions from disruption from without.",
+              "source": "Third Inaugural Address",
+              "date": "1941-01-20"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "roosevelt-jefferson",
+      "speakers": ["theodore-roosevelt", "thomas-jefferson"],
+      "topics": [
+        {
+          "name": "Executive Power",
+          "quotes": [
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "We wish peace, but we wish the peace of justice, the peace of righteousness. We wish it because we think it is right and not because we are afraid.",
+              "source": "Inaugural Address",
+              "date": "1905-03-04"
+            },
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "No weak nation that acts manfully and justly should ever have cause to fear us, and no strong power should ever be able to single us out as a subject for insolent aggression.",
+              "source": "Inaugural Address",
+              "date": "1905-03-04"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Equal and exact justice to all men, of whatever state or persuasion, religious or political; peace, commerce, and honest friendship with all nations, entangling alliances with none.",
+              "source": "First Inaugural Address",
+              "date": "1801-03-04"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "That government is best which governs least.",
+              "source": "Attributed (paraphrase of inaugural themes)",
+              "date": "1801"
+            }
+          ]
+        },
+        {
+          "name": "Conservation",
+          "quotes": [
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "The conservation of our natural resources and their proper use constitute the fundamental problem which underlies almost every other problem of our National life. We must maintain for our civilization the adequate material basis without which that civilization can not exist.",
+              "source": "Seventh Annual Message",
+              "date": "1907-12-03"
+            },
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "The senseless slaughter of game, which can by judicious protection be permanently preserved on our national reserves for the people as a whole, should be stopped at once.",
+              "source": "Second Annual Message",
+              "date": "1902-12-02"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Those who labor in the earth are the chosen people of God, if ever He had a chosen people, whose breasts He has made His peculiar deposit for substantial and genuine virtue.",
+              "source": "Notes on the State of Virginia",
+              "date": "1785"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "The tree of liberty must be refreshed from time to time with the blood of patriots and tyrants.",
+              "source": "Letter to William Stephens Smith",
+              "date": "1787-11-13"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "madison-hamilton",
+      "speakers": ["james-madison", "alexander-hamilton"],
+      "topics": [
+        {
+          "name": "Faction",
+          "quotes": [
+            {
+              "speaker": "james-madison",
+              "text": "Among the numerous advantages promised by a well constructed Union, none deserves to be more accurately developed than its tendency to break and control the violence of faction.",
+              "source": "Federalist No. 10",
+              "date": "1787-11-22"
+            },
+            {
+              "speaker": "james-madison",
+              "text": "Liberty is to faction what air is to fire, an aliment without which it instantly expires. But it could not be less folly to abolish liberty, which is essential to political life, because it nourishes faction, than it would be to wish the annihilation of air, which is essential to animal life, because it imparts to fire its destructive agency.",
+              "source": "Federalist No. 10",
+              "date": "1787-11-22"
+            },
+            {
+              "speaker": "alexander-hamilton",
+              "text": "A firm Union will be of the utmost moment to the peace and liberty of the States, as a barrier against domestic faction and insurrection.",
+              "source": "Federalist No. 9",
+              "date": "1787-11-21"
+            },
+            {
+              "speaker": "alexander-hamilton",
+              "text": "The vigor of government is essential to the security of liberty; that, in the contemplation of a sound and well-informed judgment, their interest can never be separated.",
+              "source": "Federalist No. 1",
+              "date": "1787-10-27"
+            }
+          ]
+        },
+        {
+          "name": "Checks & Balances",
+          "quotes": [
+            {
+              "speaker": "james-madison",
+              "text": "If men were angels, no government would be necessary. If angels were to govern men, neither external nor internal controls on government would be necessary. In framing a government which is to be administered by men over men, the great difficulty lies in this: you must first enable the government to control the governed; and in the next place oblige it to control itself.",
+              "source": "Federalist No. 51",
+              "date": "1788-02-06"
+            },
+            {
+              "speaker": "james-madison",
+              "text": "A dependence on the people is, no doubt, the primary control on the government; but experience has taught mankind the necessity of auxiliary precautions.",
+              "source": "Federalist No. 51",
+              "date": "1788-02-06"
+            },
+            {
+              "speaker": "alexander-hamilton",
+              "text": "Energy in the Executive is a leading character in the definition of good government. It is essential to the protection of the community against foreign attacks; it is not less essential to the steady administration of the laws; to the protection of property; to the security of liberty against the enterprises and assaults of ambition, of faction, and of anarchy.",
+              "source": "Federalist No. 70",
+              "date": "1788-03-15"
+            },
+            {
+              "speaker": "alexander-hamilton",
+              "text": "A dangerous ambition more often lurks behind the specious mask of zeal for the rights of the people than under the forbidden appearance of zeal for the firmness and efficiency of government.",
+              "source": "Federalist No. 1",
+              "date": "1787-10-27"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jefferson-adams",
+      "speakers": ["thomas-jefferson", "john-adams"],
+      "topics": [
+        {
+          "name": "Government",
+          "quotes": [
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Equal and exact justice to all men, of whatever state or persuasion, religious or political; peace, commerce, and honest friendship with all nations, entangling alliances with none.",
+              "source": "First Inaugural Address",
+              "date": "1801-03-04"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Whenever the people are well-informed, they can be trusted with their own government.",
+              "source": "Letter to Richard Price",
+              "date": "1789-01-08"
+            },
+            {
+              "speaker": "john-adams",
+              "text": "When it was first perceived, in early times, that no middle course for America remained between unlimited submission to a foreign legislature and a total independence of its claims, men of reflection were less apprehensive of danger from the formidable power of fleets and armies they must determine to resist than from those contests and dissensions which would certainly arise concerning the forms of government to be instituted.",
+              "source": "Inaugural Address",
+              "date": "1797-03-04"
+            },
+            {
+              "speaker": "john-adams",
+              "text": "The national safety and prosperity ultimately and essentially depend on the protection and the blessing of Almighty God, and the national acknowledgment of this truth is not only an indispensable duty which the people owe to Him, but a duty whose natural influence is favorable to the promotion of that morality and piety without which social happiness can not exist nor the blessings of a free government be enjoyed.",
+              "source": "Proclamation of Day of Fasting, Humiliation and Prayer",
+              "date": "1798-03-23"
+            }
+          ]
+        },
+        {
+          "name": "Liberty",
+          "quotes": [
+            {
+              "speaker": "thomas-jefferson",
+              "text": "We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.",
+              "source": "Declaration of Independence",
+              "date": "1776-07-04"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "The tree of liberty must be refreshed from time to time with the blood of patriots and tyrants.",
+              "source": "Letter to William Stephens Smith",
+              "date": "1787-11-13"
+            },
+            {
+              "speaker": "john-adams",
+              "text": "The people have a right, an indisputable, unalienable, indefeasible, divine right to that most dreaded and envied kind of knowledge -- I mean of the character and conduct of their rulers.",
+              "source": "A Dissertation on the Canon and Feudal Law",
+              "date": "1765"
+            },
+            {
+              "speaker": "john-adams",
+              "text": "Liberty cannot be preserved without a general knowledge among the people, who have a right and a desire to know; but besides this, they have a right, an indisputable right to be consulted.",
+              "source": "A Dissertation on the Canon and Feudal Law",
+              "date": "1765"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tr-fdr",
+      "speakers": ["theodore-roosevelt", "franklin-d-roosevelt"],
+      "topics": [
+        {
+          "name": "Role of Government",
+          "quotes": [
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "Ours is not the creed of the weakling and the coward; ours is the gospel of hope and of triumphant endeavor. We do not shrink from the struggle before us.",
+              "source": "Second Annual Message",
+              "date": "1902-12-02"
+            },
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "The conservation of our natural resources and their proper use constitute the fundamental problem which underlies almost every other problem of our National life. We must maintain for our civilization the adequate material basis without which that civilization can not exist.",
+              "source": "Seventh Annual Message",
+              "date": "1907-12-03"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "The only thing we have to fear is fear itself—nameless, unreasoning, unjustified terror which paralyzes needed efforts to convert retreat into advance.",
+              "source": "First Inaugural Address",
+              "date": "1933-03-04"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "We had to struggle with the old enemies of peace—business and financial monopoly, speculation, reckless banking, class antagonism, sectionalism, war profiteering. We know now that Government by organized money is just as dangerous as Government by organized mob.",
+              "source": "Speech at Madison Square Garden",
+              "date": "1936-10-31"
+            }
+          ]
+        },
+        {
+          "name": "The Common Man",
+          "quotes": [
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "Much has been given us, and much will rightfully be expected from us. We have duties to others and duties to ourselves; and we can shirk neither.",
+              "source": "Inaugural Address",
+              "date": "1905-03-04"
+            },
+            {
+              "speaker": "theodore-roosevelt",
+              "text": "We may either fall greatly or succeed greatly; but we can not avoid the endeavor from which either great failure or great success must come. Even if we would, we can not play a small part.",
+              "source": "Second Annual Message",
+              "date": "1902-12-02"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "Happiness lies not in the mere possession of money; it lies in the joy of achievement, in the thrill of creative effort. The joy and moral stimulation of work no longer must be forgotten in the mad chase of evanescent profits.",
+              "source": "First Inaugural Address",
+              "date": "1933-03-04"
+            },
+            {
+              "speaker": "franklin-d-roosevelt",
+              "text": "They are unanimous in their hate for me—and I welcome their hatred. I should like to have it said of my first Administration that in it the forces of selfishness and of lust for power met their match. I should like to have it said of my second Administration that in it these forces met their master.",
+              "source": "Speech at Madison Square Garden",
+              "date": "1936-10-31"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "washington-jefferson",
+      "speakers": ["george-washington", "thomas-jefferson"],
+      "topics": [
+        {
+          "name": "Parties & Faction",
+          "quotes": [
+            {
+              "speaker": "george-washington",
+              "text": "The alternate domination of one faction over another, sharpened by the spirit of revenge natural to party dissension, which in different ages and countries has perpetrated the most horrid enormities, is itself a frightful despotism.",
+              "source": "Farewell Address",
+              "date": "1796-09-19"
+            },
+            {
+              "speaker": "george-washington",
+              "text": "This spirit of party, unfortunately, is inseparable from our nature, having its root in the strongest passions of the human mind. It exists under different shapes in all governments, more or less stifled, controlled, or repressed; but in those of the popular form it is seen in its greatest rankness and is truly their worst enemy.",
+              "source": "Farewell Address",
+              "date": "1796-09-19"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Every difference of opinion is not a difference of principle. We have called by different names brethren of the same principle. We are all Republicans, we are all Federalists.",
+              "source": "First Inaugural Address",
+              "date": "1801-03-04"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "Equal and exact justice to all men, of whatever state or persuasion, religious or political; peace, commerce, and honest friendship with all nations, entangling alliances with none.",
+              "source": "First Inaugural Address",
+              "date": "1801-03-04"
+            }
+          ]
+        },
+        {
+          "name": "Foreign Affairs",
+          "quotes": [
+            {
+              "speaker": "george-washington",
+              "text": "The great rule of conduct for us in regard to foreign nations is, in extending our commercial relations to have with them as little political connection as possible.",
+              "source": "Farewell Address",
+              "date": "1796-09-19"
+            },
+            {
+              "speaker": "george-washington",
+              "text": "Europe has a set of primary interests which to us have none or a very remote relation. Hence she must be engaged in frequent controversies, the causes of which are essentially foreign to our concerns. Hence, therefore, it must be unwise in us to implicate ourselves by artificial ties in the ordinary vicissitudes of her politics.",
+              "source": "Farewell Address",
+              "date": "1796-09-19"
+            },
+            {
+              "speaker": "thomas-jefferson",
+              "text": "We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.",
+              "source": "Declaration of Independence",
+              "date": "1776-07-04"
             },
             {
               "speaker": "thomas-jefferson",

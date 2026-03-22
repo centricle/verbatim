@@ -146,6 +146,15 @@ function populateDropdowns(stats) {
   if (params.get('state')) filterState.value = params.get('state');
 }
 
+// Chart-to-filter bridge
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 // Load viz components
 async function loadViz() {
   const [
@@ -168,10 +177,11 @@ async function loadViz() {
 
   populateDropdowns(stats);
 
-  mountForfeitureByState(document.getElementById('viz-by-state'), stats);
-  mountForfeitureByYear(document.getElementById('viz-by-year'), stats);
-  mountForfeitureByType(document.getElementById('viz-by-type'), stats);
-  mountForfeitureConviction(document.getElementById('viz-conviction'), stats);
+  const opts = { onFilter: handleFilter };
+  mountForfeitureByState(document.getElementById('viz-by-state'), stats, opts);
+  mountForfeitureByYear(document.getElementById('viz-by-year'), stats, opts);
+  mountForfeitureByType(document.getElementById('viz-by-type'), stats, opts);
+  mountForfeitureConviction(document.getElementById('viz-conviction'), stats, opts);
 }
 
 // Init

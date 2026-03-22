@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function ShootingsByRace({ stats }) {
+function ShootingsByRace({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -38,7 +39,14 @@ function ShootingsByRace({ stats }) {
       .attr('width', d => x(Number(d.total)))
       .attr('height', y.bandwidth())
       .attr('fill', '#6b4226')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.race_label}</strong><br>${Number(d.total).toLocaleString()} incidents`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'race', value: d.race }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -71,8 +79,8 @@ function ShootingsByRace({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountShootingsByRace(container, stats) {
+export function mountShootingsByRace(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<ShootingsByRace stats={stats} />);
+  root.render(<ShootingsByRace stats={stats} onFilter={onFilter} />);
 }

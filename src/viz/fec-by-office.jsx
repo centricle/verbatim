@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function ByOffice({ stats }) {
+function ByOffice({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -58,7 +59,16 @@ function ByOffice({ stats }) {
       .attr('width', x.bandwidth())
       .attr('height', d => height - y(Number(d.total_raised)))
       .attr('fill', d => officeColors[d.office] || '#8a7e6b')
-      .attr('rx', 3);
+      .attr('rx', 3)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_raised);
+        const fmt = v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`;
+        showTooltip(event, `<strong>${d.office}</strong><br>${fmt} raised<br>${Number(d.candidate_count).toLocaleString()} candidates`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'office', value: d.office }); });
 
     // Value labels on bars
     svg.selectAll('.bar-label')
@@ -85,8 +95,8 @@ function ByOffice({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountByOffice(container, stats) {
+export function mountByOffice(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<ByOffice stats={stats} />);
+  root.render(<ByOffice stats={stats} onFilter={onFilter} />);
 }

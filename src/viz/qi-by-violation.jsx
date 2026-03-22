@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function QiByViolation({ stats }) {
+function QiByViolation({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -38,7 +39,14 @@ function QiByViolation({ stats }) {
       .attr('width', d => x(Number(d.count)))
       .attr('height', y.bandwidth())
       .attr('fill', '#8a4a2a')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.violation_type || 'unknown'}</strong><br>${Number(d.count).toLocaleString()} cases`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'violation', value: d.violation_type }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -74,8 +82,8 @@ function QiByViolation({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountQiByViolation(container, stats) {
+export function mountQiByViolation(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<QiByViolation stats={stats} />);
+  root.render(<QiByViolation stats={stats} onFilter={onFilter} />);
 }

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
 function AccuracyBreakdown({ stats }) {
   const svgRef = useRef(null);
@@ -117,7 +118,13 @@ function AccuracyBreakdown({ stats }) {
           .attr('width', x1.bandwidth())
           .attr('height', innerH - y(val))
           .attr('fill', metricColors[i])
-          .attr('rx', 2);
+          .attr('rx', 2)
+          .style('cursor', 'pointer')
+          .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+          .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+          .on('mousemove', (event) => {
+            showTooltip(event, `<strong>${d.race}</strong><br>${m.label}: ${d3.format('.1%')(val)}`);
+          });
 
         g.append('text')
           .attr('x', x0(d.race) + x1(m.key) + x1.bandwidth() / 2)

@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function ByCategory({ stats }) {
+function ByCategory({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -38,7 +39,16 @@ function ByCategory({ stats }) {
       .attr('width', d => x(Number(d.value)))
       .attr('height', y.bandwidth())
       .attr('fill', '#8a4a2a')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.value);
+        const fmt = v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(0)}M` : `$${(v / 1e3).toFixed(0)}K`;
+        showTooltip(event, `<strong>${d.category}</strong><br>${fmt}`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'category', value: d.category }); });
 
     // Category labels (truncated)
     svg.selectAll('.label')
@@ -82,8 +92,8 @@ function ByCategory({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountByCategory(container, stats) {
+export function mountByCategory(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<ByCategory stats={stats} />);
+  root.render(<ByCategory stats={stats} onFilter={onFilter} />);
 }

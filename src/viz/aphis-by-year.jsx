@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function AphisByYear({ stats }) {
+function AphisByYear({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -39,7 +40,14 @@ function AphisByYear({ stats }) {
       .attr('width', x.bandwidth())
       .attr('height', d => height - y(Number(d.count)))
       .attr('fill', '#6b5a3e')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.year}</strong><br>${Number(d.count).toLocaleString()} inspections<br>${Number(d.critical).toLocaleString()} critical`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'year', value: String(d.year) }); });
 
     svg.selectAll('.bar-crit')
       .data(data.filter(d => Number(d.critical) > 0))
@@ -49,7 +57,14 @@ function AphisByYear({ stats }) {
       .attr('width', x.bandwidth())
       .attr('height', d => height - y(Number(d.critical)))
       .attr('fill', '#8b3a3a')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.year}</strong><br>${Number(d.critical).toLocaleString()} critical of ${Number(d.count).toLocaleString()} total`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'year', value: String(d.year) }); });
 
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
@@ -80,8 +95,8 @@ function AphisByYear({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountAphisByYear(container, stats) {
+export function mountAphisByYear(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<AphisByYear stats={stats} />);
+  root.render(<AphisByYear stats={stats} onFilter={onFilter} />);
 }

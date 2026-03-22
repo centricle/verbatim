@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function PPPByLender({ stats }) {
+function PPPByLender({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -38,7 +39,16 @@ function PPPByLender({ stats }) {
       .attr('width', d => x(Number(d.total_amount)))
       .attr('height', y.bandwidth())
       .attr('fill', '#40916c')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_amount);
+        const fmt = v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`;
+        showTooltip(event, `<strong>${d.lender_name}</strong><br>${fmt} total<br>${Number(d.loan_count).toLocaleString()} loans`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'lender', value: d.lender_name }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -78,8 +88,8 @@ function PPPByLender({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountPPPByLender(container, stats) {
+export function mountPPPByLender(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<PPPByLender stats={stats} />);
+  root.render(<PPPByLender stats={stats} onFilter={onFilter} />);
 }

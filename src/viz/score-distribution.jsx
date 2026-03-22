@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
 function ScoreDistribution({ stats }) {
   const svgRef = useRef(null);
@@ -83,7 +84,13 @@ function ScoreDistribution({ stats }) {
           .attr('width', x1.bandwidth())
           .attr('height', innerH - y(pct))
           .attr('fill', colors[race])
-          .attr('rx', 1);
+          .attr('rx', 1)
+          .style('cursor', 'pointer')
+          .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+          .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+          .on('mousemove', (event) => {
+            showTooltip(event, `<strong>${race}</strong><br>Score ${score}: ${d3.format('.1%')(pct)} (${d.count.toLocaleString()})`);
+          });
       });
     });
 

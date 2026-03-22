@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TradesByYear({ stats }) {
+function TradesByYear({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -63,7 +64,14 @@ function TradesByYear({ stats }) {
           .attr('width', subX.bandwidth())
           .attr('height', height - y(d[key]))
           .attr('fill', colors[key])
-          .attr('rx', 2);
+          .attr('rx', 2)
+          .style('cursor', 'pointer')
+          .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+          .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+          .on('mousemove', (event) => {
+            showTooltip(event, `<strong>${d.year}</strong><br>${key === 'purchases' ? 'Purchases' : 'Sales'}: ${d[key].toLocaleString()}`);
+          })
+          .on('click', () => { if (onFilter) onFilter({ key: 'year', value: String(d.year) }); });
       });
     });
 
@@ -85,8 +93,8 @@ function TradesByYear({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTradesByYear(container, stats) {
+export function mountTradesByYear(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TradesByYear stats={stats} />);
+  root.render(<TradesByYear stats={stats} onFilter={onFilter} />);
 }

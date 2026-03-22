@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TriCarcinogen({ stats }) {
+function TriCarcinogen({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -36,7 +37,14 @@ function TriCarcinogen({ stats }) {
       .data(pie(data))
       .join('path')
       .attr('d', arc)
-      .attr('fill', (d, i) => colors[i]);
+      .attr('fill', (d, i) => colors[i])
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const pct = ((d.data.count / total) * 100).toFixed(0);
+        showTooltip(event, `<strong>${d.data.label}</strong><br>${d.data.count.toLocaleString()} reports (${pct}%)`);
+      });
 
     // Labels on right side
     const labelX = width / 3 + radius + 20;
@@ -66,8 +74,8 @@ function TriCarcinogen({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTriCarcinogen(container, stats) {
+export function mountTriCarcinogen(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TriCarcinogen stats={stats} />);
+  root.render(<TriCarcinogen stats={stats} onFilter={onFilter} />);
 }

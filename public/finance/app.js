@@ -102,6 +102,15 @@ function populateDropdowns(stats) {
   }
 }
 
+// Bridge: chart click → table filter
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 async function loadViz() {
   const [
     { mountTopFundraisers },
@@ -119,10 +128,11 @@ async function loadViz() {
   if (error) { console.error('Stats error:', error); return; }
 
   populateDropdowns(stats);
-  mountTopFundraisers(document.getElementById('viz-top-fundraisers'), stats);
-  mountByParty(document.getElementById('viz-by-party'), stats);
-  mountFECByState(document.getElementById('viz-by-state'), stats);
-  mountByOffice(document.getElementById('viz-by-office'), stats);
+  const opts = { onFilter: handleFilter };
+  mountTopFundraisers(document.getElementById('viz-top-fundraisers'), stats, opts);
+  mountByParty(document.getElementById('viz-by-party'), stats, opts);
+  mountFECByState(document.getElementById('viz-by-state'), stats, opts);
+  mountByOffice(document.getElementById('viz-by-office'), stats, opts);
 }
 
 search();

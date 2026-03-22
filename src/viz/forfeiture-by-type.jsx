@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function ForfeitureByType({ stats }) {
+function ForfeitureByType({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -45,7 +46,14 @@ function ForfeitureByType({ stats }) {
       .attr('width', d => x(Number(d.count)))
       .attr('height', y.bandwidth())
       .attr('fill', d => colors[d.prop_type] || '#8a7e6b')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${(d.prop_type || 'unknown').replace(/\b\w/g, c => c.toUpperCase())}</strong><br>${Number(d.count).toLocaleString()} properties`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'prop_type', value: d.prop_type }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -78,8 +86,8 @@ function ForfeitureByType({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountForfeitureByType(container, stats) {
+export function mountForfeitureByType(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<ForfeitureByType stats={stats} />);
+  root.render(<ForfeitureByType stats={stats} onFilter={onFilter} />);
 }

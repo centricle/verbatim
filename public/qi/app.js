@@ -161,6 +161,15 @@ function populateDropdowns(stats) {
   if (params.get('violation')) filterViolation.value = params.get('violation');
 }
 
+// Chart-to-filter bridge
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 // Load viz components
 async function loadViz() {
   const [
@@ -183,10 +192,11 @@ async function loadViz() {
 
   populateDropdowns(stats);
 
-  mountQiByCircuit(document.getElementById('viz-by-circuit'), stats);
-  mountQiByYear(document.getElementById('viz-by-year'), stats);
-  mountQiByRuling(document.getElementById('viz-by-ruling'), stats);
-  mountQiByViolation(document.getElementById('viz-by-violation'), stats);
+  const opts = { onFilter: handleFilter };
+  mountQiByCircuit(document.getElementById('viz-by-circuit'), stats, opts);
+  mountQiByYear(document.getElementById('viz-by-year'), stats, opts);
+  mountQiByRuling(document.getElementById('viz-by-ruling'), stats, opts);
+  mountQiByViolation(document.getElementById('viz-by-violation'), stats, opts);
 }
 
 // Init

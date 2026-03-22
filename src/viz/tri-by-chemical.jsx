@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TriByChemical({ stats }) {
+function TriByChemical({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -39,7 +40,16 @@ function TriByChemical({ stats }) {
       .attr('width', d => x(Number(d.total_lbs)))
       .attr('height', y.bandwidth())
       .attr('fill', '#4a6741')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_lbs);
+        const fmt = v >= 1e9 ? `${(v / 1e9).toFixed(1)}B lbs` : v >= 1e6 ? `${(v / 1e6).toFixed(0)}M lbs` : `${(v / 1e3).toFixed(0)}K lbs`;
+        showTooltip(event, `<strong>${d.chemical}</strong><br>${fmt}`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'chemical', value: d.chemical }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -78,8 +88,8 @@ function TriByChemical({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTriByChemical(container, stats) {
+export function mountTriByChemical(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TriByChemical stats={stats} />);
+  root.render(<TriByChemical stats={stats} onFilter={onFilter} />);
 }

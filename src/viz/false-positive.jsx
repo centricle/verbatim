@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
 function FalsePositiveRates({ stats }) {
   const svgRef = useRef(null);
@@ -80,7 +81,13 @@ function FalsePositiveRates({ stats }) {
           .attr('width', x1.bandwidth())
           .attr('height', innerH - y(fp.rate))
           .attr('fill', colors['False Positive'])
-          .attr('rx', 2);
+          .attr('rx', 2)
+          .style('cursor', 'pointer')
+          .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+          .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+          .on('mousemove', (event) => {
+            showTooltip(event, `<strong>${race}</strong><br>False Positive: ${d3.format('.1%')(fp.rate)}`);
+          });
 
         // Rate label
         g.append('text')
@@ -100,7 +107,13 @@ function FalsePositiveRates({ stats }) {
           .attr('width', x1.bandwidth())
           .attr('height', innerH - y(fn.rate))
           .attr('fill', colors['False Negative'])
-          .attr('rx', 2);
+          .attr('rx', 2)
+          .style('cursor', 'pointer')
+          .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+          .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+          .on('mousemove', (event) => {
+            showTooltip(event, `<strong>${race}</strong><br>False Negative: ${d3.format('.1%')(fn.rate)}`);
+          });
 
         g.append('text')
           .attr('x', x0(race) + x1('False Negative') + x1.bandwidth() / 2)

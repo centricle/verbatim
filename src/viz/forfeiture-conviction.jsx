@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function ForfeitureConviction({ stats }) {
+function ForfeitureConviction({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -44,7 +45,14 @@ function ForfeitureConviction({ stats }) {
       .attr('width', d => x(Number(d.count)))
       .attr('height', y.bandwidth())
       .attr('fill', d => colors[d.conviction] || '#8a7e6b')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const pct = ((Number(d.count) / stats.total_properties) * 100).toFixed(1);
+        showTooltip(event, `<strong>${(d.conviction || 'unknown').replace(/\b\w/g, c => c.toUpperCase())}</strong><br>${Number(d.count).toLocaleString()} (${pct}%)`);
+      });
 
     svg.selectAll('.label')
       .data(data)
@@ -80,8 +88,8 @@ function ForfeitureConviction({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountForfeitureConviction(container, stats) {
+export function mountForfeitureConviction(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<ForfeitureConviction stats={stats} />);
+  root.render(<ForfeitureConviction stats={stats} onFilter={onFilter} />);
 }

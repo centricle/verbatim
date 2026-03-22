@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function ShootingsByYear({ stats }) {
+function ShootingsByYear({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -55,7 +56,14 @@ function ShootingsByYear({ stats }) {
       .attr('width', x.bandwidth())
       .attr('height', d => height - y(Number(d.total)))
       .attr('fill', '#6b4226')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.year}</strong><br>${Number(d.total).toLocaleString()} incidents`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'year', value: String(d.year) }); });
 
     svg.append('text')
       .attr('x', 0).attr('y', -15)
@@ -67,8 +75,8 @@ function ShootingsByYear({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountShootingsByYear(container, stats) {
+export function mountShootingsByYear(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<ShootingsByYear stats={stats} />);
+  root.render(<ShootingsByYear stats={stats} onFilter={onFilter} />);
 }

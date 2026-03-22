@@ -102,6 +102,15 @@ function populateDropdowns(stats) {
   }
 }
 
+// Bridge: chart click → table filter
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 async function loadViz() {
   const [
     { mountPPPByState },
@@ -119,10 +128,11 @@ async function loadViz() {
   if (error) { console.error('Stats error:', error); return; }
 
   populateDropdowns(stats);
-  mountPPPByState(document.getElementById('viz-by-state'), stats);
-  mountPPPByAmount(document.getElementById('viz-by-amount'), stats);
-  mountPPPByLender(document.getElementById('viz-by-lender'), stats);
-  mountPPPByBusiness(document.getElementById('viz-by-business'), stats);
+  const opts = { onFilter: handleFilter };
+  mountPPPByState(document.getElementById('viz-by-state'), stats, opts);
+  mountPPPByAmount(document.getElementById('viz-by-amount'), stats, opts);
+  mountPPPByLender(document.getElementById('viz-by-lender'), stats, opts);
+  mountPPPByBusiness(document.getElementById('viz-by-business'), stats, opts);
 }
 
 search();

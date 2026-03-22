@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TopTickers({ stats }) {
+function TopTickers({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -53,14 +54,26 @@ function TopTickers({ stats }) {
         .attr('width', x(d.purchases))
         .attr('height', y.bandwidth())
         .attr('fill', '#4a8c5c')
-        .attr('rx', 2);
+        .attr('rx', 2)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+        .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+        .on('mousemove', (event) => {
+          showTooltip(event, `<strong>${d.ticker}</strong><br>Purchases: ${d.purchases}<br>Sales: ${d.sales}<br>Total: ${d.count}`);
+        });
       g.append('rect')
         .attr('x', x(d.purchases))
         .attr('y', y(d.ticker))
         .attr('width', x(d.sales))
         .attr('height', y.bandwidth())
         .attr('fill', '#c0694a')
-        .attr('rx', 0);
+        .attr('rx', 0)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+        .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+        .on('mousemove', (event) => {
+          showTooltip(event, `<strong>${d.ticker}</strong><br>Purchases: ${d.purchases}<br>Sales: ${d.sales}<br>Total: ${d.count}`);
+        });
       g.append('text')
         .attr('x', x(d.count) + 4)
         .attr('y', y(d.ticker) + y.bandwidth() / 2)
@@ -88,8 +101,8 @@ function TopTickers({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTopTickers(container, stats) {
+export function mountTopTickers(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TopTickers stats={stats} />);
+  root.render(<TopTickers stats={stats} onFilter={onFilter} />);
 }

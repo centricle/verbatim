@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function QiByRuling({ stats }) {
+function QiByRuling({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -37,6 +38,8 @@ function QiByRuling({ stats }) {
       'not reached': '#8a7e6b',
     };
 
+    const total = d3.sum(data, d => Number(d.count));
+
     svg.selectAll('rect')
       .data(data)
       .join('rect')
@@ -45,7 +48,15 @@ function QiByRuling({ stats }) {
       .attr('width', d => x(Number(d.count)))
       .attr('height', y.bandwidth())
       .attr('fill', d => colors[d.qi_ruling] || '#8a7e6b')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const pct = ((Number(d.count) / total) * 100).toFixed(1);
+        showTooltip(event, `<strong>${(d.qi_ruling || 'unknown').replace(/\b\w/g, c => c.toUpperCase())}</strong><br>${Number(d.count).toLocaleString()} cases (${pct}%)`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'ruling', value: d.qi_ruling }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -57,8 +68,6 @@ function QiByRuling({ stats }) {
       .text(d => (d.qi_ruling || 'unknown').replace(/\b\w/g, c => c.toUpperCase()))
       .style('fill', '#8a7e6b')
       .style('font-size', '10px');
-
-    const total = d3.sum(data, d => Number(d.count));
     svg.selectAll('.value')
       .data(data)
       .join('text')
@@ -82,8 +91,8 @@ function QiByRuling({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountQiByRuling(container, stats) {
+export function mountQiByRuling(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<QiByRuling stats={stats} />);
+  root.render(<QiByRuling stats={stats} onFilter={onFilter} />);
 }

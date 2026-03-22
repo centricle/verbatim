@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TopTraders({ stats }) {
+function TopTraders({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -53,7 +54,14 @@ function TopTraders({ stats }) {
         .attr('width', x(d.purchases))
         .attr('height', y.bandwidth())
         .attr('fill', '#4a8c5c')
-        .attr('rx', 2);
+        .attr('rx', 2)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+        .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+        .on('mousemove', (event) => {
+          showTooltip(event, `<strong>${d.senator}</strong><br>Purchases: ${d.purchases}<br>Sales: ${d.sales}<br>Total: ${d.total_trades}`);
+        })
+        .on('click', () => { if (onFilter) onFilter({ key: 'senator', value: d.senator }); });
       // Sales
       g.append('rect')
         .attr('x', x(d.purchases))
@@ -61,7 +69,14 @@ function TopTraders({ stats }) {
         .attr('width', x(d.sales))
         .attr('height', y.bandwidth())
         .attr('fill', '#c0694a')
-        .attr('rx', 0);
+        .attr('rx', 0)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+        .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+        .on('mousemove', (event) => {
+          showTooltip(event, `<strong>${d.senator}</strong><br>Purchases: ${d.purchases}<br>Sales: ${d.sales}<br>Total: ${d.total_trades}`);
+        })
+        .on('click', () => { if (onFilter) onFilter({ key: 'senator', value: d.senator }); });
       // Count label
       g.append('text')
         .attr('x', x(d.total_trades) + 4)
@@ -90,8 +105,8 @@ function TopTraders({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTopTraders(container, stats) {
+export function mountTopTraders(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TopTraders stats={stats} />);
+  root.render(<TopTraders stats={stats} onFilter={onFilter} />);
 }

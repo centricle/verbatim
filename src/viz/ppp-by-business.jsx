@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function PPPByBusiness({ stats }) {
+function PPPByBusiness({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -38,7 +39,14 @@ function PPPByBusiness({ stats }) {
       .attr('width', d => x(Number(d.total)))
       .attr('height', y.bandwidth())
       .attr('fill', '#52b788')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.business_type}</strong><br>${Number(d.total).toLocaleString()} loans`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'business_type', value: d.business_type }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -74,8 +82,8 @@ function PPPByBusiness({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountPPPByBusiness(container, stats) {
+export function mountPPPByBusiness(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<PPPByBusiness stats={stats} />);
+  root.render(<PPPByBusiness stats={stats} onFilter={onFilter} />);
 }

@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function QiByYear({ stats }) {
+function QiByYear({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -59,7 +60,14 @@ function QiByYear({ stats }) {
       .attr('width', x.bandwidth())
       .attr('height', d => height - y(Number(d.count)))
       .attr('fill', d => colorScale(Number(d.count)))
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.year}</strong><br>${Number(d.count).toLocaleString()} cases`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'year', value: String(d.year) }); });
 
     svg.append('text')
       .attr('x', 0).attr('y', -15)
@@ -71,8 +79,8 @@ function QiByYear({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountQiByYear(container, stats) {
+export function mountQiByYear(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<QiByYear stats={stats} />);
+  root.render(<QiByYear stats={stats} onFilter={onFilter} />);
 }

@@ -113,6 +113,15 @@ function populateDropdowns(stats) {
   if (params.get('state')) filterState.value = params.get('state');
 }
 
+// Chart-to-filter bridge
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 async function loadViz() {
   const [
     { mountAphisByYear },
@@ -131,10 +140,11 @@ async function loadViz() {
 
   populateDropdowns(stats);
 
-  mountAphisByYear(document.getElementById('viz-by-year'), stats);
-  mountAphisByState(document.getElementById('viz-by-state'), stats);
-  mountAphisByLicense(document.getElementById('viz-by-license'), stats);
-  mountAphisByType(document.getElementById('viz-by-type'), stats);
+  const opts = { onFilter: handleFilter };
+  mountAphisByYear(document.getElementById('viz-by-year'), stats, opts);
+  mountAphisByState(document.getElementById('viz-by-state'), stats, opts);
+  mountAphisByLicense(document.getElementById('viz-by-license'), stats, opts);
+  mountAphisByType(document.getElementById('viz-by-type'), stats, opts);
 }
 
 readUrlState();

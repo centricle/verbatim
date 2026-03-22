@@ -156,6 +156,15 @@ async function populateSenators(stats) {
   }
 }
 
+// Bridge: chart click → table filter
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 // Load viz components (React + D3)
 async function loadViz() {
   const [
@@ -179,10 +188,11 @@ async function loadViz() {
 
   populateSenators(stats);
 
-  mountTradesByYear(document.getElementById('viz-trades-by-year'), stats);
-  mountTopTraders(document.getElementById('viz-top-traders'), stats);
-  mountTopTickers(document.getElementById('viz-top-tickers'), stats);
-  mountAmountDistribution(document.getElementById('viz-amount-distribution'), stats);
+  const opts = { onFilter: handleFilter };
+  mountTradesByYear(document.getElementById('viz-trades-by-year'), stats, opts);
+  mountTopTraders(document.getElementById('viz-top-traders'), stats, opts);
+  mountTopTickers(document.getElementById('viz-top-tickers'), stats, opts);
+  mountAmountDistribution(document.getElementById('viz-amount-distribution'), stats, opts);
 }
 
 // Init

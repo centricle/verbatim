@@ -90,6 +90,14 @@ form.addEventListener('submit', (e) => { e.preventDefault(); currentPage = 1; se
 prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; search(); } });
 nextBtn.addEventListener('click', () => { currentPage++; search(); });
 
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 function populateDropdowns(stats) {
   if (stats.state_list) {
     stats.state_list.forEach(s => {
@@ -118,10 +126,11 @@ async function loadViz() {
   if (error) { console.error('Stats error:', error); return; }
 
   populateDropdowns(stats);
-  mountShootingsByYear(document.getElementById('viz-by-year'), stats);
-  mountShootingsByRace(document.getElementById('viz-by-race'), stats);
-  mountShootingsByArmed(document.getElementById('viz-by-armed'), stats);
-  mountShootingsByState(document.getElementById('viz-by-state'), stats);
+  const opts = { onFilter: handleFilter };
+  mountShootingsByYear(document.getElementById('viz-by-year'), stats, opts);
+  mountShootingsByRace(document.getElementById('viz-by-race'), stats, opts);
+  mountShootingsByArmed(document.getElementById('viz-by-armed'), stats, opts);
+  mountShootingsByState(document.getElementById('viz-by-state'), stats, opts);
 }
 
 search();

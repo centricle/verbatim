@@ -164,6 +164,15 @@ function populateDropdowns(stats) {
   if (params.get('category')) filterCategory.value = params.get('category');
 }
 
+// Bridge: chart click → table filter
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 // Load viz components (React + D3)
 async function loadViz() {
   const [
@@ -187,10 +196,11 @@ async function loadViz() {
 
   populateDropdowns(stats);
 
-  mountByState(document.getElementById('viz-by-state'), stats);
-  mountByCategory(document.getElementById('viz-by-category'), stats);
-  mountByYear(document.getElementById('viz-by-year'), stats);
-  mountTopItems(document.getElementById('viz-top-items'), stats);
+  const opts = { onFilter: handleFilter };
+  mountByState(document.getElementById('viz-by-state'), stats, opts);
+  mountByCategory(document.getElementById('viz-by-category'), stats, opts);
+  mountByYear(document.getElementById('viz-by-year'), stats, opts);
+  mountTopItems(document.getElementById('viz-top-items'), stats, opts);
 }
 
 // Init

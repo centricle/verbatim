@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function AmountDistribution({ stats }) {
+function AmountDistribution({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -78,7 +79,13 @@ function AmountDistribution({ stats }) {
         .attr('width', x.bandwidth())
         .attr('height', height - y(d.count))
         .attr('fill', color(i))
-        .attr('rx', 2);
+        .attr('rx', 2)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+        .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+        .on('mousemove', (event) => {
+          showTooltip(event, `<strong>${d.amount}</strong><br>${d.count.toLocaleString()} trades`);
+        });
 
       // Count label on top
       svg.append('text')
@@ -101,8 +108,8 @@ function AmountDistribution({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountAmountDistribution(container, stats) {
+export function mountAmountDistribution(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<AmountDistribution stats={stats} />);
+  root.render(<AmountDistribution stats={stats} onFilter={onFilter} />);
 }

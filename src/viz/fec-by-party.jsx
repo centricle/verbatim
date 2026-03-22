@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function ByParty({ stats }) {
+function ByParty({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -39,7 +40,16 @@ function ByParty({ stats }) {
       .attr('width', d => x(Number(d.total_raised)))
       .attr('height', y.bandwidth())
       .attr('fill', d => partyColors[d.party] || '#8a7e6b')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_raised);
+        const fmt = v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(0)}M` : `$${(v / 1e3).toFixed(0)}K`;
+        showTooltip(event, `<strong>${d.party}</strong><br>${fmt} raised<br>${Number(d.candidate_count).toLocaleString()} candidates`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'party', value: d.party }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -78,8 +88,8 @@ function ByParty({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountByParty(container, stats) {
+export function mountByParty(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<ByParty stats={stats} />);
+  root.render(<ByParty stats={stats} onFilter={onFilter} />);
 }

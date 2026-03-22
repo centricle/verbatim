@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function PPPByState({ stats }) {
+function PPPByState({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -38,7 +39,16 @@ function PPPByState({ stats }) {
       .attr('width', d => x(Number(d.total_amount)))
       .attr('height', y.bandwidth())
       .attr('fill', '#2d6a4f')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_amount);
+        const fmt = v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`;
+        showTooltip(event, `<strong>${d.state}</strong><br>${fmt} in loans`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'state', value: d.state }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -76,8 +86,8 @@ function PPPByState({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountPPPByState(container, stats) {
+export function mountPPPByState(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<PPPByState stats={stats} />);
+  root.render(<PPPByState stats={stats} onFilter={onFilter} />);
 }

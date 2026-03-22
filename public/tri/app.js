@@ -131,6 +131,15 @@ function populateDropdowns(stats) {
   if (params.get('industry')) filterIndustry.value = params.get('industry');
 }
 
+// Chart-to-filter bridge
+function handleFilter({ key, value }) {
+  const el = document.getElementById(`filter-${key}`);
+  if (el) {
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
 async function loadViz() {
   const [
     { mountTriByState },
@@ -149,10 +158,11 @@ async function loadViz() {
 
   populateDropdowns(stats);
 
-  mountTriByState(document.getElementById('viz-by-state'), stats);
-  mountTriByChemical(document.getElementById('viz-by-chemical'), stats);
-  mountTriByIndustry(document.getElementById('viz-by-industry'), stats);
-  mountTriCarcinogen(document.getElementById('viz-carcinogen'), stats);
+  const opts = { onFilter: handleFilter };
+  mountTriByState(document.getElementById('viz-by-state'), stats, opts);
+  mountTriByChemical(document.getElementById('viz-by-chemical'), stats, opts);
+  mountTriByIndustry(document.getElementById('viz-by-industry'), stats, opts);
+  mountTriCarcinogen(document.getElementById('viz-carcinogen'), stats, opts);
 }
 
 readUrlState();

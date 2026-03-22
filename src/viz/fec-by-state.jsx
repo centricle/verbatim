@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function FECByState({ stats }) {
+function FECByState({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -42,7 +43,16 @@ function FECByState({ stats }) {
       .attr('width', d => x(Number(d.total_raised)))
       .attr('height', y.bandwidth())
       .attr('fill', d => colorScale(Number(d.total_raised)))
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_raised);
+        const fmt = v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`;
+        showTooltip(event, `<strong>${d.state}</strong><br>${fmt} raised`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'state', value: d.state }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -80,8 +90,8 @@ function FECByState({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountFECByState(container, stats) {
+export function mountFECByState(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<FECByState stats={stats} />);
+  root.render(<FECByState stats={stats} onFilter={onFilter} />);
 }

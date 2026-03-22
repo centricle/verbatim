@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TriByIndustry({ stats }) {
+function TriByIndustry({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -39,7 +40,16 @@ function TriByIndustry({ stats }) {
       .attr('width', d => x(Number(d.total_lbs)))
       .attr('height', y.bandwidth())
       .attr('fill', '#4a6741')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_lbs);
+        const fmt = v >= 1e9 ? `${(v / 1e9).toFixed(1)}B lbs` : v >= 1e6 ? `${(v / 1e6).toFixed(0)}M lbs` : `${(v / 1e3).toFixed(0)}K lbs`;
+        showTooltip(event, `<strong>${d.industry_sector}</strong><br>${fmt}`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'industry', value: d.industry_sector }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -78,8 +88,8 @@ function TriByIndustry({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTriByIndustry(container, stats) {
+export function mountTriByIndustry(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TriByIndustry stats={stats} />);
+  root.render(<TriByIndustry stats={stats} onFilter={onFilter} />);
 }

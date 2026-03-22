@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
 const LICENSE_LABELS = {
   A: 'Breeder',
@@ -12,7 +13,7 @@ const LICENSE_LABELS = {
   G: 'Govt Research',
 };
 
-function AphisByLicense({ stats }) {
+function AphisByLicense({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -49,7 +50,14 @@ function AphisByLicense({ stats }) {
       .attr('width', d => x(Number(d.count)))
       .attr('height', y.bandwidth())
       .attr('fill', '#6b5a3e')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.label}</strong> (${d.license_type})<br>${Number(d.count).toLocaleString()} inspections`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'license', value: d.license_type }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -82,8 +90,8 @@ function AphisByLicense({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountAphisByLicense(container, stats) {
+export function mountAphisByLicense(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<AphisByLicense stats={stats} />);
+  root.render(<AphisByLicense stats={stats} onFilter={onFilter} />);
 }

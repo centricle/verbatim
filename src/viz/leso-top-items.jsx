@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TopItems({ stats }) {
+function TopItems({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -38,7 +39,14 @@ function TopItems({ stats }) {
       .attr('width', d => x(d.total_qty))
       .attr('height', y.bandwidth())
       .attr('fill', '#5a6e4a')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.item_name}</strong><br>${d.total_qty.toLocaleString()} units`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'item', value: d.item_name }); });
 
     // Item labels (truncated)
     svg.selectAll('.label')
@@ -77,8 +85,8 @@ function TopItems({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTopItems(container, stats) {
+export function mountTopItems(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TopItems stats={stats} />);
+  root.render(<TopItems stats={stats} onFilter={onFilter} />);
 }

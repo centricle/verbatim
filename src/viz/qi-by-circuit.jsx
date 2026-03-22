@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function QiByCircuit({ stats }) {
+function QiByCircuit({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -37,7 +38,14 @@ function QiByCircuit({ stats }) {
       .attr('width', d => x(Number(d.count)))
       .attr('height', y.bandwidth())
       .attr('fill', '#6b5a3e')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        showTooltip(event, `<strong>${d.circuit}</strong><br>${Number(d.count).toLocaleString()} cases`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'circuit', value: d.circuit }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -71,8 +79,8 @@ function QiByCircuit({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountQiByCircuit(container, stats) {
+export function mountQiByCircuit(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<QiByCircuit stats={stats} />);
+  root.render(<QiByCircuit stats={stats} onFilter={onFilter} />);
 }

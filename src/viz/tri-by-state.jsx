@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
-function TriByState({ stats }) {
+function TriByState({ stats, onFilter }) {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -37,7 +38,16 @@ function TriByState({ stats }) {
       .attr('width', d => x(Number(d.total_lbs)))
       .attr('height', y.bandwidth())
       .attr('fill', '#4a6741')
-      .attr('rx', 2);
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
+      .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
+      .on('mousemove', (event, d) => {
+        const v = Number(d.total_lbs);
+        const fmt = v >= 1e9 ? `${(v / 1e9).toFixed(1)}B lbs` : v >= 1e6 ? `${(v / 1e6).toFixed(0)}M lbs` : `${(v / 1e3).toFixed(0)}K lbs`;
+        showTooltip(event, `<strong>${d.state}</strong><br>${fmt}<br>${Number(d.count).toLocaleString()} reports`);
+      })
+      .on('click', (event, d) => { if (onFilter) onFilter({ key: 'state', value: d.state }); });
 
     svg.selectAll('.label')
       .data(data)
@@ -77,8 +87,8 @@ function TriByState({ stats }) {
   return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
 }
 
-export function mountTriByState(container, stats) {
+export function mountTriByState(container, stats, { onFilter } = {}) {
   if (!container) return;
   const root = createRoot(container);
-  root.render(<TriByState stats={stats} />);
+  root.render(<TriByState stats={stats} onFilter={onFilter} />);
 }

@@ -27,6 +27,7 @@ export default defineConfig({
         forfeiture: resolve(__dirname, 'public/forfeiture/index.html'),
         welfare: resolve(__dirname, 'public/welfare/index.html'),
         tri: resolve(__dirname, 'public/tri/index.html'),
+        osha: resolve(__dirname, 'public/osha/index.html'),
       },
     },
   },

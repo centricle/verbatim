@@ -28,6 +28,7 @@ export default defineConfig({
         welfare: resolve(__dirname, 'public/welfare/index.html'),
         tri: resolve(__dirname, 'public/tri/index.html'),
         osha: resolve(__dirname, 'public/osha/index.html'),
+        nursingHomes: resolve(__dirname, 'public/nursing-homes/index.html'),
       },
     },
   },

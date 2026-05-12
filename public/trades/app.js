@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+async function api(params) {
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`/api/trades?${qs}`);
+  return res.json();
+}
 
 // State
 let currentPage = 1;
@@ -49,22 +48,14 @@ function shortAmount(a) {
 }
 
 async function search() {
-  const params = {
-    search_text: searchInput.value.trim() || null,
-    filter_senator: filterSenator.value || null,
-    filter_type: filterType.value || null,
-    filter_year: filterYear.value ? parseInt(filterYear.value) : null,
-    page_size: PAGE_SIZE,
-    page_offset: (currentPage - 1) * PAGE_SIZE,
-  };
-
-  const { data, error } = await supabase.rpc('search_senate_trades', params);
-
-  if (error) {
-    console.error('Search error:', error);
-    resultsInfo.textContent = 'Error loading data.';
-    return;
-  }
+  const data = await api({
+    q: searchInput.value.trim(),
+    senator: filterSenator.value,
+    type: filterType.value,
+    year: filterYear.value,
+    pageSize: PAGE_SIZE,
+    offset: (currentPage - 1) * PAGE_SIZE,
+  });
 
   const totalCount = data.total;
   const rows = data.rows || [];
@@ -179,12 +170,7 @@ async function loadViz() {
     import('../../src/viz/amount-distribution.jsx'),
   ]);
 
-  // Fetch stats once for all visualizations
-  const { data: stats, error } = await supabase.rpc('senate_trades_stats');
-  if (error) {
-    console.error('Stats error:', error);
-    return;
-  }
+  const stats = await api({ action: 'stats' });
 
   populateSenators(stats);
 

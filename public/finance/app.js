@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+async function api(params) {
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`/api/finance?${qs}`);
+  return res.json();
+}
 
 let currentPage = 1;
 const PAGE_SIZE = 50;
@@ -37,17 +36,14 @@ function titleCase(s) {
 }
 
 async function search() {
-  const params = {
-    search_query: searchInput.value.trim() || null,
-    filter_state: filterState.value || null,
-    filter_party: filterParty.value || null,
-    filter_office: filterOffice.value || null,
-    page_num: currentPage,
-    page_size: PAGE_SIZE,
-  };
-
-  const { data, error } = await supabase.rpc('search_fec_candidates', params);
-  if (error) { console.error('Search error:', error); resultsInfo.textContent = 'Error loading data.'; return; }
+  const data = await api({
+    q: searchInput.value.trim(),
+    state: filterState.value,
+    party: filterParty.value,
+    office: filterOffice.value,
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+  });
 
   const totalCount = data.total;
   const rows = data.rows || [];
@@ -124,8 +120,7 @@ async function loadViz() {
     import('../../src/viz/fec-by-office.jsx'),
   ]);
 
-  const { data: stats, error } = await supabase.rpc('fec_candidates_stats');
-  if (error) { console.error('Stats error:', error); return; }
+  const stats = await api({ action: 'stats' });
 
   populateDropdowns(stats);
   const opts = { onFilter: handleFilter };

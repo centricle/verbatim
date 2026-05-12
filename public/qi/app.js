@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+async function api(params) {
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`/api/qi?${qs}`);
+  return res.json();
+}
 
 // State
 let currentPage = 1;
@@ -37,24 +36,14 @@ function titleCase(s) {
 }
 
 async function search() {
-  const params = {
-    search_query: searchInput.value.trim() || null,
-    filter_circuit: filterCircuit.value || null,
-    filter_ruling: filterRuling.value || null,
-    filter_violation: filterViolation.value || null,
-    sort_by: 'year',
-    sort_dir: 'desc',
-    page_num: currentPage,
-    page_size: PAGE_SIZE,
-  };
-
-  const { data, error } = await supabase.rpc('search_qi_cases', params);
-
-  if (error) {
-    console.error('Search error:', error);
-    resultsInfo.textContent = 'Error loading data.';
-    return;
-  }
+  const data = await api({
+    q: searchInput.value.trim(),
+    circuit: filterCircuit.value,
+    ruling: filterRuling.value,
+    violation: filterViolation.value,
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+  });
 
   const totalCount = data.total;
   const rows = data.rows || [];
@@ -184,11 +173,7 @@ async function loadViz() {
     import('../../src/viz/qi-by-violation.jsx'),
   ]);
 
-  const { data: stats, error } = await supabase.rpc('qi_cases_stats');
-  if (error) {
-    console.error('Stats error:', error);
-    return;
-  }
+  const stats = await api({ action: 'stats' });
 
   populateDropdowns(stats);
 

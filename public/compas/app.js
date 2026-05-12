@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+async function api(params) {
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`/api/compas?${qs}`);
+  return res.json();
+}
 
 // State
 let currentPage = 1;
@@ -40,25 +39,18 @@ function recidBadge(val) {
 }
 
 async function search() {
-  const params = {
-    search_query: searchInput.value.trim(),
-    filter_race: filterRace.value,
-    filter_score: filterScore.value,
-    filter_sex: filterSex.value,
-    filter_recid: filterRecid.value,
-    page_num: currentPage,
-    page_size: PAGE_SIZE,
-  };
+  const data = await api({
+    q: searchInput.value.trim(),
+    race: filterRace.value,
+    score: filterScore.value,
+    sex: filterSex.value,
+    recid: filterRecid.value,
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+  });
 
-  const { data, error } = await supabase.rpc('search_compas', params);
-
-  if (error) {
-    console.error('Search error:', error);
-    resultsInfo.textContent = 'Error loading data.';
-    return;
-  }
-
-  const totalCount = data.length > 0 ? data[0].total_count : 0;
+  const totalCount = data.total;
+  const rows = data.rows || [];
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   // Results info
@@ -71,7 +63,7 @@ async function search() {
   }
 
   // Render table rows
-  resultsBody.innerHTML = data.map(d => `
+  resultsBody.innerHTML = rows.map(d => `
     <tr class="hover:bg-surface-alt transition-colors">
       <td class="py-2 pr-3 font-medium">${d.name}</td>
       <td class="py-2 pr-3">${d.race}</td>
@@ -143,12 +135,7 @@ async function loadViz() {
   const { mountFalsePositive } = await import('../../src/viz/false-positive.jsx');
   const { mountAccuracy } = await import('../../src/viz/accuracy.jsx');
 
-  // Fetch stats once for all visualizations
-  const { data: stats, error } = await supabase.rpc('compas_stats');
-  if (error) {
-    console.error('Stats error:', error);
-    return;
-  }
+  const stats = await api({ action: 'stats' });
 
   mountScoreDistribution(document.getElementById('viz-score-distribution'), stats);
   mountFalsePositive(document.getElementById('viz-false-positive'), stats);

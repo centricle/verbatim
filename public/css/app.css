@@ -723,6 +723,83 @@
   .tx-purchase { --tx-key: var(--color-purchase); }
   .tx-sale { --tx-key: var(--color-sale); }
 
+  /*
+   * Below 768px each row is set as an appendix entry instead of a seven-column
+   * line: senator and amount as the entry head; date, ticker, type and owner
+   * beneath (date and ticker on minimum widths, so tickers align down the
+   * list); then the asset description, clamped to two lines (the full text
+   * stays in the title attribute, as on desktop).
+   *
+   * Flex rather than grid: the head line and the detail line split at
+   * different points (a long amount against four short fields), so a shared
+   * column grid either overlaps them or squeezes the type to nothing at 390.
+   * The tr::before is a zero-content, full-width item that breaks the line.
+   *
+   * Still a <table>: thead is clipped, not removed, so screen readers keep the
+   * column names. 768px and up is untouched.
+   */
+  @media (max-width: 767px) {
+    .record-table-wrap { overflow-x: visible; }
+    .record-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+    .record-table tbody tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: 0.6rem;
+      padding: 0.6rem 0 0.65rem;
+      border-bottom: 1px solid var(--color-rule);
+    }
+    .record-table tbody tr::before {
+      content: '';
+      order: 2;
+      flex-basis: 100%;
+      height: 0.25rem;
+    }
+    .record-table td { padding: 0; border: 0; }
+    .record-table td.cell-name {
+      order: 0;
+      flex: 1 1 0;
+      min-width: 0;
+      white-space: normal;
+      font-size: 0.86rem;
+      line-height: 1.2;
+      text-wrap: balance;
+    }
+    .record-table td.cell-amount {
+      order: 1;
+      flex: none;
+      margin-left: auto;
+      text-align: right;
+      font-size: 0.78rem;
+    }
+    .record-table td.cell-date { order: 3; min-width: 5.9em; }
+    .record-table td.cell-ticker { order: 4; min-width: 3.8em; }
+    .record-table td.cell-type { order: 5; }
+    .record-table td.cell-owner { order: 6; margin-left: auto; text-align: right; }
+    .record-table td.cell-asset {
+      order: 7;
+      flex-basis: 100%;
+      max-width: none;
+      margin-top: 0.25rem;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+  }
+
   .pager {
     display: flex;
     align-items: center;

@@ -77,11 +77,11 @@ async function search() {
       <td class="cell-name">${d.senator}</td>
       <td class="cell-ticker">${d.ticker || '—'}</td>
       <td class="cell-asset" title="${(d.asset_description || '').replace(/"/g, '&quot;')}">${d.asset_description || '—'}</td>
-      <td>
+      <td class="cell-type">
         <span class="tx-type ${typeBadgeClass(d.type)}">${d.type}</span>
       </td>
       <td class="cell-amount">${d.amount || '—'}</td>
-      <td class="cell-dim">${d.owner || '—'}</td>
+      <td class="cell-owner cell-dim">${d.owner || '—'}</td>
     </tr>
   `).join('');
 

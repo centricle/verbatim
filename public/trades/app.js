@@ -21,11 +21,11 @@ const prevBtn = document.getElementById('trades-prev');
 const nextBtn = document.getElementById('trades-next');
 const pageInfo = document.getElementById('trades-page-info');
 
-// Type badge colors
+// Type key: the same purchase/sale colors the figures use
 function typeBadgeClass(type) {
-  if (type === 'Purchase') return 'bg-[oklch(0.88_0.06_145)] text-[oklch(0.35_0.08_145)]';
-  if (type.startsWith('Sale')) return 'bg-[oklch(0.88_0.06_25)] text-[oklch(0.38_0.10_20)]';
-  return 'bg-surface-hover text-text-dim';
+  if (type === 'Purchase') return 'tx-purchase';
+  if (type.startsWith('Sale')) return 'tx-sale';
+  return 'tx-other';
 }
 
 // Format date
@@ -72,16 +72,16 @@ async function search() {
 
   // Render table rows
   resultsBody.innerHTML = rows.map(d => `
-    <tr class="hover:bg-surface-alt transition-colors">
-      <td class="py-2 pr-3 whitespace-nowrap">${fmtDate(d.transaction_date)}</td>
-      <td class="py-2 pr-3 font-medium">${d.senator}</td>
-      <td class="py-2 pr-3 font-mono text-xs">${d.ticker || '—'}</td>
-      <td class="py-2 pr-3 text-xs max-w-[200px] truncate" title="${(d.asset_description || '').replace(/"/g, '&quot;')}">${d.asset_description || '—'}</td>
-      <td class="py-2 pr-3">
-        <span class="badge ${typeBadgeClass(d.type)}">${d.type}</span>
+    <tr>
+      <td class="cell-date">${fmtDate(d.transaction_date)}</td>
+      <td class="cell-name">${d.senator}</td>
+      <td class="cell-ticker">${d.ticker || '—'}</td>
+      <td class="cell-asset" title="${(d.asset_description || '').replace(/"/g, '&quot;')}">${d.asset_description || '—'}</td>
+      <td>
+        <span class="tx-type ${typeBadgeClass(d.type)}">${d.type}</span>
       </td>
-      <td class="py-2 pr-3 text-xs whitespace-nowrap">${d.amount || '—'}</td>
-      <td class="py-2 text-xs">${d.owner || '—'}</td>
+      <td class="cell-amount">${d.amount || '—'}</td>
+      <td class="cell-dim">${d.owner || '—'}</td>
     </tr>
   `).join('');
 

@@ -22,7 +22,7 @@ function renderPairingTabs() {
     const btn = document.createElement('button');
     btn.textContent = label;
     btn.dataset.pairingId = pairing.id;
-    btn.className = 'px-3 py-1.5 text-sm rounded border transition-colors cursor-pointer';
+    btn.className = 'pairing-tab';
     btn.addEventListener('click', () => selectPairing(pairing.id));
     container.appendChild(btn);
   }
@@ -35,9 +35,9 @@ function selectPairing(pairingId) {
   // Update pairing tab styles
   document.querySelectorAll('#pairing-tabs button').forEach(btn => {
     if (btn.dataset.pairingId === pairingId) {
-      btn.className = 'px-3 py-1.5 text-sm rounded border border-accent bg-accent/10 text-accent font-medium transition-colors cursor-pointer';
+      btn.className = 'pairing-tab is-active';
     } else {
-      btn.className = 'px-3 py-1.5 text-sm rounded border border-border text-text-dim hover:text-text hover:border-accent/40 transition-colors cursor-pointer';
+      btn.className = 'pairing-tab';
     }
   });
 
@@ -53,7 +53,7 @@ function renderTopicTabs() {
     const btn = document.createElement('button');
     btn.textContent = topic.name;
     btn.dataset.topic = topic.name;
-    btn.className = 'px-3 py-1.5 text-sm rounded border transition-colors cursor-pointer';
+    btn.className = 'topic-tab';
     btn.addEventListener('click', () => selectTopic(topic.name));
     container.appendChild(btn);
   }
@@ -66,9 +66,9 @@ function selectTopic(topicName) {
   // Update topic tab styles
   document.querySelectorAll('#topic-tabs button').forEach(btn => {
     if (btn.dataset.topic === topicName) {
-      btn.className = 'px-3 py-1.5 text-sm rounded border border-accent bg-accent/10 text-accent font-medium transition-colors cursor-pointer';
+      btn.className = 'topic-tab is-active';
     } else {
-      btn.className = 'px-3 py-1.5 text-sm rounded border border-border text-text-dim hover:text-text hover:border-accent/40 transition-colors cursor-pointer';
+      btn.className = 'topic-tab';
     }
   });
 
@@ -88,22 +88,20 @@ function renderDebate() {
 
   // Corpus links
   document.getElementById('corpus-link-a').innerHTML =
-    `<a href="/corpus/?speaker=${speakerA}" class="text-accent hover:underline">${nameA}</a>`;
+    `<a href="/corpus/?speaker=${speakerA}" class="text-link">${nameA}</a>`;
   document.getElementById('corpus-link-b').innerHTML =
-    `<a href="/corpus/?speaker=${speakerB}" class="text-accent hover:underline">${nameB}</a>`;
+    `<a href="/corpus/?speaker=${speakerB}" class="text-link">${nameB}</a>`;
 }
 
 function renderSpeakerColumn(name, quotes) {
-  let html = `<h2 class="text-lg font-semibold mb-3">${name}</h2>`;
+  let html = `<h2 class="speaker-name">${name}</h2>`;
 
   for (const quote of quotes) {
-    const dateStr = quote.date ? `, ${quote.date}` : '';
+    const dateStr = quote.date ? `<span class="quote-date">${quote.date}</span>` : '';
     html += `
-      <blockquote class="bg-surface-alt border border-border rounded-lg p-5">
-        <p class="text-sm leading-relaxed mb-3">${escapeHtml(quote.text)}</p>
-        <cite class="text-xs text-text-dim not-italic block">
-          &mdash; ${escapeHtml(quote.source)}${dateStr}
-        </cite>
+      <blockquote class="quote">
+        <p class="quote-text">${escapeHtml(quote.text)}</p>
+        <cite class="quote-cite">${escapeHtml(quote.source)}${dateStr}</cite>
       </blockquote>
     `;
   }

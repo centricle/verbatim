@@ -4,19 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verbatim — Public data, made explorable</title>
-  <meta name="description" content="Five public datasets, one consistent interface. Primary source data, zero editorial. I didn't write it. I indexed it.">
+  <meta name="description" content="Five public datasets, one consistent interface. Primary source data, zero editorial. I didn’t write it. I indexed it.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://verbatim.fyi/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="Verbatim">
   <meta property="og:title" content="Verbatim — Public data, made explorable">
-  <meta property="og:description" content="Five public datasets, one consistent interface. Primary source data, zero editorial. I didn't write it. I indexed it.">
+  <meta property="og:description" content="Five public datasets, one consistent interface. Primary source data, zero editorial. I didn’t write it. I indexed it.">
   <meta property="og:url" content="https://verbatim.fyi/">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://verbatim.fyi/og-image.png">
   <link rel="canonical" href="https://verbatim.fyi/">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f5edd6' stroke='%23d4c9a8' stroke-width='1'/><g transform='translate(4,4)' fill='none' stroke='%232d2418' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 12h-5'/><path d='M15 8h-5'/><path d='M19 17V5a2 2 0 0 0-2-2H4'/><path d='M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3'/></g></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2311161f'/><path d='M8 7l8 18 8-18' fill='none' stroke='%23f8fafd' stroke-width='3.4'/></svg>">
+  <link rel="preload" href="/fonts/newsreader-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/app.css">
   <script src="/js/nav.js" defer></script>
   <!-- Google Analytics -->
@@ -30,104 +31,166 @@
 </head>
 <body class="min-h-screen flex flex-col">
   <a href="#main-content" class="skip-link">Skip to content</a>
-  <header class="border-b border-border px-6 py-4">
-    <div class="flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-lg bg-surface-alt border border-border flex items-center justify-center"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg></div><span class="text-lg font-semibold tracking-tight">Verbatim</span></div>
+  <header class="masthead">
+    <div class="page-wrap">
+      <div class="masthead-bar">
+        <a href="/" class="wordmark" aria-current="page">Verbatim</a>
+        <nav class="masthead-nav hidden md:flex" aria-label="Datasets and pages">
+          <a href="/compas/" class="nav-link">COMPAS</a>
+          <a href="/trades/" class="nav-link">Trades</a>
+          <a href="/incidents/" class="nav-link">Incidents</a>
+          <a href="/finance/" class="nav-link">Finance</a>
+          <a href="/qi/" class="nav-link">Immunity</a>
+          <a href="/vs/" class="nav-link">Vs.</a>
+          <a href="/about.html" class="nav-link">About</a>
+        </nav>
+        <button id="mobile-menu-button" class="menu-button md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <svg class="icon-menu w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          <svg class="icon-close hidden w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <nav id="mobile-menu" class="mobile-menu hidden md:hidden" aria-label="Datasets and pages">
+        <a href="/compas/" class="nav-link">COMPAS</a>
+        <a href="/trades/" class="nav-link">Trades</a>
+        <a href="/incidents/" class="nav-link">Incidents</a>
+        <a href="/finance/" class="nav-link">Finance</a>
+        <a href="/qi/" class="nav-link">Immunity</a>
+        <a href="/vs/" class="nav-link">Vs.</a>
+        <a href="/about.html" class="nav-link">About</a>
+      </nav>
     </div>
-    <nav class="hidden md:flex items-center gap-4">
-      <a href="/compas/" class="text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
-      <a href="/trades/" class="text-sm text-text-dim hover:text-text transition-colors">Trades</a>
-      <a href="/incidents/" class="text-sm text-text-dim hover:text-text transition-colors">Incidents</a>
-      <a href="/finance/" class="text-sm text-text-dim hover:text-text transition-colors">Finance</a>
-      <a href="/qi/" class="text-sm text-text-dim hover:text-text transition-colors">Immunity</a>
-      <a href="/vs/" class="text-sm text-text-dim hover:text-text transition-colors">Vs.</a>
-      <a href="/about.html" class="text-sm text-text-dim hover:text-text transition-colors">About</a>
-    </nav>
-      <button id="mobile-menu-button" class="md:hidden p-2 text-text-dim hover:text-text transition-colors cursor-pointer" aria-label="Open menu" aria-expanded="false">
-        <svg class="icon-menu w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
-        <svg class="icon-close hidden w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <nav id="mobile-menu" class="hidden md:hidden border-t border-border mt-4 pt-2">
-      <a href="/compas/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">COMPAS</a>
-      <a href="/trades/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Trades</a>
-      <a href="/incidents/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Incidents</a>
-      <a href="/finance/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Finance</a>
-      <a href="/qi/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Immunity</a>
-      <a href="/vs/" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">Vs.</a>
-      <a href="/about.html" class="block px-3 py-3 text-sm text-text-dim hover:text-text transition-colors">About</a>
-    </nav>
   </header>
 
   <main id="main-content" class="flex-1">
-    <!-- Hero -->
-    <section class="max-w-4xl mx-auto px-6 pt-16 pb-12 text-center">
-      <h1 class="text-2xl font-semibold mb-3 tracking-tight">I didn’t write it. I indexed it.</h1>
-      <p class="text-text-dim text-sm max-w-xl mx-auto">Public data deserves public craft. Five datasets, one interface, zero editorial.</p>
-
+    <!-- Opening statement -->
+    <section class="front page-wrap">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-x-8">
+        <h1 class="statement md:col-span-12"><span class="block">I didn’t write it.</span> <span class="block">I indexed it.</span></h1>
+        <p class="statement-dek mt-5 md:col-span-7 md:col-start-1">Public data deserves public craft. Five datasets, one interface, zero editorial.</p>
+      </div>
     </section>
 
-    <!-- Explorer grid -->
-    <section class="max-w-5xl mx-auto px-6 pb-16">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Contents -->
+    <section class="page-wrap" aria-labelledby="contents-label">
+      <div class="contents-head">
+        <h2 id="contents-label" class="kicker">Contents</h2>
+      </div>
 
-        <a href="/compas/" class="group block bg-surface-alt border border-border rounded-lg p-5 hover:border-accent/40 transition-colors">
-          <div class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-1">COMPAS</div>
-          <div class="text-xl font-semibold mb-2 tabular-nums">7,214</div>
-          <p class="text-sm text-text-dim leading-relaxed">ProPublica's recidivism algorithm analysis. Defendants, scores, outcomes.</p>
-          <span class="inline-block mt-3 text-xs text-accent font-medium group-hover:translate-x-0.5 transition-transform">Explore &rarr;</span>
-        </a>
+      <ol class="toc">
+        <li class="toc-entry toc-entry--lead">
+          <div class="toc-count">
+            <span class="toc-num">7,740</span>
+            <span class="toc-unit">transactions</span>
+          </div>
+          <div class="toc-main">
+            <h3 class="toc-title"><a href="/trades/">Senate Stock Trades</a></h3>
+            <p class="toc-dek">Stock transactions by sitting U.S. senators, disclosed under the STOCK Act.</p>
+            <p class="toc-figures" aria-label="Figures in this story">
+              <span class="fig-ref"><b>Fig. 1</b>Trades by year</span>
+              <span class="fig-ref"><b>Fig. 2</b>Most active traders</span>
+              <span class="fig-ref"><b>Fig. 3</b>Most traded tickers</span>
+              <span class="fig-ref"><b>Fig. 4</b>Trade size distribution</span>
+            </p>
+          </div>
+          <p class="byline">
+            <span class="byline-role">Data</span>
+            <span class="byline-source">U.S. Senate electronic filings</span>
+            <span class="byline-index">Indexed by Verbatim</span>
+          </p>
+        </li>
 
-        <a href="/trades/" class="group block bg-surface-alt border border-border rounded-lg p-5 hover:border-accent/40 transition-colors">
-          <div class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-1">Senate Trades</div>
-          <div class="text-xl font-semibold mb-2 tabular-nums">7,740</div>
-          <p class="text-sm text-text-dim leading-relaxed">Stock transactions by sitting U.S. senators, disclosed under the STOCK Act.</p>
-          <span class="inline-block mt-3 text-xs text-accent font-medium group-hover:translate-x-0.5 transition-transform">Explore &rarr;</span>
-        </a>
+        <li class="toc-entry">
+          <div class="toc-count">
+            <span class="toc-num">7,214</span>
+            <span class="toc-unit">defendants</span>
+          </div>
+          <div class="toc-main">
+            <h3 class="toc-title"><a href="/compas/">COMPAS</a></h3>
+            <p class="toc-dek">ProPublica’s recidivism algorithm analysis. Defendants, scores, outcomes.</p>
+          </div>
+          <p class="byline">
+            <span class="byline-role">Data</span>
+            <span class="byline-source">ProPublica</span>
+            <span class="byline-index">Indexed by Verbatim</span>
+          </p>
+        </li>
 
-        <a href="/incidents/" class="group block bg-surface-alt border border-border rounded-lg p-5 hover:border-accent/40 transition-colors">
-          <div class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-1">Fatal Force</div>
-          <div class="text-xl font-semibold mb-2 tabular-nums">10,430</div>
-          <p class="text-sm text-text-dim leading-relaxed">Washington Post's police shootings database, 2015 to present.</p>
-          <span class="inline-block mt-3 text-xs text-accent font-medium group-hover:translate-x-0.5 transition-transform">Explore &rarr;</span>
-        </a>
+        <li class="toc-entry">
+          <div class="toc-count">
+            <span class="toc-num">10,430</span>
+            <span class="toc-unit">incidents</span>
+          </div>
+          <div class="toc-main">
+            <h3 class="toc-title"><a href="/incidents/">Fatal Force</a></h3>
+            <p class="toc-dek">Washington Post’s police shootings database, 2015 to present.</p>
+          </div>
+          <p class="byline">
+            <span class="byline-role">Data</span>
+            <span class="byline-source">The Washington Post</span>
+            <span class="byline-index">Indexed by Verbatim</span>
+          </p>
+        </li>
 
-        <a href="/finance/" class="group block bg-surface-alt border border-border rounded-lg p-5 hover:border-accent/40 transition-colors">
-          <div class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-1">Campaign Finance</div>
-          <div class="text-xl font-semibold mb-2 tabular-nums">3,457</div>
-          <p class="text-sm text-text-dim leading-relaxed">2024 FEC candidate fundraising data. Every dollar, every race.</p>
-          <span class="inline-block mt-3 text-xs text-accent font-medium group-hover:translate-x-0.5 transition-transform">Explore &rarr;</span>
-        </a>
+        <li class="toc-entry">
+          <div class="toc-count">
+            <span class="toc-num">3,457</span>
+            <span class="toc-unit">candidates</span>
+          </div>
+          <div class="toc-main">
+            <h3 class="toc-title"><a href="/finance/">Campaign Finance</a></h3>
+            <p class="toc-dek">2024 FEC candidate fundraising data. Every dollar, every race.</p>
+          </div>
+          <p class="byline">
+            <span class="byline-role">Data</span>
+            <span class="byline-source">Federal Election Commission</span>
+            <span class="byline-index">Indexed by Verbatim</span>
+          </p>
+        </li>
 
-        <a href="/qi/" class="group block bg-surface-alt border border-border rounded-lg p-5 hover:border-accent/40 transition-colors">
-          <div class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-1">Qualified Immunity</div>
-          <div class="text-xl font-semibold mb-2 tabular-nums">5,500+</div>
-          <p class="text-sm text-text-dim leading-relaxed">Federal appellate qualified immunity cases, 2010&ndash;2020. Every circuit, every ruling.</p>
-          <span class="inline-block mt-3 text-xs text-accent font-medium group-hover:translate-x-0.5 transition-transform">Explore &rarr;</span>
-        </a>
+        <li class="toc-entry">
+          <div class="toc-count">
+            <span class="toc-num">5,500+</span>
+            <span class="toc-unit">cases</span>
+          </div>
+          <div class="toc-main">
+            <h3 class="toc-title"><a href="/qi/">Qualified Immunity</a></h3>
+            <p class="toc-dek">Federal appellate qualified immunity cases, 2010–2020. Every circuit, every ruling.</p>
+          </div>
+          <p class="byline">
+            <span class="byline-role">Data</span>
+            <span class="byline-source">Institute for Justice</span>
+            <span class="byline-index">Indexed by Verbatim</span>
+          </p>
+        </li>
+      </ol>
 
-        <a href="/vs/" class="group block bg-surface-alt border border-border rounded-lg p-5 hover:border-accent/40 transition-colors">
-          <div class="text-xs font-semibold uppercase tracking-wider text-text-dim mb-1">Vs.</div>
-          <div class="text-xl font-semibold mb-2">Debates</div>
-          <p class="text-sm text-text-dim leading-relaxed">Curated debates using real quotes. Two voices, one topic, side by side. Verbatim.</p>
-          <span class="inline-block mt-3 text-xs text-accent font-medium group-hover:translate-x-0.5 transition-transform">Explore &rarr;</span>
-        </a>
-
+      <!-- Back of book -->
+      <div class="back-of-book">
+        <h2 class="kicker bob-label">Also in Verbatim</h2>
+        <div class="bob-entry">
+          <h3 class="toc-title"><a href="/vs/">Vs.</a></h3>
+          <p class="toc-dek">Curated debates using real quotes. Two voices, one topic, side by side. Verbatim.</p>
+        </div>
+        <div class="bob-entry">
+          <h3 class="toc-title"><a href="/about.html">About</a></h3>
+          <p class="toc-dek">Primary source data, made explorable.</p>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="border-t border-border px-6 py-6 flex flex-col items-center gap-3 text-xs text-text-dim">
-    <div class="flex items-center gap-4">
-      <a href="/about.html" class="hover:text-text transition-colors">About</a>
-    </div>
-    <div class="flex items-center gap-2">
-      <span>made by</span>
-      <a href="https://centricle.com" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 hover:text-text transition-colors">
-        <img src="https://centricle.com/brand/avatar-sm.jpg" alt="ksmith" class="w-5 h-5 rounded-full">
-        <span>ksmith</span>
-      </a>
+  <footer class="colophon">
+    <div class="page-wrap colophon-inner">
+      <a href="/" class="wordmark">Verbatim</a>
+      <div class="colophon-links">
+        <a href="/about.html">About</a>
+        <span class="inline-flex items-center gap-2">Made by
+          <a href="https://centricle.com" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5">
+            <img src="https://centricle.com/brand/avatar-sm.jpg" alt="" class="avatar">
+            <span>ksmith</span>
+          </a>
+        </span>
+      </div>
     </div>
   </footer>
 </body>

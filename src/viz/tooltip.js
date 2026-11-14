@@ -1,25 +1,27 @@
 // Shared tooltip utility for all D3 charts
-// Uses position: fixed + clientX/clientY to avoid SVG coordinate math
+// Uses position: fixed + clientX/clientY to avoid SVG coordinate math.
+// Colors and type come from the @theme tokens in app.css.
 
 let tooltipEl = null;
 
 function ensureTooltip() {
   if (tooltipEl) return tooltipEl;
   tooltipEl = document.createElement('div');
+  tooltipEl.setAttribute('role', 'presentation');
   tooltipEl.style.cssText = `
     position: fixed;
     pointer-events: none;
-    background: #2d2418;
-    color: #e8e0d0;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    line-height: 1.4;
+    background: var(--color-ink);
+    color: var(--color-ground);
+    padding: 7px 10px 8px;
+    font-family: var(--font-label);
+    font-size: 13px;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
     max-width: 260px;
     z-index: 9999;
     opacity: 0;
     transition: opacity 150ms ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   `;
   document.body.appendChild(tooltipEl);
   return tooltipEl;

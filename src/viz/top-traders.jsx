@@ -1,108 +1,114 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
 
+// Drawn at the container's real pixel width, so label sizes in app.css are true sizes.
+function useContainerWidth(ref) {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current?.parentElement;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return width;
+}
+
 function TopTraders({ stats, onFilter }) {
   const svgRef = useRef();
+  const fullWidth = useContainerWidth(svgRef);
 
   useEffect(() => {
-    if (!stats.top_traders) return;
+    if (!stats.top_traders || !fullWidth) return;
     const data = stats.top_traders.slice(0, 15);
 
-    const margin = { top: 30, right: 20, bottom: 10, left: 140 };
-    const barHeight = 18;
-    const gap = 4;
-    const height = data.length * (barHeight + gap);
-    const width = 440 - margin.left - margin.right;
+    const narrow = fullWidth < 480;
+    const margin = { top: 4, right: 44, bottom: 4, left: narrow ? 128 : 150 };
+    const rowHeight = 24;
+    const height = data.length * rowHeight;
+    const width = fullWidth - margin.left - margin.right;
 
     d3.select(svgRef.current).selectAll('*').remove();
 
     const svg = d3.select(svgRef.current)
-      .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+      .attr('width', fullWidth)
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('viewBox', `0 0 ${fullWidth} ${height + margin.top + margin.bottom}`)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     const x = d3.scaleLinear()
-      .domain([0, d3.max(data, d => d.total_trades) * 1.1])
+      .domain([0, d3.max(data, d => d.total_trades)])
       .range([0, width]);
 
     const y = d3.scaleBand()
       .domain(data.map(d => d.senator))
       .range([0, height])
-      .padding(0.15);
+      .padding(0.28);
 
     // Senator labels
-    svg.selectAll('.label')
+    svg.selectAll('.cat-label')
       .data(data)
       .join('text')
-      .attr('x', -4)
+      .attr('class', 'cat-label')
+      .attr('x', -10)
       .attr('y', d => y(d.senator) + y.bandwidth() / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'end')
-      .text(d => d.senator)
-      .style('fill', '#2d2418')
-      .style('font-size', '10px');
+      .text(d => d.senator);
 
-    // Stacked bars: purchases then sales
+    // Stacked bars: purchases then sales, split by a 2px gap in the ground color
     data.forEach(d => {
       const g = svg.append('g');
+      const tip = (event) => {
+        showTooltip(event, `<strong>${d.senator}</strong><br>Purchases: ${d.purchases}<br>Sales: ${d.sales}<br>Total: ${d.total_trades}`);
+      };
       // Purchases
       g.append('rect')
+        .attr('class', 'bar')
         .attr('x', 0)
         .attr('y', y(d.senator))
-        .attr('width', x(d.purchases))
+        .attr('width', Math.max(0, x(d.purchases) - 1))
         .attr('height', y.bandwidth())
-        .attr('fill', '#4a8c5c')
-        .attr('rx', 2)
+        .style('fill', 'var(--color-purchase)')
         .style('cursor', 'pointer')
         .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
         .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
-        .on('mousemove', (event) => {
-          showTooltip(event, `<strong>${d.senator}</strong><br>Purchases: ${d.purchases}<br>Sales: ${d.sales}<br>Total: ${d.total_trades}`);
-        })
+        .on('mousemove', tip)
         .on('click', () => { if (onFilter) onFilter({ key: 'senator', value: d.senator }); });
       // Sales
       g.append('rect')
-        .attr('x', x(d.purchases))
+        .attr('class', 'bar')
+        .attr('x', x(d.purchases) + 1)
         .attr('y', y(d.senator))
-        .attr('width', x(d.sales))
+        .attr('width', Math.max(0, x(d.sales) - 1))
         .attr('height', y.bandwidth())
-        .attr('fill', '#c0694a')
-        .attr('rx', 0)
+        .style('fill', 'var(--color-sale)')
         .style('cursor', 'pointer')
         .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
         .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
-        .on('mousemove', (event) => {
-          showTooltip(event, `<strong>${d.senator}</strong><br>Purchases: ${d.purchases}<br>Sales: ${d.sales}<br>Total: ${d.total_trades}`);
-        })
+        .on('mousemove', tip)
         .on('click', () => { if (onFilter) onFilter({ key: 'senator', value: d.senator }); });
       // Count label
       g.append('text')
-        .attr('x', x(d.total_trades) + 4)
+        .attr('class', 'value-label')
+        .attr('x', x(d.total_trades) + 6)
         .attr('y', y(d.senator) + y.bandwidth() / 2)
         .attr('dy', '0.35em')
-        .text(d.total_trades)
-        .style('fill', '#8a7e6b')
-        .style('font-size', '9px');
+        .text(d.total_trades.toLocaleString());
     });
 
-    // Legend
-    const legend = svg.append('g').attr('transform', `translate(${width - 130}, -15)`);
-    [{ color: '#4a8c5c', label: 'Purchases' }, { color: '#c0694a', label: 'Sales' }].forEach((item, i) => {
-      legend.append('rect').attr('x', i * 80).attr('y', 0).attr('width', 10).attr('height', 10).attr('fill', item.color).attr('rx', 2);
-      legend.append('text').attr('x', i * 80 + 14).attr('y', 9).text(item.label).style('fill', '#8a7e6b').style('font-size', '10px');
-    });
+    // Zero line in ink
+    svg.append('line')
+      .attr('class', 'baseline')
+      .attr('x1', 0.5).attr('x2', 0.5)
+      .attr('y1', 0).attr('y2', height);
 
-    // Title
-    svg.append('text')
-      .attr('x', 0).attr('y', -15)
-      .text('Most Active Traders')
-      .style('fill', '#2d2418').style('font-size', '13px').style('font-weight', '600');
+  }, [stats, fullWidth]);
 
-  }, [stats]);
-
-  return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
+  return <svg ref={svgRef} className="chart" style={{ width: '100%', height: 'auto' }} />;
 }
 
 export function mountTopTraders(container, stats, { onFilter } = {}) {

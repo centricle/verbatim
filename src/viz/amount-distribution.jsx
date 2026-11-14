@@ -1,27 +1,30 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
 
+// Drawn at the container's real pixel width, so label sizes in app.css are true sizes.
+function useContainerWidth(ref) {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current?.parentElement;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return width;
+}
+
 function AmountDistribution({ stats, onFilter }) {
   const svgRef = useRef();
+  const fullWidth = useContainerWidth(svgRef);
 
   useEffect(() => {
-    if (!stats.by_amount) return;
+    if (!stats.by_amount || !fullWidth) return;
     const data = stats.by_amount;
 
-    const margin = { top: 30, right: 20, bottom: 80, left: 50 };
-    const width = 440 - margin.left - margin.right;
-    const height = 280 - margin.top - margin.bottom;
-
-    d3.select(svgRef.current).selectAll('*').remove();
-
-    const svg = d3.select(svgRef.current)
-      .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
-      .append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    // Short labels for x axis
+    // Short labels for the category axis
     const shortLabel = (a) => {
       if (!a) return '?';
       return a.replace('$1,001 - $15,000', '$1K–$15K')
@@ -36,76 +39,79 @@ function AmountDistribution({ stats, onFilter }) {
         .replace('Over $50,000,000', '>$50M');
     };
 
-    const x = d3.scaleBand()
+    // Horizontal bars so every range label reads level, at any width
+    const margin = { top: 4, right: 56, bottom: 4, left: 92 };
+    const rowHeight = 26;
+    const height = data.length * rowHeight;
+    const width = fullWidth - margin.left - margin.right;
+
+    d3.select(svgRef.current).selectAll('*').remove();
+
+    const svg = d3.select(svgRef.current)
+      .attr('width', fullWidth)
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('viewBox', `0 0 ${fullWidth} ${height + margin.top + margin.bottom}`)
+      .append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const y = d3.scaleBand()
       .domain(data.map(d => shortLabel(d.amount)))
-      .range([0, width])
-      .padding(0.2);
+      .range([0, height])
+      .padding(0.28);
 
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(data, d => d.count) * 1.1])
-      .range([height, 0]);
+    const x = d3.scaleLinear()
+      .domain([0, d3.max(data, d => d.count)])
+      .range([0, width]);
 
-    // Axes
-    svg.append('g')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x))
-      .selectAll('text')
-      .style('fill', '#8a7e6b')
-      .style('font-size', '9px')
-      .attr('transform', 'rotate(-45)')
-      .attr('text-anchor', 'end')
-      .attr('dx', '-0.5em')
-      .attr('dy', '0.15em');
+    // One-hue ramp, light to dark by bracket: a CSS color-mix of the neutral
+    // figure color into the ground, since d3-color cannot parse oklch or var().
+    const shade = (i) => {
+      const pct = Math.round(42 + (58 * i) / Math.max(1, data.length - 1));
+      return `color-mix(in oklch, var(--color-figure) ${pct}%, var(--color-ground))`;
+    };
 
-    svg.append('g')
-      .call(d3.axisLeft(y).ticks(5))
-      .selectAll('text')
-      .style('fill', '#8a7e6b')
-      .style('font-size', '10px');
-
-    svg.selectAll('.domain, line').style('stroke', '#c4b899');
-
-    // Color scale: light to dark by amount bracket
-    const color = d3.scaleSequential()
-      .domain([0, data.length - 1])
-      .interpolator(d3.interpolateRgb('#c4b899', '#8a4a2a'));
-
-    // Bars
     data.forEach((d, i) => {
       const label = shortLabel(d.amount);
+
+      svg.append('text')
+        .attr('class', 'cat-label')
+        .attr('x', -10)
+        .attr('y', y(label) + y.bandwidth() / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'end')
+        .text(label);
+
       svg.append('rect')
-        .attr('x', x(label))
-        .attr('y', y(d.count))
-        .attr('width', x.bandwidth())
-        .attr('height', height - y(d.count))
-        .attr('fill', color(i))
-        .attr('rx', 2)
-        .style('cursor', 'pointer')
+        .attr('class', 'bar')
+        .attr('x', 0)
+        .attr('y', y(label))
+        .attr('width', Math.max(1, x(d.count)))
+        .attr('height', y.bandwidth())
+        .style('fill', shade(i))
         .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
         .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
         .on('mousemove', (event) => {
           showTooltip(event, `<strong>${d.amount}</strong><br>${d.count.toLocaleString()} trades`);
         });
 
-      // Count label on top
+      // Count label at the end of the bar
       svg.append('text')
-        .attr('x', x(label) + x.bandwidth() / 2)
-        .attr('y', y(d.count) - 4)
-        .attr('text-anchor', 'middle')
-        .text(d.count.toLocaleString())
-        .style('fill', '#8a7e6b')
-        .style('font-size', '9px');
+        .attr('class', 'value-label')
+        .attr('x', Math.max(1, x(d.count)) + 6)
+        .attr('y', y(label) + y.bandwidth() / 2)
+        .attr('dy', '0.35em')
+        .text(d.count.toLocaleString());
     });
 
-    // Title
-    svg.append('text')
-      .attr('x', 0).attr('y', -15)
-      .text('Trade Size Distribution')
-      .style('fill', '#2d2418').style('font-size', '13px').style('font-weight', '600');
+    // Zero line in ink
+    svg.append('line')
+      .attr('class', 'baseline')
+      .attr('x1', 0.5).attr('x2', 0.5)
+      .attr('y1', 0).attr('y2', height);
 
-  }, [stats]);
+  }, [stats, fullWidth]);
 
-  return <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />;
+  return <svg ref={svgRef} className="chart" style={{ width: '100%', height: 'auto' }} />;
 }
 
 export function mountAmountDistribution(container, stats, { onFilter } = {}) {

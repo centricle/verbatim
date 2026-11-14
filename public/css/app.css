@@ -950,8 +950,7 @@
   .colophon .wordmark { font-size: 1rem; }
   .colophon a:not(.wordmark) { color: inherit; text-decoration: none; }
   .colophon a:not(.wordmark):hover { color: var(--color-ink); }
-  .colophon-links { display: flex; align-items: center; gap: 1.2rem; }
-  .avatar { width: 20px; height: 20px; border-radius: 50%; }
+  .colophon-links { display: flex; align-items: baseline; gap: 1.2rem; }
 
   /* Legacy component kept for the pages that still use it (COMPAS, QI tables). */
   .badge {
@@ -965,14 +964,3 @@
     color: var(--color-ink-dim);
   }
 }
-
-/* Legacy header rules, scoped to the old markup on the five untouched pages. */
-header:not(.masthead) a, header:not(.masthead) > div > div > span { white-space: nowrap; }
-header:not(.masthead) > div > div:first-child { flex-shrink: 0; }
-header:not(.masthead) nav:not(#mobile-menu) {
-  overflow-x: auto;
-  scrollbar-width: none;
-  min-width: 0;
-  margin-left: 1.5rem;
-}
-header:not(.masthead) nav:not(#mobile-menu)::-webkit-scrollbar { display: none; }

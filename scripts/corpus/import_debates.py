@@ -3,7 +3,13 @@
 
 Sources:
 - UCSB American Presidency Project (presidency.ucsb.edu)
-  All debate transcripts are public domain government documents.
+
+Rights: these transcripts are not government documents. The debates are run by
+the Commission on Presidential Debates, the League of Women Voters or the
+networks, and candidates debating are not acting in an official capacity. UCSB's
+terms bar republishing without permission, and the sponsors reserve their rights.
+The records stay in corpus.db for local research; build_release.py leaves them
+out of the release.
 
 Covers all general election presidential and VP debates, 1960-2024.
 Each debate is stored as a full transcript record with type 'debate'.

@@ -515,6 +515,12 @@
   .note-body { margin-top: 0.6rem; }
   .note-body > * + * { margin-top: 0.6em; }
   .note-body strong { font-weight: 600; color: var(--color-ink); }
+  /* A summary set in its own case, for copy that must render exactly as written. */
+  .note--as-written summary {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 0.68rem;
+  }
 
   /* ---------- Figures ---------- */
   .figures {

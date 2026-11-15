@@ -57,15 +57,15 @@ async function search() {
   }
 
   resultsBody.innerHTML = rows.map(d => `
-    <tr class="hover:bg-surface-alt transition-colors">
-      <td class="py-2 pr-3 whitespace-nowrap">${fmtDate(d.date)}</td>
-      <td class="py-2 pr-3 font-medium">${d.name || 'Unknown'}</td>
-      <td class="py-2 pr-3">${d.age || '—'}</td>
-      <td class="py-2 pr-3">${raceLabels[d.race] || d.race || '—'}</td>
-      <td class="py-2 pr-3 text-xs">${d.city || ''}, ${d.state || ''}</td>
-      <td class="py-2 pr-3 text-xs">${armedLabel(d.armed_with)}</td>
-      <td class="py-2 pr-3 text-xs">${d.flee_status || '—'}</td>
-      <td class="py-2 text-xs">${d.body_camera ? 'Yes' : 'No'}</td>
+    <tr>
+      <td class="cell-dim cell-nowrap cell-trail">${fmtDate(d.date)}</td>
+      <td class="cell-name cell-lead">${d.name || 'Unknown'}</td>
+      <td class="cell-num">${d.age || '—'}</td>
+      <td class="cell-nowrap">${raceLabels[d.race] || d.race || '—'}</td>
+      <td class="cell-dim">${d.city || ''}, ${d.state || ''}</td>
+      <td class="cell-l3">${armedLabel(d.armed_with)}</td>
+      <td class="cell-dim cell-l3">${d.flee_status || '—'}</td>
+      <td class="cell-dim cell-l3 cell-push">${d.body_camera ? 'Yes' : 'No'}</td>
     </tr>
   `).join('');
 

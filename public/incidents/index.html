@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fatal Police Shootings — Verbatim</title>
-  <meta name="description" content="The Washington Post's Fatal Force database: 10,430 fatal police shootings, 2015–2024. Searchable, filterable. All data from the Post's public dataset.">
+  <meta name="description" content="The Washington Post's Fatal Force database: 10,430 fatal police shootings, 2015–2024. Searchable, filterable. All data from the Post's public dataset."> <!-- quote-ok -->
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://verbatim.fyi/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="Verbatim">
   <meta property="og:title" content="Fatal Police Shootings — Verbatim">
-  <meta property="og:description" content="The Washington Post's Fatal Force database: 10,430 fatal police shootings, 2015–2024. Searchable, filterable. All data from the Post's public dataset.">
+  <meta property="og:description" content="The Washington Post's Fatal Force database: 10,430 fatal police shootings, 2015–2024. Searchable, filterable. All data from the Post's public dataset."> <!-- quote-ok -->
   <meta property="og:url" content="https://verbatim.fyi/incidents/">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://verbatim.fyi/og-image.png">
@@ -61,121 +61,137 @@
     </div>
   </header>
 
-  <main id="main-content" class="flex-1 max-w-6xl mx-auto px-6 py-8">
-    <section class="mb-10">
-      <h1 class="text-2xl font-semibold mb-3">Washington Post Fatal Force Database</h1>
-      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+  <main id="main-content" class="flex-1">
+    <article>
+      <header class="story-head page-wrap">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-7">
+          <h1 class="headline md:col-span-10">Washington Post Fatal Force Database</h1>
+          <div class="md:col-span-7 md:row-start-2">
+            <p class="dek">
         Starting in 2015, the Washington Post compiled a record of every fatal shooting by an
         on-duty police officer in the United States. The resulting dataset covers 10,430 incidents
         through 2024.
-      </p>
-      <p class="text-text-dim text-sm leading-relaxed max-w-3xl mb-3">
+            </p>
+            <p class="prose mt-5">
         This is a searchable interface to that public dataset. Each record includes date, location,
         demographics, armed status, and whether a body camera was present. All data is from the
-        Post's <a href="https://github.com/washingtonpost/data-police-shootings" target="_blank" rel="noopener" class="text-accent hover:text-accent-hover">published GitHub repository</a>.
+        Post's <a href="https://github.com/washingtonpost/data-police-shootings" target="_blank" rel="noopener" class="source-link">published GitHub repository</a>. <!-- quote-ok -->
         Verbatim does not editorialize.
-      </p>
-      <details class="text-text-dim text-sm leading-relaxed max-w-3xl mt-4">
-        <summary class="cursor-pointer text-accent hover:text-accent-hover transition-colors font-medium">About this dataset</summary>
-        <div class="mt-3 space-y-2 pl-4 border-l-2 border-border">
-          <p>
-            The Washington Post's database includes every fatal shooting by a police officer in the line
+            </p>
+          </div>
+          <aside class="md:col-span-4 md:col-start-9 md:row-start-2">
+            <details class="note note--as-written">
+              <summary>About this dataset</summary>
+              <div class="note-body">
+                <p>
+            The Washington Post's database includes every fatal shooting by a police officer in the line <!-- quote-ok -->
             of duty since Jan. 1, 2015. It does not include deaths in police custody, fatal shootings by
             off-duty officers, or non-shooting deaths.
-          </p>
-          <p>
+                </p>
+                <p>
             The data is compiled from news reports, law enforcement websites, social media, and
             independent databases such as Fatal Encounters and the Killed by Police project.
             The Post stopped updating in January 2025.
-          </p>
-          <p>
+                </p>
+                <p>
             Race codes: W = White, B = Black, H = Hispanic, A = Asian, N = Native American, O = Other.
-          </p>
+                </p>
+              </div>
+            </details>
+          </aside>
         </div>
-      </details>
-    </section>
+      </header>
 
-    <!-- Visualizations -->
-    <section class="mb-10">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div id="viz-by-year" role="img" aria-label="Shootings by year chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-        <div id="viz-by-state" role="img" aria-label="Shootings by state chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-      </div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div id="viz-by-armed" role="img" aria-label="Armed status chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-        <div id="viz-by-race" role="img" aria-label="Race demographics chart" class="bg-surface-alt border border-border rounded-lg p-5 min-h-[320px]"></div>
-      </div>
-    </section>
+      <!-- Visualizations (React + D3 mount points). Each chart draws its own title. -->
+      <section class="page-wrap">
+        <div class="figures">
+          <figure class="figure">
+            <div id="viz-by-year" role="img" aria-label="Shootings by year chart" class="figure-plot"></div>
+          </figure>
+          <figure class="figure">
+            <div id="viz-by-state" role="img" aria-label="Shootings by state chart" class="figure-plot"></div>
+          </figure>
+          <figure class="figure">
+            <div id="viz-by-armed" role="img" aria-label="Armed status chart" class="figure-plot"></div>
+          </figure>
+          <figure class="figure">
+            <div id="viz-by-race" role="img" aria-label="Race demographics chart" class="figure-plot"></div>
+          </figure>
+        </div>
+      </section>
 
-    <!-- Filters -->
-    <section class="mb-6">
-      <form id="incidents-search-form" class="flex flex-wrap gap-3">
-        <input type="text" id="incidents-search" aria-label="Search incidents" placeholder="Search by name, city, or state..."
-          class="flex-1 min-w-[200px] bg-surface-alt border border-border rounded-lg px-4 py-2 text-sm text-text placeholder:text-text-dim focus:border-accent">
-        <select id="filter-state" aria-label="Filter by state" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
-          <option value="">All states</option>
-        </select>
-        <select id="filter-race" aria-label="Filter by race" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
-          <option value="">All races</option>
-          <option value="W">White</option>
-          <option value="B">Black</option>
-          <option value="H">Hispanic</option>
-          <option value="A">Asian</option>
-          <option value="N">Native American</option>
-          <option value="O">Other</option>
-        </select>
-        <select id="filter-armed" aria-label="Filter by armed status" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
-          <option value="">All</option>
-          <option value="gun">Gun</option>
-          <option value="knife">Knife</option>
-          <option value="unarmed">Unarmed</option>
-          <option value="vehicle">Vehicle</option>
-          <option value="replica">Replica</option>
-        </select>
-        <select id="filter-year" aria-label="Filter by year" class="bg-surface-alt border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-text">
-          <option value="">All years</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-          <option value="2022">2022</option>
-          <option value="2021">2021</option>
-          <option value="2020">2020</option>
-          <option value="2019">2019</option>
-          <option value="2018">2018</option>
-          <option value="2017">2017</option>
-          <option value="2016">2016</option>
-          <option value="2015">2015</option>
-        </select>
-        <button type="submit" class="bg-accent hover:bg-accent-hover text-surface font-semibold rounded-lg px-5 py-2 text-sm transition-colors">
+      <!-- Search, filters, table -->
+      <section class="page-wrap mt-16">
+        <div class="appendix">
+          <form id="incidents-search-form" class="flex flex-wrap items-end gap-3 mb-6">
+            <input type="text" id="incidents-search" aria-label="Search incidents" placeholder="Search by name, city, or state..."
+              class="field field--search flex-1 basis-full md:basis-auto min-w-[240px]">
+            <select id="filter-state" aria-label="Filter by state" class="field flex-1 md:flex-none">
+              <option value="">All states</option>
+            </select>
+            <select id="filter-race" aria-label="Filter by race" class="field flex-1 md:flex-none">
+              <option value="">All races</option>
+              <option value="W">White</option>
+              <option value="B">Black</option>
+              <option value="H">Hispanic</option>
+              <option value="A">Asian</option>
+              <option value="N">Native American</option>
+              <option value="O">Other</option>
+            </select>
+            <select id="filter-armed" aria-label="Filter by armed status" class="field flex-1 md:flex-none">
+              <option value="">All</option>
+              <option value="gun">Gun</option>
+              <option value="knife">Knife</option>
+              <option value="unarmed">Unarmed</option>
+              <option value="vehicle">Vehicle</option>
+              <option value="replica">Replica</option>
+            </select>
+            <select id="filter-year" aria-label="Filter by year" class="field flex-1 md:flex-none">
+              <option value="">All years</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2020">2020</option>
+              <option value="2019">2019</option>
+              <option value="2018">2018</option>
+              <option value="2017">2017</option>
+              <option value="2016">2016</option>
+              <option value="2015">2015</option>
+            </select>
+            <button type="submit" class="button">
           Filter
         </button>
-      </form>
-    </section>
+          </form>
 
-    <div id="incidents-results-info" aria-live="polite" class="text-sm text-text-dim mb-4"></div>
+          <div id="incidents-results-info" aria-live="polite" class="results-info mb-2"></div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-border text-left text-text-dim text-xs uppercase tracking-wider">
-            <th scope="col" class="pb-2 pr-3">Date</th>
-            <th scope="col" class="pb-2 pr-3">Name</th>
-            <th scope="col" class="pb-2 pr-3">Age</th>
-            <th scope="col" class="pb-2 pr-3">Race</th>
-            <th scope="col" class="pb-2 pr-3">City, State</th>
-            <th scope="col" class="pb-2 pr-3">Armed</th>
-            <th scope="col" class="pb-2 pr-3">Flee</th>
-            <th scope="col" class="pb-2">Camera</th>
-          </tr>
-        </thead>
-        <tbody id="incidents-results" class="divide-y divide-border"></tbody>
-      </table>
-    </div>
+          <div class="record-table-wrap">
+            <table class="record-table record-table--l3">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Name</th>
+                  <th scope="col" class="cell-num">Age</th>
+                  <th scope="col">Race</th>
+                  <th scope="col">City, State</th>
+                  <th scope="col">Armed</th>
+                  <th scope="col">Flee</th>
+                  <th scope="col">Camera</th>
+                </tr>
+              </thead>
+              <tbody id="incidents-results"></tbody>
+            </table>
+          </div>
 
-    <div id="incidents-pagination" class="flex items-center justify-center gap-4 mt-6 hidden">
-      <button id="incidents-prev" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
-      <span id="incidents-page-info" class="text-sm text-text-dim"></span>
-      <button id="incidents-next" class="px-4 py-2 text-sm bg-surface-alt border border-border rounded-lg hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
-    </div>
+          <div id="incidents-pagination" class="pager hidden">
+            <button id="incidents-prev" class="button button--quiet">Previous</button>
+            <span id="incidents-page-info" class="pager-info"></span>
+            <button id="incidents-next" class="button button--quiet">Next</button>
+          </div>
+        </div>
+      </section>
+    </article>
   </main>
 
   <footer class="colophon">

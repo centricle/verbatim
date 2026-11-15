@@ -21,6 +21,7 @@ never duplicates a record.
 | WikiSource, American Rhetoric, Project Gutenberg | `import_congress.py` | Landmark Congressional floor speeches |
 | WikiSource, Cornell LII | `import_scotus.py` | Landmark Supreme Court opinions |
 | Cornell LII, WikiSource | `import_opinions.py` | Opinions of the Court, one per decision and credited to the author the opinion names: Brown, the decisions paired with corpus opinions by the Constitution Annotated's table of overruled decisions, and full-text replacements for corpus records that hold a syllabus or part of an opinion |
+| Historic Hansard (UK Parliament) | `import_hansard.py` | Four of Churchill's 1940 House of Commons speeches, under the Open Parliament Licence v3.0 |
 | Project Gutenberg, WikiSource | `import_churchill.py`, `import_douglass.py`, `import_franklin.py`, `import_suffrage.py`, `import_twain.py` | Speeches, letters and essays by non-presidential voices |
 | Project Gutenberg, WikiSource | `deepen_lincoln.py`, `deepen_voices.py` | Additional records for speakers with thin coverage |
 | Public archive mirror | `scrape.py --source twitter` | Archived social media posts |
@@ -64,6 +65,7 @@ python3 scripts/corpus/import_federal_register.py
 python3 scripts/corpus/import_founding.py
 python3 scripts/corpus/import_constitution.py      # --dry-run to parse and check only
 python3 scripts/corpus/import_opinions.py          # --dry-run to parse and check only
+python3 scripts/corpus/import_hansard.py           # --dry-run to parse and check only
 python3 scripts/corpus/import_debates.py
 # ...then any of the other import_*.py and deepen_*.py scripts, in any order
 ```

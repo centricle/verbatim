@@ -10,6 +10,20 @@ import sys
 CORPUS_JSONL = os.path.join(os.path.dirname(__file__), "corpus.jsonl")
 CORPUS_DB = os.path.join(os.path.dirname(__file__), "corpus.db")
 
+
+def user_agent():
+    """User-Agent for polite scraping, with a contact read from the environment.
+
+    WikiSource and Project Gutenberg ask automated clients to identify themselves
+    with a way to reach the operator. Set CORPUS_UA_CONTACT to an email address or
+    URL before running any import script.
+    """
+    contact = os.environ.get("CORPUS_UA_CONTACT", "").strip()
+    if not contact:
+        sys.exit("CORPUS_UA_CONTACT is not set. Export a contact (email or URL) "
+                 "for the User-Agent header, then rerun.")
+    return f"verbatim-corpus/0.1 (https://verbatim.fyi; {contact})"
+
 VALID_TYPES = {"tweet", "truth_social", "speech", "interview", "press_gaggle", "statement", "press_conference", "remarks", "earnings_call", "memo", "letter", "executive_order", "proclamation", "address", "founding_document", "essay", "debate", "floor_speech", "opinion"}
 
 

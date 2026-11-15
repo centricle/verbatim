@@ -18,11 +18,11 @@ import time
 
 import requests
 
-from ingest import bulk_insert, make_id
+from ingest import bulk_insert, make_id, user_agent
 
 SESSION = requests.Session()
 SESSION.headers.update({
-    "User-Agent": "verbatim-corpus/0.1 (https://verbatim.fyi; ksmith@centricle.com)"
+    "User-Agent": user_agent()
 })
 
 SPEAKER = "abraham-lincoln"

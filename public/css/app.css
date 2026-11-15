@@ -305,6 +305,7 @@
     line-height: 1.15;
     letter-spacing: -0.012em;
   }
+  .prose strong { font-weight: 600; }
   .num { font-variant-numeric: tabular-nums; }
 
   /* ---------- Byline: the source takes the credit ---------- */

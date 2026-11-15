@@ -21,7 +21,7 @@ never duplicates a record.
 | WikiSource, American Rhetoric, Project Gutenberg | `import_congress.py` | Landmark Congressional floor speeches |
 | WikiSource, Cornell LII | `import_scotus.py` | Landmark Supreme Court opinions |
 | Cornell LII, WikiSource | `import_opinions.py` | Opinions of the Court, one per decision and credited to the author the opinion names: Brown, the decisions paired with corpus opinions by the Constitution Annotated's table of overruled decisions, and full-text replacements for corpus records that hold a syllabus or part of an opinion |
-| GovInfo (Government Publishing Office) | `import_govinfo.py` | Statements taken from GPO prints in place of transcript-site copies: Barbara Jordan's 1974 impeachment statement, from the Judiciary Committee's print |
+| GovInfo (Government Publishing Office) | `import_govinfo.py` | Statements taken from GPO prints in place of transcript-site copies: Barbara Jordan's 1974 impeachment statement, from the Judiciary Committee's print, and Shirley Chisholm's 1970 Equal Rights Amendment remarks, from the bound Congressional Record scan (needs `pdftotext` from poppler) |
 | Historic Hansard (UK Parliament) | `import_hansard.py` | Four of Churchill's 1940 House of Commons speeches, under the Open Parliament Licence v3.0 |
 | Project Gutenberg, WikiSource | `import_churchill.py`, `import_douglass.py`, `import_franklin.py`, `import_suffrage.py`, `import_twain.py` | Speeches, letters and essays by non-presidential voices |
 | Project Gutenberg, WikiSource | `deepen_lincoln.py`, `deepen_voices.py` | Additional records for speakers with thin coverage |

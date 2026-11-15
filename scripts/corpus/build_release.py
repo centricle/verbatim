@@ -12,9 +12,11 @@ The rules are data at the top of this file, so a change to what the release
 contains is a reviewable diff. The build is deterministic: the same corpus.db
 gives byte-identical output.
 
-Order: exclude whole works, exclude single records, fix speakers, normalize dates
-(amendments take theirs from amendments.json), assign collection and genre,
-attach the rights basis, drop near-duplicates.
+Order: exclude whole works, exclude single records, remove what publishers added
+(GPO's Federal Register apparatus, HTML entities, Gutenberg boilerplate), fix
+speakers, normalize dates (book headings, amendments.json, then DATE_FIXES),
+remove editors' matter from the voices books, assign collection and genre, attach
+the rights basis, drop near-duplicates.
 
 Usage (from the repo root):
   python3 scripts/corpus/build_release.py            # build
@@ -87,6 +89,8 @@ EXCLUDE_WORKS = {
 EXCLUDE_RECORDS = {
     (GUTENBERG + "18419", "HODDER AND STOUGHTON LONDON MCMIX"):
         "front matter: title page and preface",
+    (GUTENBERG + "18419", "INTRODUCTION"):
+        "not the speaker's words: the editor's introduction, signed H.W. Massingham",
 }
 
 # Single records by id, where the title is shared with a record that stays.
@@ -97,6 +101,9 @@ EXCLUDE_IDS = {
     "d2f8b270528e26c51717a15bcbbf95b26e2ab4857dabb8a1976f8c4422e0934e":
         "not the opinion: a 1,392-character encyclopedia summary of Loving v. "
         "Virginia; the opinion itself is the Cornell LII record",
+    "2f54a3ee370a40d2ea6a1ca21c7a21451263f7a4a1a2d910f7ba6a78b3bccd30":
+        "two speeches in one record (Leicester, September 5, 1909, and Abernethy, "
+        "October 7, 1909); import_churchill.py now splits them",
 }
 
 # Retweets ("RT @...") are another account's text. Old-style quote tweets
@@ -155,6 +162,29 @@ DATE_PRECISION_OVERRIDES = {
     "https://en.wikisource.org/wiki/The_War_Prayer": "year",
     "https://en.wikisource.org/wiki/Churchill's_1919_War_Office_Memorandum": "year",
 }
+
+# Dates a source prints wrong, each settled against an independent record that
+# is quoted here. Keyed by (source_url, exact title); applied after every other
+# date rule.
+DATE_FIXES = {
+    ("https://millercenter.org/the-presidency/presidential-speeches/"
+     "december-9-1908-eighth-annual-message", "December 9, 1908: Eighth Annual Message"):
+        ("1908-12-08", "Miller Center prints \"December 09, 1908\"; the American "
+         "Presidency Project prints \"Eighth Annual Message December 08, 1908\", the "
+         "day the message was sent to Congress"),
+    (GUTENBERG + "18419", "THE BUDGET RESOLUTIONS"):
+        ("1909-05-03", "the book prints \"HOUSE OF COMMONS, May 4, 1903\"; Hansard "
+         "has the speech in HC Deb 03 May 1909 vol 4 cc749-854, opening \"The Leader "
+         "of the Opposition this afternoon told us\""),
+    (GUTENBERG + "18419", "THE HOUSE OF LORDS"):
+        ("1907-06-25", "the book prints \"HOUSE OF COMMONS, June 29, 1907\"; Hansard "
+         "has the speech in HC Deb 25 June 1907 vol 176 cc1218-54, the second day of "
+         "the debate on Campbell-Bannerman's resolution"),
+}
+
+# Books that store their publication year as every record's date. A date in a
+# record's heading replaces it even when the year differs.
+BOOK_YEAR_WORKS = {GUTENBERG + "18419"}
 
 # Sources whose dates come from a dated document or an API field, so a first of
 # the month is a real day.
@@ -382,23 +412,27 @@ def heading_block(text):
     return "\n".join(out)
 
 
-def heading_date(text, stored, precision):
+def heading_date(text, stored, precision, book_year=False):
     """A day-precision date from the heading block, accepted only when it agrees
-    with the stored year (and month, when the month was stored). None otherwise.
+    with the stored year (and month, when the month was stored), or, for a work
+    in BOOK_YEAR_WORKS, falls in or before the stored year. Italic markers
+    (underscores) around the date are read through. None otherwise.
 
     >>> heading_date("X\\nLONDON, SEPTEMBER 28, 1872.\\n" + "x" * 70, "1872-01-01", "year")
     '1872-09-28'
     >>> heading_date("X\\nLONDON, SEPTEMBER 28, 1873.\\n" + "x" * 70, "1872-01-01", "year") is None
     True
+    >>> heading_date("X\\nLEEDS, _June 29, 1907_\\n" + "x" * 70, "1909-01-01", "year", True)
+    '1907-06-29'
     """
-    m = HEADING_DATE.search(heading_block(text))
+    m = HEADING_DATE.search(heading_block(text).replace("_", " "))
     if not m:
         return None
     found = date(int(m.group(3)), MONTHS[m.group(1).capitalize()], int(m.group(2)))
     iso = found.isoformat()
     if precision == "unknown" or not stored:
         return iso
-    if precision == "year" and iso[:4] == stored[:4]:
+    if precision == "year" and (iso[:4] == stored[:4] or book_year and iso[:4] < stored[:4]):
         return iso
     if precision == "month" and iso[:7] == stored[:7]:
         return iso
@@ -432,10 +466,87 @@ def strip_boilerplate(text):
     m = TRANSCRIBER.search(text)
     if m and m.start() > len(text) * 2 / 3:
         text = text[:m.start()]
-    return text.strip()
+    return PRODUCED_BY.sub("", text.strip(), count=1)
+
+
+PRODUCED_BY = re.compile(r"\A\s*Produced by [^\n]*(?:\n[^\n]+)*\n\s*")
+
+# Voices books whose editor prints a caption, a headnote or setting-up text
+# between a speech's title and its first words (Paine's edition of Twain's
+# speeches; the 1909 edition of Churchill's, with its venue lines, the motions he
+# answered and its source notes). Those paragraphs go, after heading_date has
+# read the date from them: indented ones, a venue line with an italic date or in
+# capitals, and a "(From ...)" source note. A part number ("II") stays.
+HEADNOTE_WORKS = {GUTENBERG + "3188", GUTENBERG + "18419"}
+HEADNOTE_LINE = re.compile(r"^(?:[^\n]*_[^\n]*\d{4}[^\n]*_[^\n]*|[^a-z\n]*[A-Z][^a-z\n]*[^,\u2014\n])$")
+SOURCE_NOTE = re.compile(r"^\(From [^)]*\)$")
+
+# Editor's notes printed after a title elsewhere, cut from the title through
+# these words. Keyed by (source_url, exact title).
+EDITOR_NOTES = {
+    (GUTENBERG + "70", "Taming The Bicycle"): "A. B. P.",
+    (GUTENBERG + "70", "Concerning Tobacco"): "(Written about 1893; not before published)",
+    (GUTENBERG + "70", "The Memorable Assassination"): "A. B. P.",
+    (GUTENBERG + "70", "The Death Of Jean"): "Albert Bigelow Paine.",
+    (GUTENBERG + "70", "A Simplified Alphabet"): "on any impersonal subject.)",
+    (GUTENBERG + "3188", "THE WEATHER"): "The Weather of New England.\u201d",
+}
+
+# Footnotes in the voices books are the editor's: who "the noble Lord" was, what
+# happened since. A FOOTNOTES section runs to the end of its record; a footnote
+# printed inline is a paragraph that opens with its label. Each goes with the
+# reference marks that point to it.
+FOOTNOTES_SECTION = re.compile(r"^FOOTNOTES?:[ \t]*$", re.MULTILINE)
+FOOTNOTE_PARA = re.compile(r"^ ?\[(\d+)\] [^\n]*(?:\n(?![ \t]*\n)[^\n]*)*\n*", re.MULTILINE)
+
+
+def strip_editorial(text, url, title):
+    """A voices-book record without its editor's caption, headnote, notes and
+    footnotes. The title line stays.
+
+    >>> print(strip_editorial("THE LADIES\\n\\n    DELIVERED IN LONDON, 1872\\n\\n"
+    ...     "I am proud, indeed, of the distinction of being chosen to respond to[1]\\n"
+    ...     "this toast.\\n\\n [1] An editor's aside.\\n\\nMore.\\n\\nFOOTNOTES:\\n\\n[2] Gone.",
+    ...     GUTENBERG + "3188", "THE LADIES"))
+    THE LADIES
+    <BLANKLINE>
+    I am proud, indeed, of the distinction of being chosen to respond to
+    this toast.
+    <BLANKLINE>
+    More.
+    """
+    head, _, body = text.partition("\n")
+    note = EDITOR_NOTES.get((url, title))
+    if note:
+        end = body.index(note) + len(note)
+        body = body[end:]
+    if url in HEADNOTE_WORKS:
+        paras = re.split(r"\n(?:[ \t]*\n)+", body.strip("\n"))
+        kept = []
+        while paras:
+            p = paras[0]
+            if not p.strip() or p[:1].isspace() or SOURCE_NOTE.match(p.strip().replace("\n", " ")):
+                paras.pop(0)
+            elif ROMAN_LINE.match(p.strip()):
+                kept.append(paras.pop(0).strip())
+            elif "\n" not in p.strip() and HEADNOTE_LINE.match(p.strip()):
+                paras.pop(0)
+            else:
+                break
+        body = "\n\n".join(kept + paras)
+    m = FOOTNOTES_SECTION.search(body)
+    if m:
+        body = body[:m.start()]
+    labels = set(FOOTNOTE_PARA.findall(body))
+    body = FOOTNOTE_PARA.sub("", body)
+    if labels:
+        body = re.sub(r"\[(\d+)\]", lambda r: "" if r.group(1) in labels else r.group(), body)
+    return head + "\n\n" + body.strip()
 
 
 HTML_TAG = re.compile(r"</?[a-zA-Z][^>]*>")
+# Transcripts taken from web pages that kept their HTML entities as text.
+ENTITY_SOURCES = {"miller_center", "wikisource"}
 FR_DOC = re.compile(r"\[?FR Doc\.?(?: No:)? ?([A-Z0-9][A-Z0-9-]+)")
 
 # The Federal Register text GPO serves wraps each presidential document in its
@@ -741,6 +852,11 @@ def build(db_path):
             text = html.unescape(HTML_TAG.sub("", text))
             fr_doc, text, found = strip_fr_wrapper(text)
             flags["fr_wrapper_stripped" if found else "fr_heading_not_found"].append(rec["id"])
+        if rec["source_name"] in ENTITY_SOURCES:
+            unescaped = html.unescape(text).replace("\xa0", " ")
+            if unescaped != text:
+                flags["entities_decoded"].append(rec["id"])
+            text = unescaped
         is_retweet = rec["source_name"] == TWEETS and text.startswith("RT @")
         if is_retweet and EXCLUDE_RETWEETS:
             excluded.append((rec["id"], "retweet", "another account's text"))
@@ -768,10 +884,16 @@ def build(db_path):
 
         d, precision, timestamp = normalize_date(rec, flags)
         if is_book and precision in ("year", "month", "unknown"):
-            found = heading_date(text, d, precision)
+            found = heading_date(text, d, precision, url in BOOK_YEAR_WORKS)
             if found:
                 changed.append((rec["id"], "date", f"{d} ({precision}) -> {found} (heading)"))
                 d, precision = found, "day"
+        if is_book and speaker in VOICES:
+            edited = strip_editorial(text, url, title)
+            if edited != text:
+                changed.append((rec["id"], "text", f"editor's matter removed, "
+                                                   f"{len(text) - len(edited):,} chars"))
+            text = edited
         amendment = None
         m = AMENDMENT_TITLE.match(title)
         if m and rec["source_name"] == "national_archives":
@@ -779,6 +901,10 @@ def build(db_path):
             if d != amendment["date"]:
                 changed.append((rec["id"], "date", f"{d} -> {amendment['date']} (amendments.json)"))
                 d, precision = amendment["date"], "day"
+        fix = DATE_FIXES.get((url, title))
+        if fix:
+            changed.append((rec["id"], "date", f"{d} -> {fix[0]} ({fix[1]})"))
+            d, precision = fix[0], "day"
         last = SPEAKER_LAST_DATE.get(speaker)
         if last and d and d > last:
             flags["speaker_after_death"].append(rec["id"])

@@ -1,0 +1,75 @@
+# Corpus pipeline
+
+The scrapers and importers behind Verbatim's speech corpus: presidential
+addresses, executive orders and proclamations, founding documents, debate
+transcripts, Congressional floor speeches, Supreme Court opinions, and the
+speeches, letters and essays of a handful of non-presidential voices.
+
+Each record is one statement with a speaker, date, type, title, source name and
+source URL. Records are keyed by `sha256(speaker:text)`, so rerunning an import
+never duplicates a record.
+
+## Sources
+
+| Source | Script | What it supplies |
+|---|---|---|
+| Miller Center, University of Virginia | `import_miller.py` | Presidential speeches (bulk download, `data.millercenter.org`) |
+| Federal Register API | `import_federal_register.py` | Executive orders and proclamations |
+| Project Gutenberg | `import_founding.py` | Declaration of Independence, Constitution, Bill of Rights, Federalist Papers |
+| UCSB American Presidency Project | `import_debates.py` | General-election presidential and VP debate transcripts, 1960 to 2024 |
+| WikiSource, American Rhetoric, Project Gutenberg | `import_congress.py` | Landmark Congressional floor speeches |
+| WikiSource, Cornell LII | `import_scotus.py` | Landmark Supreme Court opinions |
+| Project Gutenberg, WikiSource | `import_churchill.py`, `import_douglass.py`, `import_franklin.py`, `import_suffrage.py`, `import_twain.py` | Speeches, letters and essays by non-presidential voices |
+| Project Gutenberg, WikiSource | `deepen_lincoln.py`, `deepen_voices.py` | Additional records for speakers with thin coverage |
+| Public archive mirror | `scrape.py --source twitter` | Archived social media posts |
+
+Each script's docstring lists its exact sources (Gutenberg ebook numbers,
+WikiSource page titles). Rights differ by source, and not all of this material
+is public domain. `scrape.py` also carries Rev.com and UCSB scrapers, kept for
+reference only; read its docstring before running either.
+
+## Where the data goes
+
+Nothing the pipeline produces is committed. Every path comes from the constants
+at the top of `ingest.py`:
+
+| Path | Contents |
+|---|---|
+| `data/corpus/corpus.db` | SQLite, one `statements` table plus a full-text index |
+| `data/corpus/corpus.jsonl` | Records added one at a time through `ingest.add_record` |
+| `data/corpus/sources.json` | Log of what `scrape.py` has fetched |
+| `data/corpus/export/` | Flat text files written by `export_corpus.py` |
+| `tmp/corpus/raw/` | Cached downloads, so a rerun does not refetch |
+
+Set `CORPUS_DIR` to keep the data somewhere other than `data/corpus/`.
+
+## Rebuilding
+
+Python 3. Run everything from the repository root.
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r scripts/corpus/requirements.txt
+
+# The import scripts identify themselves to WikiSource and Gutenberg.
+# They exit without this set.
+export CORPUS_UA_CONTACT="you@example.com"
+
+python3 scripts/corpus/import_miller.py            # --dry-run to preview, --inspect to see the JSON
+python3 scripts/corpus/import_federal_register.py
+python3 scripts/corpus/import_founding.py
+python3 scripts/corpus/import_debates.py
+# ...then any of the other import_*.py and deepen_*.py scripts, in any order
+```
+
+`ingest.py` manages the database: with no arguments it reloads
+`corpus.jsonl` into `corpus.db`, and with file arguments it imports JSON or
+JSONL records from them.
+
+## Searching it locally
+
+```bash
+python3 scripts/corpus/search.py "tariff"          # full-text search, highlighted
+python3 scripts/corpus/search.py --help            # date, type and speaker filters, export
+python3 scripts/corpus/export_corpus.py            # one folder per speaker under data/corpus/export/
+```

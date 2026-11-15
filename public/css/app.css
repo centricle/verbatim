@@ -514,6 +514,7 @@
   .note[open] summary::after { content: '\2212'; }
   .note-body { margin-top: 0.6rem; }
   .note-body > * + * { margin-top: 0.6em; }
+  .note-body strong { font-weight: 600; color: var(--color-ink); }
 
   /* ---------- Figures ---------- */
   .figures {
@@ -807,6 +808,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .cell-clip--mid { max-width: 14rem; }
+  .cell-clip--narrow { max-width: 11rem; }
 
   /*
    * Below 768px each row is set as an appendix entry instead of a seven-column
@@ -900,6 +903,7 @@
       order: 0;
       flex: 1 1 0;
       min-width: 0;
+      max-width: none;
       white-space: normal;
       font-size: 0.86rem;
       line-height: 1.2;

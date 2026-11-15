@@ -21,12 +21,12 @@ const prevBtn = document.getElementById('qi-prev');
 const nextBtn = document.getElementById('qi-next');
 const pageInfo = document.getElementById('qi-page-info');
 
-// Ruling badge colors
+// Ruling key: the same ruling colors Figure 3 uses
 function rulingBadgeClass(ruling) {
-  if (ruling === 'granted') return 'bg-[oklch(0.88_0.06_25)] text-[oklch(0.38_0.10_20)]';
-  if (ruling === 'denied') return 'bg-[oklch(0.88_0.06_145)] text-[oklch(0.35_0.08_145)]';
-  if (ruling === 'mixed') return 'bg-[oklch(0.88_0.06_70)] text-[oklch(0.38_0.08_70)]';
-  return 'bg-surface-hover text-text-dim';
+  if (ruling === 'granted') return 'tx-series-2';
+  if (ruling === 'denied') return 'tx-series-1';
+  if (ruling === 'mixed') return 'tx-series-3';
+  return 'tx-other';
 }
 
 // Title case
@@ -58,16 +58,16 @@ async function search() {
   }
 
   resultsBody.innerHTML = rows.map(d => `
-    <tr class="hover:bg-surface-alt transition-colors">
-      <td class="py-2 pr-3 whitespace-nowrap">${d.year || '—'}</td>
-      <td class="py-2 pr-3 font-mono text-xs">${d.circuit || '—'}</td>
-      <td class="py-2 pr-3 text-xs max-w-[220px] truncate" title="${(d.case_name || '').replace(/"/g, '&quot;')}">${d.case_name || '—'}</td>
-      <td class="py-2 pr-3">
-        <span class="badge ${rulingBadgeClass(d.qi_ruling)}">${titleCase(d.qi_ruling)}</span>
+    <tr>
+      <td class="cell-dim cell-nowrap cell-trail">${d.year || '—'}</td>
+      <td class="cell-dim">${d.circuit || '—'}</td>
+      <td class="cell-name cell-lead cell-clip cell-clip--mid" title="${(d.case_name || '').replace(/"/g, '&quot;')}">${d.case_name || '—'}</td>
+      <td class="cell-push">
+        <span class="tx-type ${rulingBadgeClass(d.qi_ruling)}">${titleCase(d.qi_ruling)}</span>
       </td>
-      <td class="py-2 pr-3 text-xs max-w-[140px] truncate" title="${(d.violation_type || '').replace(/"/g, '&quot;')}">${d.violation_type || '—'}</td>
-      <td class="py-2 pr-3 text-xs">${titleCase(d.defendant_type)}</td>
-      <td class="py-2 text-xs">${titleCase(d.prevailing_party)}</td>
+      <td class="cell-clip cell-clip--narrow cell-dim cell-wide" title="${(d.violation_type || '').replace(/"/g, '&quot;')}">${d.violation_type || '—'}</td>
+      <td class="cell-dim cell-l3" data-label="Defendant">${titleCase(d.defendant_type)}</td>
+      <td class="cell-dim cell-l3 cell-push" data-label="Prevailing">${titleCase(d.prevailing_party)}</td>
     </tr>
   `).join('');
 

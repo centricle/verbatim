@@ -51,6 +51,22 @@
   --color-other: oklch(0.72 0.01 258);
   --color-figure: oklch(0.42 0.03 258);
 
+  /* Categorical series for figures that compare groups (COMPAS groups and
+     error rates, immunity rulings). Validated as a set for color-vision
+     deficiency against the ground; the fourth is a neutral. */
+  --color-series-1: oklch(0.52 0.13 245);
+  --color-series-2: oklch(0.66 0.15 60);
+  --color-series-3: oklch(0.50 0.12 165);
+  --color-series-4: oklch(0.64 0.012 258);
+
+  /* Party identity in the conventional press colors. Violet stays reserved
+     for provenance, so a party without a color here takes --color-other. */
+  --color-party-dem: oklch(0.52 0.13 245);
+  --color-party-rep: oklch(0.55 0.18 28);
+  --color-party-lib: oklch(0.72 0.15 75);
+  --color-party-gre: oklch(0.50 0.12 165);
+  --color-party-ind: oklch(0.55 0.015 258);
+
   /* Legacy names, aliased so the five pages that keep their old markup still
      resolve every utility they use (bg-surface-alt, text-text-dim, ...). */
   --color-surface: var(--color-ground);
@@ -273,6 +289,15 @@
     text-decoration-color: var(--color-ink-dim);
   }
   .prose a:hover, .text-link:hover { text-decoration-color: var(--color-ink); }
+  /* A link out to the source's own publication is provenance, so violet. */
+  .source-link, .prose a.source-link {
+    color: var(--color-source);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: color-mix(in oklch, var(--color-source) 40%, transparent);
+  }
+  .source-link:hover, .prose a.source-link:hover { color: var(--color-source-deep); text-decoration-color: currentColor; }
   .subhead {
     font-family: var(--font-display);
     font-weight: 600;
@@ -555,6 +580,15 @@
   .key-other { background: var(--color-other); }
   /* Referenced here so Tailwind emits it; the amount chart reads it from JS. */
   .key-figure { background: var(--color-figure); }
+  .key-series-1 { background: var(--color-series-1); }
+  .key-series-2 { background: var(--color-series-2); }
+  .key-series-3 { background: var(--color-series-3); }
+  .key-series-4 { background: var(--color-series-4); }
+  .key-party-dem { background: var(--color-party-dem); }
+  .key-party-rep { background: var(--color-party-rep); }
+  .key-party-lib { background: var(--color-party-lib); }
+  .key-party-gre { background: var(--color-party-gre); }
+  .key-party-ind { background: var(--color-party-ind); }
   .figure-plot { min-height: 220px; }
   .figure-source {
     margin-top: 0.7rem;
@@ -590,6 +624,22 @@
     fill: var(--color-ink-dim);
   }
   .chart .bar { transition: opacity 0.12s; }
+  /* A title the chart draws itself, set as a figure title. */
+  .chart .chart-title {
+    font-family: var(--font-display);
+    font-stretch: 100%;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    fill: var(--color-ink);
+  }
+  .chart .axis-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    fill: var(--color-ink-dim);
+  }
 
   /* ---------- Appendix ---------- */
   .appendix {
@@ -722,6 +772,41 @@
   }
   .tx-purchase { --tx-key: var(--color-purchase); }
   .tx-sale { --tx-key: var(--color-sale); }
+  .tx-series-1 { --tx-key: var(--color-series-1); }
+  .tx-series-2 { --tx-key: var(--color-series-2); }
+  .tx-series-3 { --tx-key: var(--color-series-3); }
+  .tx-party-dem { --tx-key: var(--color-party-dem); }
+  .tx-party-rep { --tx-key: var(--color-party-rep); }
+  .tx-party-lib { --tx-key: var(--color-party-lib); }
+  .tx-party-gre { --tx-key: var(--color-party-gre); }
+  .tx-party-ind { --tx-key: var(--color-party-ind); }
+  /* Ordered levels (low to high) step one neutral hue, light to dark. */
+  .tx-level-1 { --tx-key: color-mix(in oklch, var(--color-figure) 30%, var(--color-ground)); }
+  .tx-level-2 { --tx-key: color-mix(in oklch, var(--color-figure) 62%, var(--color-ground)); }
+  .tx-level-3 { --tx-key: var(--color-figure); }
+  /* Yes/no: a filled key and an empty one, no color judgment either way. */
+  .tx-yes { --tx-key: var(--color-ink); }
+  .tx-no::before { background: transparent; box-shadow: inset 0 0 0 1.5px var(--color-ink-dim); }
+
+  /* Shared cell roles for the other appendix tables. */
+  .cell-num { text-align: right; white-space: nowrap; }
+  .record-table th.cell-num { text-align: right; }
+  .record-table th:last-child, .record-table td:last-child { padding-right: 0; }
+  .cell-code {
+    font-family: var(--font-label);
+    font-stretch: 87.5%;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .cell-nowrap { white-space: nowrap; }
+  .cell-clip {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   /*
    * Below 768px each row is set as an appendix entry instead of a seven-column
@@ -797,6 +882,69 @@
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 2;
       line-clamp: 2;
+    }
+  }
+
+  /*
+   * The same appendix-entry reflow for the other tables, driven by role
+   * classes instead of per-column rules: .cell-lead and .cell-trail make the
+   * entry head, every other cell runs on the detail line in column order,
+   * .cell-push sends a cell to the right edge, .cell-l3 starts a third line
+   * (tables marked .record-table--l3) and .cell-wide takes a clamped line of
+   * its own at the end. A data-label attribute prints the column name before
+   * a value that would be ambiguous without its header.
+   */
+  @media (max-width: 767px) {
+    .record-table td { order: 3; }
+    .record-table td.cell-lead {
+      order: 0;
+      flex: 1 1 0;
+      min-width: 0;
+      white-space: normal;
+      font-size: 0.86rem;
+      line-height: 1.2;
+      font-weight: 500;
+      text-wrap: balance;
+    }
+    .record-table td.cell-trail {
+      order: 1;
+      flex: none;
+      margin-left: auto;
+      padding: 0;
+      text-align: right;
+    }
+    .record-table td.cell-push { margin-left: auto; text-align: right; }
+    .record-table td.cell-num { text-align: left; }
+    .record-table--l3 tbody tr::after {
+      content: '';
+      order: 5;
+      flex-basis: 100%;
+      height: 0.2rem;
+    }
+    .record-table td.cell-l3 { order: 6; }
+    .record-table td.cell-wide {
+      order: 7;
+      flex-basis: 100%;
+      max-width: none;
+      margin-top: 0.25rem;
+      white-space: normal;
+      color: var(--color-ink-dim);
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+    }
+    .record-table td[data-label]::before {
+      content: attr(data-label);
+      margin-right: 0.35em;
+      font-family: var(--font-label);
+      font-stretch: 87.5%;
+      font-size: 0.54rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-ink-dim);
     }
   }
 

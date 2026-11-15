@@ -22,20 +22,20 @@ const prevBtn = document.getElementById('compas-prev');
 const nextBtn = document.getElementById('compas-next');
 const pageInfo = document.getElementById('compas-page-info');
 
-// Score badge colors
+// Risk key: one neutral hue stepped light to dark, Low to High
 function scoreBadgeClass(scoreText) {
   switch (scoreText) {
-    case 'Low': return 'bg-[oklch(0.92_0.05_145)] text-[oklch(0.35_0.08_145)]';
-    case 'Medium': return 'bg-[oklch(0.90_0.07_75)] text-[oklch(0.40_0.10_60)]';
-    case 'High': return 'bg-[oklch(0.88_0.06_25)] text-[oklch(0.38_0.10_20)]';
-    default: return 'bg-surface-hover text-text-dim';
+    case 'Low': return 'tx-level-1';
+    case 'Medium': return 'tx-level-2';
+    case 'High': return 'tx-level-3';
+    default: return 'tx-other';
   }
 }
 
-// Recidivism badge
+// Recidivism key: filled for yes, empty for no
 function recidBadge(val) {
-  if (val === 1) return '<span class="badge bg-[oklch(0.88_0.06_25)] text-[oklch(0.38_0.10_20)]">Yes</span>';
-  return '<span class="badge bg-[oklch(0.92_0.05_145)] text-[oklch(0.35_0.08_145)]">No</span>';
+  if (val === 1) return '<span class="tx-type tx-yes">Yes</span>';
+  return '<span class="tx-type tx-no">No</span>';
 }
 
 async function search() {
@@ -64,19 +64,17 @@ async function search() {
 
   // Render table rows
   resultsBody.innerHTML = rows.map(d => `
-    <tr class="hover:bg-surface-alt transition-colors">
-      <td class="py-2 pr-3 font-medium">${d.name}</td>
-      <td class="py-2 pr-3">${d.race}</td>
-      <td class="py-2 pr-3">${d.age}</td>
-      <td class="py-2 pr-3">${d.sex}</td>
-      <td class="py-2 pr-3 text-xs">${d.c_charge_desc || '—'}</td>
-      <td class="py-2 pr-3">
-        <span class="badge ${scoreBadgeClass(d.score_text)}">${d.decile_score}</span>
+    <tr>
+      <td class="cell-name cell-lead">${d.name}</td>
+      <td class="cell-nowrap">${d.race}</td>
+      <td class="cell-num" data-label="Age">${d.age}</td>
+      <td class="cell-dim">${d.sex}</td>
+      <td class="cell-clip cell-dim cell-wide" title="${(d.c_charge_desc || '').replace(/"/g, '&quot;')}">${d.c_charge_desc || '—'}</td>
+      <td class="cell-num cell-l3" data-label="Score">${d.decile_score}</td>
+      <td class="cell-trail">
+        <span class="tx-type ${scoreBadgeClass(d.score_text)}">${d.score_text}</span>
       </td>
-      <td class="py-2 pr-3">
-        <span class="badge ${scoreBadgeClass(d.score_text)}">${d.score_text}</span>
-      </td>
-      <td class="py-2">${recidBadge(d.two_year_recid)}</td>
+      <td class="cell-push cell-l3" data-label="Recidivated">${recidBadge(d.two_year_recid)}</td>
     </tr>
   `).join('');
 

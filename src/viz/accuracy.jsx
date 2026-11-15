@@ -2,32 +2,31 @@ import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
+import { useContainerWidth, wrapText } from './chart-size.js';
 
 function AccuracyBreakdown({ stats }) {
   const svgRef = useRef(null);
+  const fullWidth = useContainerWidth(svgRef);
 
   useEffect(() => {
-    if (!stats?.score_by_race || !stats?.recid_by_race || !svgRef.current) return;
+    if (!stats?.score_by_race || !stats?.recid_by_race || !fullWidth) return;
 
-    const container = svgRef.current.parentElement;
-    const width = container.clientWidth;
-    const height = 240;
-    const margin = { top: 20, right: 20, bottom: 40, left: 50 };
-    const innerW = width - margin.left - margin.right;
-    const innerH = height - margin.top - margin.bottom;
+    const narrow = fullWidth < 560;
+    const margin = { top: 18, right: 4, bottom: 40, left: 44 };
+    const width = fullWidth - margin.left - margin.right;
+    const height = (narrow ? 240 : 280) - margin.top - margin.bottom;
+
+    d3.select(svgRef.current).selectAll('*').remove();
 
     const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height);
-
-    svg.selectAll('*').remove();
-
-    const g = svg.append('g')
+      .attr('width', fullWidth)
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('viewBox', `0 0 ${fullWidth} ${height + margin.top + margin.bottom}`)
+      .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Calculate prediction accuracy per race
     // "Accurate" = (scored High/Medium AND recidivated) OR (scored Low AND did not recidivate)
-    const scoreByRace = stats.score_by_race;
     const recidByRace = stats.recid_by_race;
 
     // We need per-defendant accuracy, but we have aggregates
@@ -35,13 +34,7 @@ function AccuracyBreakdown({ stats }) {
     const fpData = stats.false_positive_by_race || [];
     const fnData = stats.false_negative_by_race || [];
 
-    // Build accuracy data: for each race, accuracy = 1 - (weighted error rate)
     const races = ['African-American', 'Caucasian', 'Hispanic'];
-    const raceColors = {
-      'African-American': 'oklch(0.55 0.12 30)',
-      'Caucasian': 'oklch(0.60 0.10 210)',
-      'Hispanic': 'oklch(0.60 0.10 145)',
-    };
 
     // Recidivism rates by race
     const recidRates = {};
@@ -66,106 +59,85 @@ function AccuracyBreakdown({ stats }) {
       };
     });
 
-    // Grouped bar: recidivism rate vs. high-score rate
+    // Grouped bar: recidivism rate vs. error rates
     const metrics = [
       { key: 'recidivismRate', label: 'Actual Recidivism Rate' },
       { key: 'falsePositiveRate', label: 'False Positive Rate' },
       { key: 'falseNegativeRate', label: 'False Negative Rate' },
     ];
     const metricColors = [
-      'oklch(0.55 0.08 70)',
-      'oklch(0.55 0.12 30)',
-      'oklch(0.60 0.10 210)',
+      'var(--color-series-4)',
+      'var(--color-series-2)',
+      'var(--color-series-1)',
     ];
 
     const x0 = d3.scaleBand()
       .domain(races)
-      .range([0, innerW])
-      .padding(0.3);
+      .range([0, width])
+      .paddingInner(narrow ? 0.2 : 0.3)
+      .paddingOuter(0.1);
 
     const x1 = d3.scaleBand()
       .domain(metrics.map(m => m.key))
       .range([0, x0.bandwidth()])
-      .padding(0.08);
+      .padding(0.06);
 
     const maxVal = d3.max(chartData.flatMap(d => metrics.map(m => d[m.key]))) || 0.6;
 
     const y = d3.scaleLinear()
       .domain([0, Math.ceil(maxVal * 10) / 10])
-      .range([innerH, 0]);
+      .range([height, 0]);
 
-    // Axes
-    g.append('g')
-      .attr('transform', `translate(0,${innerH})`)
-      .call(d3.axisBottom(x0))
-      .call(g => g.select('.domain').attr('stroke', 'oklch(0.70 0.02 60)'))
-      .call(g => g.selectAll('.tick text').attr('fill', 'oklch(0.45 0.03 60)').style('font-size', '10px'))
-      .call(g => g.selectAll('.tick line').attr('stroke', 'oklch(0.70 0.02 60)'));
+    // Horizontal gridlines double as the y axis
+    svg.append('g')
+      .attr('class', 'axis axis-y')
+      .call(d3.axisLeft(y).ticks(narrow ? 4 : 5).tickSize(-width).tickPadding(8).tickFormat(d3.format('.0%')));
 
-    g.append('g')
-      .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('.0%')))
-      .call(g => g.select('.domain').attr('stroke', 'oklch(0.70 0.02 60)'))
-      .call(g => g.selectAll('.tick text').attr('fill', 'oklch(0.45 0.03 60)').style('font-size', '11px'))
-      .call(g => g.selectAll('.tick line').attr('stroke', 'oklch(0.70 0.02 60)'));
+    svg.append('g')
+      .attr('class', 'axis axis-x')
+      .attr('transform', `translate(0,${height})`)
+      .call(d3.axisBottom(x0).tickSize(0).tickPadding(9))
+      .call(g => g.selectAll('.tick text').each(function() { wrapText(this, x0.step() - 4); }));
 
-    // Bars
+    // Bars, each with its rate above it
     chartData.forEach(d => {
       metrics.forEach((m, i) => {
         const val = d[m.key];
-        g.append('rect')
+        svg.append('rect')
+          .attr('class', 'bar')
           .attr('x', x0(d.race) + x1(m.key))
           .attr('y', y(val))
           .attr('width', x1.bandwidth())
-          .attr('height', innerH - y(val))
-          .attr('fill', metricColors[i])
-          .attr('rx', 2)
-          .style('cursor', 'pointer')
+          .attr('height', height - y(val))
+          .style('fill', metricColors[i])
           .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
           .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
           .on('mousemove', (event) => {
             showTooltip(event, `<strong>${d.race}</strong><br>${m.label}: ${d3.format('.1%')(val)}`);
           });
 
-        g.append('text')
+        svg.append('text')
+          .attr('class', 'value-label')
           .attr('x', x0(d.race) + x1(m.key) + x1.bandwidth() / 2)
-          .attr('y', y(val) - 3)
+          .attr('y', y(val) - 5)
           .attr('text-anchor', 'middle')
-          .attr('fill', 'oklch(0.45 0.03 60)')
-          .style('font-size', '9px')
-          .style('font-weight', '600')
           .text(d3.format('.0%')(val));
       });
     });
 
-    // Legend
-    const legend = g.append('g')
-      .attr('transform', `translate(0, ${innerH + 25})`);
+    // Baseline in ink
+    svg.append('line')
+      .attr('class', 'baseline')
+      .attr('x1', 0).attr('x2', width)
+      .attr('y1', height + 0.5).attr('y2', height + 0.5);
 
-    metrics.forEach((m, i) => {
-      const offset = i * (innerW / 3);
-      const row = legend.append('g').attr('transform', `translate(${offset}, 0)`);
-      row.append('rect').attr('width', 10).attr('height', 10).attr('rx', 2).attr('fill', metricColors[i]);
-      row.append('text').attr('x', 14).attr('y', 9).attr('fill', 'oklch(0.45 0.03 60)')
-        .style('font-size', '10px').text(m.label);
-    });
+  }, [stats, fullWidth]);
 
-  }, [stats]);
-
-  return <svg ref={svgRef} />;
+  return <svg ref={svgRef} className="chart" style={{ width: '100%', height: 'auto' }} />;
 }
 
 export function mountAccuracy(container, stats) {
   if (!container) return;
-  const title = document.createElement('h3');
-  title.className = 'text-sm font-semibold mb-3';
-  title.textContent = 'Prediction Accuracy by Race';
-  container.prepend(title);
-  const subtitle = document.createElement('p');
-  subtitle.className = 'text-xs text-text-dim mb-3';
-  subtitle.textContent = 'Actual recidivism rates alongside COMPAS prediction error rates. The algorithm errors differently depending on race.';
-  container.insertBefore(subtitle, title.nextSibling);
-  const wrapper = document.createElement('div');
-  container.appendChild(wrapper);
-  const root = createRoot(wrapper);
+  const root = createRoot(container);
   root.render(<AccuracyBreakdown stats={stats} />);
 }

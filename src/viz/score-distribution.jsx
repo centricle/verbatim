@@ -2,40 +2,40 @@ import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
+import { useContainerWidth } from './chart-size.js';
+
+const RACES = ['African-American', 'Caucasian', 'Hispanic'];
+const COLORS = {
+  'African-American': 'var(--color-series-2)',
+  'Caucasian': 'var(--color-series-1)',
+  'Hispanic': 'var(--color-series-3)',
+};
 
 function ScoreDistribution({ stats }) {
   const svgRef = useRef(null);
+  const fullWidth = useContainerWidth(svgRef);
 
   useEffect(() => {
-    if (!stats?.score_distribution || !svgRef.current) return;
+    if (!stats?.score_distribution || !fullWidth) return;
 
     const data = stats.score_distribution;
-    const container = svgRef.current.parentElement;
-    const width = container.clientWidth;
-    const height = 260;
-    const margin = { top: 20, right: 20, bottom: 40, left: 50 };
-    const innerW = width - margin.left - margin.right;
-    const innerH = height - margin.top - margin.bottom;
+    const narrow = fullWidth < 560;
+    const margin = { top: 10, right: 4, bottom: 48, left: 44 };
+    const width = fullWidth - margin.left - margin.right;
+    const height = (narrow ? 240 : 290) - margin.top - margin.bottom;
+
+    d3.select(svgRef.current).selectAll('*').remove();
 
     const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height);
-
-    svg.selectAll('*').remove();
-
-    const g = svg.append('g')
+      .attr('width', fullWidth)
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('viewBox', `0 0 ${fullWidth} ${height + margin.top + margin.bottom}`)
+      .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    const races = ['African-American', 'Caucasian', 'Hispanic'];
-    const colors = {
-      'African-American': 'oklch(0.55 0.12 30)',
-      'Caucasian': 'oklch(0.60 0.10 210)',
-      'Hispanic': 'oklch(0.60 0.10 145)',
-    };
 
     // Normalize to percentages within each race
     const raceTotals = {};
-    races.forEach(race => {
+    RACES.forEach(race => {
       raceTotals[race] = d3.sum(data.filter(d => d.race === race), d => d.count);
     });
 
@@ -43,49 +43,46 @@ function ScoreDistribution({ stats }) {
 
     const x0 = d3.scaleBand()
       .domain(scores)
-      .range([0, innerW])
-      .padding(0.2);
+      .range([0, width])
+      .paddingInner(narrow ? 0.16 : 0.24)
+      .paddingOuter(0.08);
 
     const x1 = d3.scaleBand()
-      .domain(races)
+      .domain(RACES)
       .range([0, x0.bandwidth()])
-      .padding(0.05);
+      .padding(0.06);
 
     const maxPct = d3.max(data, d => d.count / raceTotals[d.race]) || 0.25;
 
     const y = d3.scaleLinear()
       .domain([0, maxPct])
-      .range([innerH, 0]);
+      .nice()
+      .range([height, 0]);
 
-    // Axes
-    g.append('g')
-      .attr('transform', `translate(0,${innerH})`)
-      .call(d3.axisBottom(x0).tickFormat(d => d))
-      .call(g => g.select('.domain').attr('stroke', 'oklch(0.70 0.02 60)'))
-      .call(g => g.selectAll('.tick text').attr('fill', 'oklch(0.45 0.03 60)').style('font-size', '11px'))
-      .call(g => g.selectAll('.tick line').attr('stroke', 'oklch(0.70 0.02 60)'));
+    // Horizontal gridlines double as the y axis
+    svg.append('g')
+      .attr('class', 'axis axis-y')
+      .call(d3.axisLeft(y).ticks(narrow ? 4 : 5).tickSize(-width).tickPadding(8).tickFormat(d3.format('.0%')));
 
-    g.append('g')
-      .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('.0%')))
-      .call(g => g.select('.domain').attr('stroke', 'oklch(0.70 0.02 60)'))
-      .call(g => g.selectAll('.tick text').attr('fill', 'oklch(0.45 0.03 60)').style('font-size', '11px'))
-      .call(g => g.selectAll('.tick line').attr('stroke', 'oklch(0.70 0.02 60)'));
+    svg.append('g')
+      .attr('class', 'axis axis-x')
+      .attr('transform', `translate(0,${height})`)
+      .call(d3.axisBottom(x0).tickSize(0).tickPadding(9).tickFormat(d => d));
 
     // Bars
     scores.forEach(score => {
-      races.forEach(race => {
+      RACES.forEach(race => {
         const d = data.find(d => d.race === race && d.decile_score === score);
         if (!d) return;
         const pct = d.count / raceTotals[race];
 
-        g.append('rect')
+        svg.append('rect')
+          .attr('class', 'bar')
           .attr('x', x0(score) + x1(race))
           .attr('y', y(pct))
           .attr('width', x1.bandwidth())
-          .attr('height', innerH - y(pct))
-          .attr('fill', colors[race])
-          .attr('rx', 1)
-          .style('cursor', 'pointer')
+          .attr('height', height - y(pct))
+          .style('fill', COLORS[race])
           .on('mouseenter', function() { d3.select(this).style('opacity', 0.8); })
           .on('mouseleave', function() { d3.select(this).style('opacity', 1); hideTooltip(); })
           .on('mousemove', (event) => {
@@ -94,40 +91,27 @@ function ScoreDistribution({ stats }) {
       });
     });
 
+    // Baseline in ink
+    svg.append('line')
+      .attr('class', 'baseline')
+      .attr('x1', 0).attr('x2', width)
+      .attr('y1', height + 0.5).attr('y2', height + 0.5);
+
     // X label
-    g.append('text')
-      .attr('x', innerW / 2)
-      .attr('y', innerH + 35)
+    svg.append('text')
+      .attr('class', 'axis-title')
+      .attr('x', width / 2)
+      .attr('y', height + 42)
       .attr('text-anchor', 'middle')
-      .attr('fill', 'oklch(0.45 0.03 60)')
-      .style('font-size', '11px')
-      .text('COMPAS Decile Score');
+      .text('COMPAS decile score');
 
-    // Legend
-    const legend = g.append('g')
-      .attr('transform', `translate(${innerW - 180}, 0)`);
+  }, [stats, fullWidth]);
 
-    races.forEach((race, i) => {
-      const row = legend.append('g').attr('transform', `translate(0, ${i * 18})`);
-      row.append('rect').attr('width', 12).attr('height', 12).attr('rx', 2).attr('fill', colors[race]);
-      row.append('text').attr('x', 16).attr('y', 10).attr('fill', 'oklch(0.45 0.03 60)')
-        .style('font-size', '11px').text(race);
-    });
-
-  }, [stats]);
-
-  return <svg ref={svgRef} />;
+  return <svg ref={svgRef} className="chart" style={{ width: '100%', height: 'auto' }} />;
 }
 
 export function mountScoreDistribution(container, stats) {
   if (!container) return;
   const root = createRoot(container);
-  const title = document.createElement('h3');
-  title.className = 'text-sm font-semibold mb-3';
-  title.textContent = 'Risk Score Distribution by Race';
-  container.prepend(title);
-  const wrapper = document.createElement('div');
-  container.appendChild(wrapper);
-  const vizRoot = createRoot(wrapper);
-  vizRoot.render(<ScoreDistribution stats={stats} />);
+  root.render(<ScoreDistribution stats={stats} />);
 }

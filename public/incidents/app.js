@@ -1,24 +1,7 @@
-async function api(params) {
-  const qs = new URLSearchParams(params);
-  const res = await fetch(`/api/incidents?${qs}`);
-  return res.json();
-}
+import { createExplorer, html } from '../js/explorer.js';
 
-let currentPage = 1;
-const PAGE_SIZE = 50;
-
-const form = document.getElementById('incidents-search-form');
-const searchInput = document.getElementById('incidents-search');
-const filterState = document.getElementById('filter-state');
-const filterRace = document.getElementById('filter-race');
-const filterArmed = document.getElementById('filter-armed');
-const filterYear = document.getElementById('filter-year');
-const resultsBody = document.getElementById('incidents-results');
-const resultsInfo = document.getElementById('incidents-results-info');
-const pagination = document.getElementById('incidents-pagination');
-const prevBtn = document.getElementById('incidents-prev');
-const nextBtn = document.getElementById('incidents-next');
-const pageInfo = document.getElementById('incidents-page-info');
+// This page's visible copy is fixed (see AGENTS.md, "Fatal Force"). That is why
+// it sets no `errorText`: a failed search leaves the table as it was.
 
 const raceLabels = { W: 'White', B: 'Black', H: 'Hispanic', A: 'Asian', N: 'Native Am.', O: 'Other' };
 
@@ -33,30 +16,21 @@ function armedLabel(a) {
   return a.replace(/_/g, ' ');
 }
 
-async function search() {
-  const data = await api({
-    q: searchInput.value.trim(),
-    state: filterState.value,
-    race: filterRace.value,
-    armed: filterArmed.value,
-    year: filterYear.value,
-    page: currentPage,
-    pageSize: PAGE_SIZE,
-  });
+// Started now so the chunks load while the first search and stats are in flight.
+const charts = Promise.all([
+  import('../../src/viz/shootings-by-year.jsx'),
+  import('../../src/viz/shootings-by-race.jsx'),
+  import('../../src/viz/shootings-by-armed.jsx'),
+  import('../../src/viz/shootings-by-state.jsx'),
+]);
 
-  const totalCount = data.total;
-  const rows = data.rows || [];
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
-  if (totalCount === 0) {
-    resultsInfo.textContent = 'No records match your filters.';
-  } else {
-    const start = (currentPage - 1) * PAGE_SIZE + 1;
-    const end = Math.min(currentPage * PAGE_SIZE, totalCount);
-    resultsInfo.textContent = `Showing ${start}–${end} of ${totalCount.toLocaleString()} fatal shootings`;
-  }
-
-  resultsBody.innerHTML = rows.map(d => `
+createExplorer({
+  prefix: 'incidents',
+  endpoint: '/api/incidents',
+  filters: ['state', 'race', 'armed', 'year'],
+  noun: 'fatal shootings',
+  emptyText: 'No records match your filters.',
+  row: (d) => html`
     <tr>
       <td class="cell-dim cell-nowrap cell-trail">${fmtDate(d.date)}</td>
       <td class="cell-name cell-lead">${d.name || 'Unknown'}</td>
@@ -67,66 +41,20 @@ async function search() {
       <td class="cell-dim cell-l3" data-label="Flee">${d.flee_status || '—'}</td>
       <td class="cell-dim cell-l3 cell-push" data-label="Camera">${d.body_camera ? 'Yes' : 'No'}</td>
     </tr>
-  `).join('');
-
-  if (totalPages > 1) {
-    pagination.classList.remove('hidden');
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages.toLocaleString()}`;
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
-  } else {
-    pagination.classList.add('hidden');
-  }
-}
-
-form.addEventListener('submit', (e) => { e.preventDefault(); currentPage = 1; search(); });
-[filterState, filterRace, filterArmed, filterYear].forEach(el => {
-  el.addEventListener('change', () => { currentPage = 1; search(); });
+  `,
+  options: (stats) => ({
+    state: (stats.state_list || []).map((s) => [s.state, s.state]),
+  }),
+  charts: async (stats, opts) => {
+    const [
+      { mountShootingsByYear },
+      { mountShootingsByRace },
+      { mountShootingsByArmed },
+      { mountShootingsByState },
+    ] = await charts;
+    mountShootingsByYear(document.getElementById('viz-by-year'), stats, opts);
+    mountShootingsByRace(document.getElementById('viz-by-race'), stats, opts);
+    mountShootingsByArmed(document.getElementById('viz-by-armed'), stats, opts);
+    mountShootingsByState(document.getElementById('viz-by-state'), stats, opts);
+  },
 });
-prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; search(); } });
-nextBtn.addEventListener('click', () => { currentPage++; search(); });
-
-function handleFilter({ key, value }) {
-  const el = document.getElementById(`filter-${key}`);
-  if (el) {
-    el.value = value;
-    el.dispatchEvent(new Event('change'));
-  }
-}
-
-function populateDropdowns(stats) {
-  if (stats.state_list) {
-    stats.state_list.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.state;
-      opt.textContent = s.state;
-      filterState.appendChild(opt);
-    });
-  }
-}
-
-async function loadViz() {
-  const [
-    { mountShootingsByYear },
-    { mountShootingsByRace },
-    { mountShootingsByArmed },
-    { mountShootingsByState },
-  ] = await Promise.all([
-    import('../../src/viz/shootings-by-year.jsx'),
-    import('../../src/viz/shootings-by-race.jsx'),
-    import('../../src/viz/shootings-by-armed.jsx'),
-    import('../../src/viz/shootings-by-state.jsx'),
-  ]);
-
-  const stats = await api({ action: 'stats' });
-
-  populateDropdowns(stats);
-  const opts = { onFilter: handleFilter };
-  mountShootingsByYear(document.getElementById('viz-by-year'), stats, opts);
-  mountShootingsByRace(document.getElementById('viz-by-race'), stats, opts);
-  mountShootingsByArmed(document.getElementById('viz-by-armed'), stats, opts);
-  mountShootingsByState(document.getElementById('viz-by-state'), stats, opts);
-}
-
-search();
-loadViz();

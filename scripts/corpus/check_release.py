@@ -7,7 +7,7 @@ Reads data/corpus/release.jsonl (written by build_release.py) and checks:
   - no text contains a NUL character (Postgres text cannot hold one)
   - every date is ISO with a precision of day, month or year, or is empty with
     precision "unknown"
-  - every collection is core, tweets or voices
+  - every collection is core, executive, tweets or voices
   - every record has a settled rights basis (not empty, not "pending")
   - no two core records share a title and a date
   - no speaker is credited with words dated after their death
@@ -29,7 +29,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_release import RELEASE_JSONL, SPEAKER_LAST_DATE  # noqa: E402
 
-COLLECTIONS = {"core", "tweets", "voices"}
+COLLECTIONS = {"core", "executive", "tweets", "voices"}
 PRECISIONS = {"day", "month", "year"}
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 AMENDMENT = re.compile(r"\bAmendment ([IVXL]+)\b")
@@ -68,7 +68,7 @@ def check(records):
             fail["date not ISO with day/month/year precision"].append(rid)
 
         if r.get("collection") not in COLLECTIONS:
-            fail["collection not core/tweets/voices"].append(rid)
+            fail["collection not core/executive/tweets/voices"].append(rid)
 
         rights = r.get("rights")
         if not rights or rights in ("pending", "exclude"):

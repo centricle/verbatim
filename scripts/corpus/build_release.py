@@ -60,6 +60,10 @@ EXCLUDE_WORKS = {
                          "edited by Stanton, Anthony and Gage, with chapters and "
                          "documents by many authors; imported as Anthony's own "
                          "words and dated 1898",
+    GUTENBERG + "9880": "compiled work: The Woman's Bible (1895), long King James "
+                        "passages with commentary signed by several authors; "
+                        "credited whole to Stanton it would count scripture as "
+                        "her words",
     GUTENBERG + "14721": "split wrong: records run past their own document into the "
                          "next ones (one is 321,228 chars), and the book ends in "
                          "anecdotes about Lincoln told by others; needs a re-split",
@@ -142,9 +146,12 @@ DAY_PRECISION_SOURCES = {
     "wikisource",
 }
 
-# Collections. Tweets and the two literary voices stay out of the core, which is
-# the part trend charts count.
+# Collections. Trend charts count the core only. Tweets and the two literary
+# voices are kept apart, and so are Federal Register orders and proclamations:
+# the API starts in 1993, so in the core they would put a step in every trend
+# that comes from the source's coverage, not from the record.
 VOICES = {"mark-twain", "winston-churchill"}
+EXECUTIVE_SOURCES = {"federal_register"}
 
 # Normalized genre. The original type is kept on every record.
 GENRE = {
@@ -576,6 +583,8 @@ def build(db_path):
 
         if rec["source_name"] == TWEETS:
             collection = "tweets"
+        elif rec["source_name"] in EXECUTIVE_SOURCES:
+            collection = "executive"
         elif speaker in VOICES:
             collection = "voices"
         else:

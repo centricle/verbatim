@@ -82,7 +82,7 @@ applies the rules at the top of `build_release.py` and writes `release.jsonl`
 and `release-report.json`. The rules cover works the importers got wrong (a
 novel filed under a statesman, a book split in the wrong places), retweets,
 dates (the tweet scrape lost its years, which come back from the status ids),
-collections (`core`, `tweets`, `voices`), a normalized `genre` beside the
+collections (`core`, `executive`, `tweets`, `voices`), a normalized `genre` beside the
 original `type`, a rights basis per work, and near-duplicates. Each excluded or
 changed record is listed in the report with the rule that did it. Rerunning on
 the same `corpus.db` gives byte-identical output.

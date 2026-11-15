@@ -19,7 +19,8 @@ const prevBtn = document.getElementById('fec-prev');
 const nextBtn = document.getElementById('fec-next');
 const pageInfo = document.getElementById('fec-page-info');
 
-const partyColors = { DEM: '#2563eb', REP: '#dc2626', LIB: '#f59e0b', GRE: '#16a34a' };
+// Party key: the same party colors the figures use
+const partyKeys = { DEM: 'tx-party-dem', REP: 'tx-party-rep', LIB: 'tx-party-lib', GRE: 'tx-party-gre', IND: 'tx-party-ind' };
 
 function fmtMoney(n) {
   if (n == null || n === 0) return '—';
@@ -58,15 +59,15 @@ async function search() {
   }
 
   resultsBody.innerHTML = rows.map(d => `
-    <tr class="hover:bg-surface-alt transition-colors">
-      <td class="py-2 pr-3 font-medium">${titleCase(d.cand_name)}</td>
-      <td class="py-2 pr-3 text-xs"><span class="inline-block px-1.5 py-0.5 rounded text-white" style="background:${partyColors[d.party] || '#6b7280'}">${d.party || '—'}</span></td>
-      <td class="py-2 pr-3 text-xs">${d.office || '—'}</td>
-      <td class="py-2 pr-3 text-xs">${d.office === 'House' && d.cand_state ? d.cand_state + '-' + (d.cand_district || '00') : d.office === 'Senate' && d.cand_state ? d.cand_state : '—'}</td>
-      <td class="py-2 pr-3 text-right tabular-nums">${fmtMoney(d.total_receipts)}</td>
-      <td class="py-2 pr-3 text-right tabular-nums text-xs">${fmtMoney(d.total_disbursements)}</td>
-      <td class="py-2 pr-3 text-right tabular-nums text-xs">${fmtMoney(d.cash_on_hand)}</td>
-      <td class="py-2 text-right tabular-nums text-xs">${fmtMoney(d.indiv_contrib)}</td>
+    <tr>
+      <td class="cell-name cell-lead">${titleCase(d.cand_name)}</td>
+      <td><span class="tx-type ${partyKeys[d.party] || 'tx-other'}">${d.party || '—'}</span></td>
+      <td class="cell-dim">${d.office || '—'}</td>
+      <td class="cell-code">${d.office === 'House' && d.cand_state ? d.cand_state + '-' + (d.cand_district || '00') : d.office === 'Senate' && d.cand_state ? d.cand_state : '—'}</td>
+      <td class="cell-num cell-trail" data-label="Raised">${fmtMoney(d.total_receipts)}</td>
+      <td class="cell-num cell-dim cell-l3" data-label="Spent">${fmtMoney(d.total_disbursements)}</td>
+      <td class="cell-num cell-dim cell-l3" data-label="Cash">${fmtMoney(d.cash_on_hand)}</td>
+      <td class="cell-num cell-dim cell-l3" data-label="Individual">${fmtMoney(d.indiv_contrib)}</td>
     </tr>
   `).join('');
 

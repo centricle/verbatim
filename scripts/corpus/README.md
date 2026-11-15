@@ -39,6 +39,8 @@ at the top of `ingest.py`:
 | `data/corpus/corpus.jsonl` | Records added one at a time through `ingest.add_record` |
 | `data/corpus/sources.json` | Log of what `scrape.py` has fetched |
 | `data/corpus/export/` | Flat text files written by `export_corpus.py` |
+| `data/corpus/release.jsonl` | The release, written by `build_release.py` |
+| `data/corpus/release-report.json` | What the release builder kept, changed and left out, and why |
 | `tmp/corpus/raw/` | Cached downloads, so a rerun does not refetch |
 
 Set `CORPUS_DIR` to keep the data somewhere other than `data/corpus/`.
@@ -65,6 +67,25 @@ python3 scripts/corpus/import_debates.py
 `ingest.py` manages the database: with no arguments it reloads
 `corpus.jsonl` into `corpus.db`, and with file arguments it imports JSON or
 JSONL records from them.
+
+## The release
+
+`corpus.db` is the scrape as imported, and nothing after the importers writes to
+it. What the site serves is built from it:
+
+```bash
+python3 scripts/corpus/build_release.py --summary
+```
+
+The builder needs only the standard library. It opens `corpus.db` read-only,
+applies the rules at the top of `build_release.py` and writes `release.jsonl`
+and `release-report.json`. The rules cover works the importers got wrong (a
+novel filed under a statesman, a book split in the wrong places), retweets,
+dates (the tweet scrape lost its years, which come back from the status ids),
+collections (`core`, `tweets`, `voices`), a normalized `genre` beside the
+original `type`, a rights basis per work, and near-duplicates. Each excluded or
+changed record is listed in the report with the rule that did it. Rerunning on
+the same `corpus.db` gives byte-identical output.
 
 ## Searching it locally
 

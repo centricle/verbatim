@@ -297,8 +297,9 @@ def import_gutenberg_liberalism():
     content = raw[start:end]
 
     # Split into chapters — each is a speech
-    # Pattern: chapter headings are in ALL CAPS, preceded by blank lines
-    chapters = re.split(r'\n\n\n+(?=[A-Z][A-Z\s,\':—\-]{10,}\n)', content)
+    # Pattern: chapter headings are in ALL CAPS, preceded by blank lines. One
+    # ends in a period ("THE BUDGET AND PROPERTY."), so a period is allowed.
+    chapters = re.split(r'\n\n\n+(?=[A-Z][A-Z\s,\':—\-]{10,}\.?\n)', content)
 
     records = []
     speech_dates = {
@@ -327,7 +328,7 @@ def import_gutenberg_liberalism():
         if not title_lines:
             continue
 
-        title = " ".join(title_lines).strip()
+        title = " ".join(title_lines).strip().rstrip(".")
         if len(title) < 5 or title.startswith("***"):
             continue
 

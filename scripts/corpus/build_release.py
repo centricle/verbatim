@@ -161,7 +161,7 @@ DATE_PRECISION_OVERRIDES = {
 DAY_PRECISION_SOURCES = {
     "federal_register", "miller_center", "ucsb_american_presidency_project",
     "american_rhetoric", "cornell_lii", "international_churchill_society",
-    "wikisource", "national_archives", "historic_hansard",
+    "wikisource", "national_archives", "historic_hansard", "govinfo",
 }
 
 # Amendment dates, reconciled across the National Archives, the Constitution
@@ -213,6 +213,7 @@ RIGHTS = {
     "cornell_lii": "us-gov-work",
     "national_archives": "us-gov-work",
     "historic_hansard": "license:OPL-3.0",
+    "govinfo": "us-gov-work",
 }
 
 # Attribution text each license requires, in the licensor's words.

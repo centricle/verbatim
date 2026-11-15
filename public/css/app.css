@@ -179,6 +179,11 @@
     align-items: center;
     gap: 1.35rem;
   }
+  /* Eight links plus the wordmark overran a 768px viewport by 12px; a tighter
+     gap holds them on one line until the links have room at 1024px. */
+  @media (max-width: 1023px) {
+    .masthead-nav { gap: 0.9rem; }
+  }
   .nav-link {
     font-family: var(--font-label);
     font-size: 0.7rem;

@@ -21,6 +21,7 @@ export default defineConfig({
         finance: resolve(__dirname, 'public/finance/index.html'),
         vs: resolve(__dirname, 'public/vs/index.html'),
         qi: resolve(__dirname, 'public/qi/index.html'),
+        crashes: resolve(__dirname, 'public/crashes/index.html'),
       },
     },
   },

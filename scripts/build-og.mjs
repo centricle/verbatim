@@ -25,6 +25,7 @@ const PAGES = [
   ['incidents', '/incidents/'],
   ['finance', '/finance/'],
   ['qi', '/qi/'],
+  ['crashes', '/crashes/'],
   ['vs', '/vs/'],
 ];
 

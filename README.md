@@ -14,9 +14,10 @@ publishers, made searchable, filterable and charted, with nothing added.
 | [`/incidents/`](https://verbatim.fyi/incidents/) | The Washington Post Fatal Force database of fatal police shootings |
 | [`/finance/`](https://verbatim.fyi/finance/) | 2024 federal campaign finance, one row per candidate, from the FEC |
 | [`/qi/`](https://verbatim.fyi/qi/) | Qualified immunity cases in the federal courts of appeals, from the Institute for Justice |
+| [`/crashes/`](https://verbatim.fyi/crashes/) | Crash reports filed with NHTSA under Standing General Order 2021-01 for vehicles with automated driving systems or Level 2 driver assistance |
 | [`/vs/`](https://verbatim.fyi/vs/) | Vs.: two historical speakers on one topic, quoted side by side |
 
-The five data explorers each have full-text search, filters, charts and a
+The data explorers each have full-text search, filters, charts and a
 paginated table. Every search and filter is written to the URL, so any view
 can be linked.
 
@@ -29,14 +30,20 @@ can be linked.
 | Fatal Force | The Washington Post | [`washingtonpost/data-police-shootings`](https://github.com/washingtonpost/data-police-shootings), v2 CSV | Fatal shootings by on-duty police officers, 2015 to 2024 | [CC BY-NC-SA 4.0](https://github.com/washingtonpost/data-police-shootings/blob/master/LICENSE) |
 | Campaign finance | Federal Election Commission | [All candidates file](https://www.fec.gov/campaign-finance-data/all-candidates-file-description/), `weball24` ([bulk data](https://www.fec.gov/data/browse-data/?tab=bulk-data)) | The 2023 to 2024 election cycle | U.S. government data. The FEC’s [sale-or-use restriction](https://www.fec.gov/updates/sale-or-use-contributor-information/) (52 U.S.C. § 30111(a)(4)) covers individual contributor information; this file holds candidate-level totals only |
 | Qualified immunity | Institute for Justice | [*Unaccountable*](https://ij.org/report/unaccountable/) report, [data downloads](https://ij.org/report/unaccountable/data-downloads/) | Federal appellate opinions, 2010 to 2020 | No license or terms stated by the publisher |
+| SGO crash reports | National Highway Traffic Safety Administration | Standing General Order 2021-01 incident report CSVs (ADS, ADAS and OTHER, current and `Archive-2021-2025/`) at `static.nhtsa.gov/odi/ffdd/sgo-2021-01/`, with the [data dictionary](https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/SGO-2021-01_Data_Element_Definitions.pdf) | Reports filed from July 2021 on; NHTSA republishes the files monthly | U.S. government data. The files and their data dictionary state no license or terms |
 | Vs. quotations | Ten historical speakers | Published speeches, letters and writings | 1765 to 1943 | Short quotations, each with its source title and date |
 
 ### How the data was loaded
 
-Each dataset was loaded once from the source above. COMPAS was loaded with
-`import_compas.py`, written for the site’s original Supabase database; the
-loaders for the other four were one-off scripts and were not kept. All five
-moved to [Neon](https://neon.tech) Postgres in May 2026. `db/schema.sql` is
+The first five datasets were each loaded once from the source above. COMPAS
+was loaded with `import_compas.py`, written for the site’s original Supabase
+database; the loaders for the other four were one-off scripts and were not
+kept. All five moved to [Neon](https://neon.tech) Postgres in May 2026.
+
+Datasets added since have a loader in `scripts/<dataset>/` with tests
+(`npm test`). `npm run crashes -- refresh` downloads NHTSA’s six files,
+replaces the crash table in one transaction, and checks every loaded field
+against the source; `parse.mjs` there lists each change the loader makes. `db/schema.sql` is
 the schema they live in now: one table per dataset plus a `search_*` and a
 `*_stats` stored function for each.
 
@@ -74,7 +81,9 @@ per-page social cards from a running copy of the site.
 | `public/<explorer>/app.js` | Each explorer’s configuration: filters, row markup, charts |
 | `src/viz/` | Chart components, one per chart |
 | `netlify/functions/` | The API, one function per explorer (`/api/<explorer>`) |
-| `db/schema.sql` | Tables and stored functions |
+| `db/schema.sql` | Tables and stored functions, as dumped from production |
+| `db/<dataset>.sql` | The authored table and functions for datasets added since |
+| `scripts/<dataset>/` | Loaders for datasets added since: fetch, parse, load, check, with test fixtures |
 | `scripts/build-og.mjs` | Social card generator |
 | `import_compas.py` | COMPAS loader |
 
@@ -82,5 +91,6 @@ per-page social cards from a running copy of the site.
 
 The code is MIT licensed (see [`LICENSE`](LICENSE)). The data is not covered
 by that license: each dataset remains under its publisher’s terms, listed
-above. Apart from the Vs. quotations, this repository holds no dataset
+above. Apart from the Vs. quotations and a few source rows kept as loader
+test fixtures (`scripts/*/fixtures/`), this repository holds no dataset
 records; they live in the database.

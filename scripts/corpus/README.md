@@ -90,7 +90,8 @@ novel filed under a statesman, a book split in the wrong places), retweets,
 dates (the tweet scrape lost its years, which come back from the status ids),
 collections (`core`, `executive`, `tweets`, `voices`), a normalized `genre` beside the
 original `type`, a rights basis per work, amendment dates (from `amendments.json`,
-which reconciles three government sources and states its conventions), and
+which reconciles three government sources and states its conventions), the
+Miller Center pages its bulk download leaves out (`miller_urls.json`), and
 near-duplicates. Each excluded or
 changed record is listed in the report with the rule that did it. Rerunning on
 the same `corpus.db` gives byte-identical output.

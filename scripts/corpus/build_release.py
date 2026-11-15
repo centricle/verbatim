@@ -162,6 +162,12 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "amendments.j
     AMENDMENTS = {a["number"]: a for a in json.load(_f)["amendments"]}
 AMENDMENT_TITLE = re.compile(r"^Amendment ([IVXL]+)$")
 
+# Miller Center speeches whose bulk-download record has no URL: the page for
+# each, keyed by title, every one fetched and checked against the title.
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "miller_urls.json"),
+          encoding="utf-8") as _f:
+    MILLER_URLS = json.load(_f)["urls"]
+
 # Collections. Trend charts count the core only. Tweets and the two literary
 # voices are kept apart, and so are Federal Register orders and proclamations:
 # the API starts in 1993, so in the core they would put a step in every trend
@@ -641,6 +647,10 @@ def build(db_path):
         if is_book and is_contents(text):
             excluded.append((rec["id"], "record", "front matter: table of contents"))
             continue
+
+        if not url and rec["source_name"] == "miller_center" and title in MILLER_URLS:
+            url = MILLER_URLS[title]
+            changed.append((rec["id"], "source_url", url))
 
         speaker = SPEAKER_FIXES.get(url, rec["speaker"])
         if speaker != rec["speaker"]:

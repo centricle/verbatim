@@ -150,7 +150,7 @@ DATE_PRECISION_OVERRIDES = {
 DAY_PRECISION_SOURCES = {
     "federal_register", "miller_center", "ucsb_american_presidency_project",
     "american_rhetoric", "cornell_lii", "international_churchill_society",
-    "wikisource", "national_archives",
+    "wikisource", "national_archives", "historic_hansard",
 }
 
 # Amendment dates, reconciled across the National Archives, the Constitution
@@ -187,12 +187,21 @@ GENRE = {
 
 # Rights basis per record group (see rights_group), settled by the licensing
 # review on 2026-11-15. Bases: "us-gov-work" (17 USC 105: federal officers'
-# official work, court opinions) and "pd-expired" (published before 1931 in the
-# US). A group with a reason instead stays in corpus.db and out of the release.
+# official work, court opinions), "pd-expired" (published before 1931 in the
+# US) and "license:<id>" (a license the publisher grants, whose attribution
+# rides along on each record). A group with a reason instead stays in corpus.db
+# and out of the release.
 RIGHTS = {
     "federal_register": "us-gov-work",
     "cornell_lii": "us-gov-work",
     "national_archives": "us-gov-work",
+    "historic_hansard": "license:OPL-3.0",
+}
+
+# Attribution text each license requires, in the licensor's words.
+ATTRIBUTION = {
+    "license:OPL-3.0": "Contains Parliamentary information licensed under the "
+                       "Open Parliament Licence v3.0.",
 }
 NO_BASIS = {
     TWEETS: "no rights basis: third-party archive with no license; X's terms "
@@ -689,6 +698,8 @@ def build(db_path):
         }
         if timestamp:
             out["timestamp"] = timestamp
+        if rights in ATTRIBUTION:
+            out["attribution"] = ATTRIBUTION[rights]
         if amendment:
             out["proposed"] = amendment["proposed"]
             if amendment["certified"]:

@@ -1,7 +1,7 @@
 import { createExplorer, html } from '../js/explorer.js';
 
-// This page's visible copy is fixed (see AGENTS.md, "Fatal Force"). That is why
-// it sets no `errorText`: a failed search leaves the table as it was.
+// This page's visible copy is fixed. That is why it sets no `errorText`: a
+// failed search leaves the table as it was.
 
 const raceLabels = { W: 'White', B: 'Black', H: 'Hispanic', A: 'Asian', N: 'Native Am.', O: 'Other' };
 

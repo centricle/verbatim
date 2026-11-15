@@ -436,7 +436,99 @@ def strip_boilerplate(text):
 
 
 HTML_TAG = re.compile(r"</?[a-zA-Z][^>]*>")
-FR_DOC = re.compile(r"\[FR Doc\.?(?: No:)? ?([A-Z0-9][A-Z0-9-]+)")
+FR_DOC = re.compile(r"\[?FR Doc\.?(?: No:)? ?([A-Z0-9][A-Z0-9-]+)")
+
+# The Federal Register text GPO serves wraps each presidential document in its
+# own apparatus: a header (volume, issue, pages, "From the Federal Register
+# Online...", the FR Doc number, the issue's "Part" page with its list of
+# documents, "Title 3-- The President"), page markers, a placeholder where the
+# signature is printed, and a footer (FR Doc number, filing time, billing code).
+# None of it is the President's words. The document starts at its own heading
+# ("Proclamation 7481 of October 5, 2001"), near the top and before the line
+# that opens the body when there is one ("By the President of the United States
+# of America", "By the authority vested in me"). A record whose heading is not
+# found loses only the header lines below; the report counts those.
+_MONTH = (r"(?:January|February|March|April|May|June|July|August|September|"
+          r"October|November|December)")
+FR_HEADING = re.compile(
+    r"^[ \t]*(?:Proclamation|Prolamation|Executive Order|Memorandum|Notice|Order|"
+    r"Military Order|Presidential Determination|Determination)\b(?:(?!--)[^\n])*?"
+    rf"\b{_MONTH} \d{{1,2}}, \d{{4}}[ \t]*$", re.MULTILINE)
+FR_BODY = re.compile(r"By\s+the\s+President\s+of\s+the\s+United\s+States|By\s+(?:virtue\s+of\s+)?"
+                     r"the\s+authority\s+vested\s+in\s+me|^[ \t]*A\s+Proclamation\b",
+                     re.MULTILINE)
+# Past this many characters, a heading-shaped line is in the body.
+FR_HEADING_WITHIN = 4000
+FR_HEADER_LINE = re.compile(
+    r"^(?:Federal Register(?:,? .*| / .*)?|\[Federal Register.*\]|\[Presidential Documents\]|"
+    r"\[Pages? [\d-]+\]|From the Federal Register Online via the Government Publishing "
+    r"Office.*|\[FR Doc No: .*\]|\[\[Page (?:\d+|Unknown)\]\]|Presidential Documents|"
+    r"Vol\. \d+(?:, No\. \d+)?|No\. \d+|(?:Monday|Tuesday|Wednesday|Thursday|Friday|"
+    rf"Saturday|Sunday),?(?: {_MONTH} \d{{1,2}}, \d{{4}})?|{_MONTH} \d{{1,2}}, \d{{4}}|"
+    r"Part [IVXL]+|The President|Title 3--|[_-]{20,})$")
+FR_FOOTER = re.compile(r"^[ \t\d]*\[?FR Doc\b(?! No:)|^[ \t]*(?i:billing code)\b", re.MULTILINE)
+# The last document in an issue can arrive with the issue's contents pages after it.
+FR_CONTENTS = re.compile(r"^[ \t]*CONTENTS[ \t]*\n(?:[ \t]*\n)*[ \t]*Federal Register / Vol\.",
+                         re.MULTILINE)
+FR_PAGE_MARK = re.compile(r"^[ \t]*\[\[Page [^\]\n]*\]{1,2}[ \t]*\n?", re.MULTILINE)
+FR_PAGE_INLINE = re.compile(r"[ \t]*\[\[Page [^\]\n]*\]{1,2}")
+FR_SIGNATURE = re.compile(r"^[ \t]*\(Presidential Sig\.\)[ \t]*[>B]?[ \t]*\n?", re.MULTILINE)
+# A document followed by an annex can carry its footer between the two.
+FR_DOC_LINES = re.compile(r"^[ \t\d]*\[?FR Doc\b(?! No:)[^\]\n]*(?:\n[ \t\d]*Filed [^\]\n]*)?"
+                          r"\]?[ \t]*\n?", re.MULTILINE)
+FR_BILLING = re.compile(r"^[ \t]*Billing code [\w-]+[ \t]*\n?", re.MULTILINE | re.IGNORECASE)
+# The lines that close GPO's header; the heading is the first one after them.
+FR_ANCHOR = re.compile(r"^[ \t]*(?:Title 3--|Presidential Documents)[ \t]*$", re.MULTILINE)
+
+
+def strip_fr_wrapper(text):
+    """(FR Doc number, the document without GPO's apparatus, heading found).
+
+    >>> doc = ("Federal Register, Volume 66 Issue 196 (Wednesday, October 10, 2001)\\n"
+    ...        "[FR Doc No: 01-25676]\\n\\nTitle 3--\\nThe President\\n\\n[[Page 51810]]\\n\\n"
+    ...        "    Proclamation 7481 of October 5, 2001\\n\\nGerman-American Day, 2001\\n\\n"
+    ...        "    By the President of the United States of America\\n\\n    Words.\\n"
+    ...        "[[Page 51811]]\\n    More words.\\n\\n        (Presidential Sig.)B\\n\\n"
+    ...        "[FR Doc. 01-25676\\nFiled 10-9-01; 12:11 pm]\\nBilling code 3195-01-P")
+    >>> strip_fr_wrapper(doc)[0]
+    '01-25676'
+    >>> print(strip_fr_wrapper(doc)[1])
+    Proclamation 7481 of October 5, 2001
+    <BLANKLINE>
+    German-American Day, 2001
+    <BLANKLINE>
+        By the President of the United States of America
+    <BLANKLINE>
+        Words.
+        More words.
+    """
+    m = FR_DOC.search(text)
+    fr_doc = m.group(1) if m else None
+    contents = FR_CONTENTS.search(text)
+    if contents:
+        text = text[:contents.start()]
+    tail = len(text) - 400
+    foot = next((f for f in FR_FOOTER.finditer(text) if f.start() > tail), None)
+    if foot:
+        text = text[:foot.start()]
+    body = FR_BODY.search(text)
+    limit = min(body.start() if body else len(text), FR_HEADING_WITHIN)
+    anchors = [a.end() for a in FR_ANCHOR.finditer(text, 0, limit)]
+    head = ((anchors and FR_HEADING.search(text, anchors[-1], limit))
+            or FR_HEADING.search(text, 0, limit))
+    found = bool(head)
+    if found:
+        text = text[head.start():]
+    else:
+        if anchors:
+            text = text[anchors[-1]:]
+        lines = text.split("\n")
+        while lines and (not lines[0].strip() or FR_HEADER_LINE.match(lines[0].strip())):
+            lines.pop(0)
+        text = "\n".join(lines)
+    for mark in (FR_PAGE_MARK, FR_PAGE_INLINE, FR_SIGNATURE, FR_DOC_LINES, FR_BILLING):
+        text = mark.sub("", text)
+    return fr_doc, text.strip(), found
 
 CONTENTS_LINE = re.compile(r"^\s*CHAPTER [IVXLC]+\.", re.MULTILINE)
 CHAPTER_TITLE = re.compile(r", Chapter [IVXLC]+$")
@@ -499,9 +591,8 @@ def disambiguate_titles(records, changed):
         if len(members) < 2:
             continue
         for r in members:
-            m = FR_DOC.search(r["text"])
-            if m:
-                extra = f" (FR Doc. {m.group(1)})"
+            if r.get("fr_doc"):
+                extra = f" (FR Doc. {r['fr_doc']})"
                 changed.append((r["id"], "title", f"{r['title']} -> {r['title'] + extra}"))
                 r["title"] += extra
 
@@ -643,9 +734,13 @@ def build(db_path):
         if len(text) != len(raw_text):
             flags["nul_stripped"].append(rec["id"])
         # GPO wraps each Federal Register document in an HTML page around a
-        # <pre> block. The tags go; the printed text stays as it is.
+        # <pre> block. The tags go, then GPO's apparatus (strip_fr_wrapper); the
+        # FR Doc number rides along as a field.
+        fr_doc = None
         if rec["source_name"] == "federal_register":
             text = html.unescape(HTML_TAG.sub("", text))
+            fr_doc, text, found = strip_fr_wrapper(text)
+            flags["fr_wrapper_stripped" if found else "fr_heading_not_found"].append(rec["id"])
         is_retweet = rec["source_name"] == TWEETS and text.startswith("RT @")
         if is_retweet and EXCLUDE_RETWEETS:
             excluded.append((rec["id"], "retweet", "another account's text"))
@@ -725,6 +820,8 @@ def build(db_path):
             out["timestamp"] = timestamp
         if rights in ATTRIBUTION:
             out["attribution"] = ATTRIBUTION[rights]
+        if fr_doc:
+            out["fr_doc"] = fr_doc
         if amendment:
             out["proposed"] = amendment["proposed"]
             if amendment["certified"]:

@@ -71,6 +71,13 @@ EXCLUDE_RECORDS = {
         "front matter: title page and preface",
 }
 
+# Single records by id, where the title is shared with a record that stays.
+EXCLUDE_IDS = {
+    "406a1339da0332cddcc057f6c7f31b637fdc7e4a61a85c9a9e85dd9e440011d6":
+        "front matter: end of the contents, list of illustrations and George L. "
+        "Ruffin's introduction, imported as Life and Times, Chapter XIX",
+}
+
 # Retweets ("RT @...") are another account's text. Old-style quote tweets
 # ('"@user: ...') are kept and flagged, because many add the account holder's
 # own words after the quote.
@@ -235,6 +242,150 @@ def normalize_date(rec, flags):
     return raw, "day", None
 
 
+HEADING_DATE = re.compile(
+    r"\b(January|February|March|April|May|June|July|August|September|October|"
+    r"November|December) (\d{1,2}), (\d{4})\b", re.IGNORECASE)
+
+
+def heading_block(text):
+    """The lines under a record's title and above its first line of body text
+    (unindented and over 60 characters), where book editions print the venue
+    and date of a speech.
+
+    >>> heading_block("THE WEATHER\\n\\n   ADDRESS AT DINNER,\\n   MAY 1, 1876.\\n\\n" + "x" * 70)
+    '   ADDRESS AT DINNER,\\n   MAY 1, 1876.'
+    """
+    lines = text.splitlines()[1:]
+    out = []
+    for line in lines:
+        if len(line) > 60 and not line[:1].isspace():
+            break
+        if line.strip():
+            out.append(line)
+    return "\n".join(out)
+
+
+def heading_date(text, stored, precision):
+    """A day-precision date from the heading block, accepted only when it agrees
+    with the stored year (and month, when the month was stored). None otherwise.
+
+    >>> heading_date("X\\nLONDON, SEPTEMBER 28, 1872.\\n" + "x" * 70, "1872-01-01", "year")
+    '1872-09-28'
+    >>> heading_date("X\\nLONDON, SEPTEMBER 28, 1873.\\n" + "x" * 70, "1872-01-01", "year") is None
+    True
+    """
+    m = HEADING_DATE.search(heading_block(text))
+    if not m:
+        return None
+    found = date(int(m.group(3)), MONTHS[m.group(1).capitalize()], int(m.group(2)))
+    iso = found.isoformat()
+    if precision == "unknown" or not stored:
+        return iso
+    if precision == "year" and iso[:4] == stored[:4]:
+        return iso
+    if precision == "month" and iso[:7] == stored[:7]:
+        return iso
+    return None
+
+
+PG_START = re.compile(r"^\*\*\* ?START OF (THE|THIS) PROJECT GUTENBERG.*$", re.MULTILINE)
+# The END line is sometimes gone and the license follows the text directly, so
+# the license's own first line counts as the footer too.
+PG_END = re.compile(r"^(\*\*\* ?END OF (THE|THIS) PROJECT GUTENBERG|End of (the )?Project "
+                    r"Gutenberg|Updated editions will replace the previous one)",
+                    re.MULTILINE | re.IGNORECASE)
+TRANSCRIBER = re.compile(r"^\s*\[?Transcriber[’']s Notes?\b", re.MULTILINE | re.IGNORECASE)
+
+
+def strip_boilerplate(text):
+    """Remove what Project Gutenberg and its transcribers added: the header
+    through its START line, the footer from its END line, and transcriber's
+    notes in the last third of a record. The author's text is left as printed.
+
+    >>> strip_boilerplate("Header\\n*** START OF THE PROJECT GUTENBERG EBOOK X ***\\nWords.\\n"
+    ...                   "End of Project Gutenberg's X")
+    'Words.'
+    """
+    m = PG_START.search(text)
+    if m:
+        text = text[m.end():]
+    m = PG_END.search(text)
+    if m:
+        text = text[:m.start()]
+    m = TRANSCRIBER.search(text)
+    if m and m.start() > len(text) * 2 / 3:
+        text = text[:m.start()]
+    return text.strip()
+
+
+CONTENTS_LINE = re.compile(r"^\s*CHAPTER [IVXLC]+\.", re.MULTILINE)
+CHAPTER_TITLE = re.compile(r", Chapter [IVXLC]+$")
+ROMAN_LINE = re.compile(r"^[IVXLC]+$")
+SMALL_WORDS = {"a", "an", "and", "as", "at", "by", "for", "from", "in", "of", "on",
+               "or", "the", "to", "with"}
+
+
+def is_contents(text):
+    """A table of contents imported as a chapter: five or more chapter lines."""
+    return len(CONTENTS_LINE.findall(text[:5000])) >= 5
+
+
+def title_case(s):
+    """'A GENERAL SURVEY OF THE SLAVE PLANTATION.' -> 'A General Survey of the
+    Slave Plantation'. Lines that are not all capitals are kept as printed.
+
+    >>> title_case("“HONOR TO WHOM HONOR.”")
+    '“Honor to Whom Honor”'
+    >>> title_case("Genesis i: 26, 27, 28.")
+    'Genesis i: 26, 27, 28'
+    """
+    s = s.strip().strip("_").strip()
+    s = re.sub(r"\.(?=[”\"]?$)", "", s)
+    if s != s.upper():
+        return s
+    words = s.lower().split()
+    out = []
+    for i, w in enumerate(words):
+        lead = re.match(r"^[“\"‘']*", w).group()
+        core = w[len(lead):]
+        out.append(lead + (core if i and core in SMALL_WORDS else core[:1].upper() + core[1:]))
+    return " ".join(out)
+
+
+def subtitle(rec):
+    """The line a chapter or numbered speech prints under its heading: the
+    chapter's own title, or the part number of a speech in several parts."""
+    lines = [l.strip() for l in rec["text"].splitlines() if l.strip()][:3]
+    if len(lines) < 2:
+        return None
+    if CHAPTER_TITLE.search(rec["title"]) and re.match(r"^CHAPTER [IVXLC]+\.?$", lines[0]):
+        return ": " + title_case(lines[1])
+    if ROMAN_LINE.match(lines[1]):
+        return ", " + lines[1]
+    return None
+
+
+def disambiguate_titles(records, changed):
+    """Within a work, give records that share a title the subtitle their text
+    prints. When any title in a work is shared, every chapter in it gets one, so
+    the work's titles stay uniform."""
+    by_work = defaultdict(list)
+    for r in records:
+        if r["collection"] != "tweets":
+            by_work[r["source_url"]].append(r)
+    for members in by_work.values():
+        counts = Counter(r["title"] for r in members)
+        if max(counts.values()) < 2:
+            continue
+        for r in members:
+            if counts[r["title"]] < 2 and not CHAPTER_TITLE.search(r["title"]):
+                continue
+            extra = subtitle(r)
+            if extra:
+                changed.append((r["id"], "title", f"{r['title']} -> {r['title'] + extra}"))
+                r["title"] += extra
+
+
 # ---------------------------------------------------------------------------
 # Grouping, rights and duplicates
 # ---------------------------------------------------------------------------
@@ -334,12 +485,29 @@ def build(db_path):
         if is_retweet and EXCLUDE_RETWEETS:
             excluded.append((rec["id"], "retweet", "another account's text"))
             continue
+        if rec["id"] in EXCLUDE_IDS:
+            excluded.append((rec["id"], "record", EXCLUDE_IDS[rec["id"]]))
+            continue
+        is_book = rec["source_name"] == "project_gutenberg"
+        if is_book:
+            stripped = strip_boilerplate(text)
+            if stripped != text.strip():
+                flags["boilerplate_stripped"].append(rec["id"])
+            text = stripped
+        if is_book and is_contents(text):
+            excluded.append((rec["id"], "record", "front matter: table of contents"))
+            continue
 
         speaker = SPEAKER_FIXES.get(url, rec["speaker"])
         if speaker != rec["speaker"]:
             changed.append((rec["id"], "speaker", f"{rec['speaker']} -> {speaker}"))
 
         d, precision, timestamp = normalize_date(rec, flags)
+        if is_book and precision in ("year", "month", "unknown"):
+            found = heading_date(text, d, precision)
+            if found:
+                changed.append((rec["id"], "date", f"{d} ({precision}) -> {found} (heading)"))
+                d, precision = found, "day"
         last = SPEAKER_LAST_DATE.get(speaker)
         if last and d and d > last:
             flags["speaker_after_death"].append(rec["id"])
@@ -386,6 +554,7 @@ def build(db_path):
     for dup_id, kept_id in sorted(dropped.items()):
         excluded.append((dup_id, "duplicate", f"contained in {kept_id}"))
     release = [r for r in kept if r["id"] not in dropped]
+    disambiguate_titles(release, changed)
     release.sort(key=lambda r: (r["collection"], r["date"] or "9999", r["id"]))
     return release, excluded, changed, flags
 

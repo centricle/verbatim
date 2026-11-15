@@ -60,12 +60,12 @@ async function search() {
     <tr>
       <td class="cell-dim cell-nowrap cell-trail">${fmtDate(d.date)}</td>
       <td class="cell-name cell-lead">${d.name || 'Unknown'}</td>
-      <td class="cell-num">${d.age || '—'}</td>
+      <td class="cell-num" data-label="Age">${d.age || '—'}</td>
       <td class="cell-nowrap">${raceLabels[d.race] || d.race || '—'}</td>
       <td class="cell-dim">${d.city || ''}, ${d.state || ''}</td>
       <td class="cell-l3">${armedLabel(d.armed_with)}</td>
-      <td class="cell-dim cell-l3">${d.flee_status || '—'}</td>
-      <td class="cell-dim cell-l3 cell-push">${d.body_camera ? 'Yes' : 'No'}</td>
+      <td class="cell-dim cell-l3" data-label="Flee">${d.flee_status || '—'}</td>
+      <td class="cell-dim cell-l3 cell-push" data-label="Camera">${d.body_camera ? 'Yes' : 'No'}</td>
     </tr>
   `).join('');
 

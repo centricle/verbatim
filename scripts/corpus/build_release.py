@@ -163,9 +163,9 @@ DATE_PRECISION_OVERRIDES = {
     "https://en.wikisource.org/wiki/Churchill's_1919_War_Office_Memorandum": "year",
 }
 
-# Dates a source prints wrong, each settled against an independent record that
-# is quoted here. Keyed by (source_url, exact title); applied after every other
-# date rule.
+# Dates a source prints wrong, or prints where no rule reads it (a dateline, an
+# editor's note), each settled by the words quoted here. Keyed by (source_url,
+# exact title); applied after every other date rule. "YYYY" sets year precision.
 DATE_FIXES = {
     ("https://millercenter.org/the-presidency/presidential-speeches/"
      "december-9-1908-eighth-annual-message", "December 9, 1908: Eighth Annual Message"):
@@ -180,6 +180,23 @@ DATE_FIXES = {
         ("1907-06-25", "the book prints \"HOUSE OF COMMONS, June 29, 1907\"; Hansard "
          "has the speech in HC Deb 25 June 1907 vol 176 cc1218-54, the second day of "
          "the debate on Campbell-Bannerman's resolution"),
+    (GUTENBERG + "3188", "ADVICE TO GIRLS"):
+        ("1909-06-10", "the stored 1907 is when he met the girl; the headnote: \"He "
+         "accordingly made the journey from New York on June 10, 1909, and delivered "
+         "a short address\""),
+    (GUTENBERG + "70", "The Death Of Jean"):
+        ("1909-12-24", "the stored 1910 is the book's; his dateline reads "
+         "\"Stormfield, Christmas Eve, 11 A.M., 1909\" (Paine: finished on the 26th)"),
+    (GUTENBERG + "70", "At The Shrine Of St. Wagner"):
+        ("1891-08-02", "his dateline reads \"Bayreuth, Aug. 2d, 1891\""),
+    (GUTENBERG + "70", "Switzerland, The Cradle Of Liberty"):
+        ("1891", "his dateline reads \"Interlaken, Switzerland, 1891.\""),
+    (GUTENBERG + "70", "A Simplified Alphabet"):
+        ("1899", "the editor's note: \"written during the autumn of 1899\""),
+    (GUTENBERG + "70", "Taming The Bicycle"):
+        ("1893", "the stored 1884 is when he learned to ride; the editor's note: "
+         "\"(Written about 1893; not before published)\", the date Concerning "
+         "Tobacco carries from the same note"),
 }
 
 # Books that store their publication year as every record's date. A date in a
@@ -466,9 +483,11 @@ def strip_boilerplate(text):
     m = TRANSCRIBER.search(text)
     if m and m.start() > len(text) * 2 / 3:
         text = text[:m.start()]
-    return PRODUCED_BY.sub("", text.strip(), count=1)
+    return THE_END.sub("", PRODUCED_BY.sub("", text.strip(), count=1))
 
 
+# The book's closing line, left on the last record of a volume.
+THE_END = re.compile(r"\n\s*THE END\.?\s*\Z")
 PRODUCED_BY = re.compile(r"\A\s*Produced by [^\n]*(?:\n[^\n]+)*\n\s*")
 
 # Voices books whose editor prints a caption, a headnote or setting-up text
@@ -903,8 +922,9 @@ def build(db_path):
                 d, precision = amendment["date"], "day"
         fix = DATE_FIXES.get((url, title))
         if fix:
-            changed.append((rec["id"], "date", f"{d} -> {fix[0]} ({fix[1]})"))
-            d, precision = fix[0], "day"
+            new, why = fix
+            changed.append((rec["id"], "date", f"{d} -> {new} ({why})"))
+            d, precision = (new, "day") if len(new) == 10 else (new + "-01-01", "year")
         last = SPEAKER_LAST_DATE.get(speaker)
         if last and d and d > last:
             flags["speaker_after_death"].append(rec["id"])

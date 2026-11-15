@@ -1,1 +1,3 @@
 /shootings/* /incidents/:splat 301
+/og-image.png /og/home.webp 301
+/og-image.webp /og/home.webp 301

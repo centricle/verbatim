@@ -1,4 +1,5 @@
 import { getSQL } from './shared/db.js'
+import { pageSize, rowOffset } from './shared/paging.js'
 
 function json(data, status = 200) {
   return { statusCode: status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30' }, body: JSON.stringify(data) }
@@ -18,7 +19,7 @@ export async function handler(event) {
     ${params.assetType || null}, ${params.ticker || null},
     ${params.year ? parseInt(params.year) : null},
     ${params.sortCol || 'transaction_date'}, ${params.sortDir || 'desc'},
-    ${parseInt(params.pageSize) || 50}, ${parseInt(params.offset) || 0}
+    ${pageSize(params.pageSize)}, ${rowOffset(params.offset)}
   ) as data`
   return json(row.data)
 }

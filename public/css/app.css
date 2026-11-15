@@ -67,17 +67,6 @@
   --color-party-gre: oklch(0.50 0.12 165);
   --color-party-ind: oklch(0.55 0.015 258);
 
-  /* Legacy names, aliased so the five pages that keep their old markup still
-     resolve every utility they use (bg-surface-alt, text-text-dim, ...). */
-  --color-surface: var(--color-ground);
-  --color-surface-alt: var(--color-ground-2);
-  --color-surface-hover: var(--color-ground-3);
-  --color-border: var(--color-rule);
-  --color-text: var(--color-ink);
-  --color-text-dim: var(--color-ink-dim);
-  --color-accent: var(--color-source);
-  --color-accent-hover: var(--color-source-deep);
-
   --font-serif: 'Newsreader', ui-serif, serif;
   --font-sans: 'Radio Canada', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
@@ -1110,16 +1099,4 @@
   .colophon a:not(.wordmark) { color: inherit; text-decoration: none; }
   .colophon a:not(.wordmark):hover { color: var(--color-ink); }
   .colophon-links { display: flex; align-items: baseline; gap: 1.2rem; }
-
-  /* Legacy component kept for the pages that still use it (COMPAS, QI tables). */
-  .badge {
-    font-family: var(--font-label);
-    font-size: 0.6rem;
-    padding: 0.12rem 0.4rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    background: var(--color-ground-3);
-    color: var(--color-ink-dim);
-  }
 }

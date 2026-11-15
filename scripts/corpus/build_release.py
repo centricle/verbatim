@@ -24,6 +24,7 @@ Stdlib only.
 
 import argparse
 import calendar
+import html
 import json
 import os
 import re
@@ -76,6 +77,9 @@ EXCLUDE_IDS = {
     "406a1339da0332cddcc057f6c7f31b637fdc7e4a61a85c9a9e85dd9e440011d6":
         "front matter: end of the contents, list of illustrations and George L. "
         "Ruffin's introduction, imported as Life and Times, Chapter XIX",
+    "d2f8b270528e26c51717a15bcbbf95b26e2ab4857dabb8a1976f8c4422e0934e":
+        "not the opinion: a 1,392-character encyclopedia summary of Loving v. "
+        "Virginia; the opinion itself is the Cornell LII record",
 }
 
 # Retweets ("RT @...") are another account's text. Old-style quote tweets
@@ -83,8 +87,40 @@ EXCLUDE_IDS = {
 # own words after the quote.
 EXCLUDE_RETWEETS = True
 
-# Speaker corrections, keyed by source_url. Filled from the opinion-author survey.
-SPEAKER_FIXES = {}
+# Speaker corrections, keyed by source_url. Each author is the one the opinion's
+# own first line names ("Mr. Justice FORTAS delivered the opinion of the
+# Court"); an unsigned per curiam opinion is credited to the Court.
+WS = "https://en.wikisource.org/wiki/"
+SPEAKER_FIXES = {
+    WS + "Dred_Scott_v._Sandford/Dissent_Curtis": "benjamin-curtis",
+    WS + "Plessy_v._Ferguson/Opinion_of_the_Court": "henry-brown",
+    WS + "Lochner_v._New_York/Opinion_of_the_Court": "rufus-peckham",
+    WS + "Mapp_v._Ohio": "tom-clark",
+    WS + "Heart_of_Atlanta_Motel,_Inc._v._United_States": "tom-clark",
+    WS + "Tinker_v._Des_Moines_Independent_Community_School_District": "abe-fortas",
+    WS + "Brandenburg_v._Ohio": "supreme-court",
+    WS + "Furman_v._Georgia": "supreme-court",
+    WS + "Bush_v._Gore/Opinion_of_the_Court": "supreme-court",
+}
+
+# Opinion records that are not the opinion. They stay out until a full-text
+# source replaces them; the authors above still apply to that re-import.
+STUB = ("not the opinion: a syllabus, header or disambiguation page; "
+        "re-import from a full-text source")
+EXCLUDE_PAGES = {
+    WS + "Heart_of_Atlanta_Motel,_Inc._v._United_States": STUB,
+    WS + "Engel_v._Vitale": STUB,
+    WS + "Mapp_v._Ohio": STUB,
+    WS + "Brandenburg_v._Ohio": STUB,
+    WS + "Gideon_v._Wainwright": STUB,
+    WS + "Tinker_v._Des_Moines_Independent_Community_School_District": STUB,
+    WS + "Furman_v._Georgia": STUB,
+    WS + "Schenck_v._United_States": STUB,
+    WS + "Gregg_v._Georgia": STUB,
+    WS + "Miranda_v._Arizona/Opinion_of_the_Court":
+        "partial: the first 12,819 characters of the Court's opinion, then a "
+        "footnote; re-import from a full-text source",
+}
 
 # Speakers who cannot have spoken after a date. A record past it is flagged in
 # the report (not changed) until SPEAKER_FIXES resolves it.
@@ -318,6 +354,9 @@ def strip_boilerplate(text):
     return text.strip()
 
 
+HTML_TAG = re.compile(r"</?[a-zA-Z][^>]*>")
+FR_DOC = re.compile(r"\[FR Doc\.?(?: No:)? ?([A-Z0-9][A-Z0-9-]+)")
+
 CONTENTS_LINE = re.compile(r"^\s*CHAPTER [IVXLC]+\.", re.MULTILINE)
 CHAPTER_TITLE = re.compile(r", Chapter [IVXLC]+$")
 ROMAN_LINE = re.compile(r"^[IVXLC]+$")
@@ -369,6 +408,22 @@ def disambiguate_titles(records, changed):
     """Within a work, give records that share a title the subtitle their text
     prints. When any title in a work is shared, every chapter in it gets one, so
     the work's titles stay uniform."""
+    # Federal Register corrections are titled "Correction" or repeat the title
+    # of the document they correct; the document number tells them apart.
+    fr = defaultdict(list)
+    for r in records:
+        if r["source_name"] == "federal_register":
+            fr[(r["title"], r["date"])].append(r)
+    for members in fr.values():
+        if len(members) < 2:
+            continue
+        for r in members:
+            m = FR_DOC.search(r["text"])
+            if m:
+                extra = f" (FR Doc. {m.group(1)})"
+                changed.append((r["id"], "title", f"{r['title']} -> {r['title'] + extra}"))
+                r["title"] += extra
+
     by_work = defaultdict(list)
     for r in records:
         if r["collection"] != "tweets":
@@ -472,6 +527,9 @@ def build(db_path):
         if url in EXCLUDE_WORKS:
             excluded.append((rec["id"], "work", EXCLUDE_WORKS[url]))
             continue
+        if url in EXCLUDE_PAGES:
+            excluded.append((rec["id"], "page", EXCLUDE_PAGES[url]))
+            continue
         if (url, title) in EXCLUDE_RECORDS:
             excluded.append((rec["id"], "record", EXCLUDE_RECORDS[(url, title)]))
             continue
@@ -481,6 +539,10 @@ def build(db_path):
         text = raw_text.replace("\x00", "")
         if len(text) != len(raw_text):
             flags["nul_stripped"].append(rec["id"])
+        # GPO wraps each Federal Register document in an HTML page around a
+        # <pre> block. The tags go; the printed text stays as it is.
+        if rec["source_name"] == "federal_register":
+            text = html.unescape(HTML_TAG.sub("", text))
         is_retweet = rec["source_name"] == TWEETS and text.startswith("RT @")
         if is_retweet and EXCLUDE_RETWEETS:
             excluded.append((rec["id"], "retweet", "another account's text"))
@@ -547,7 +609,7 @@ def build(db_path):
             out["timestamp"] = timestamp
         if rec["source_name"] == TWEETS and text.startswith('"@'):
             out["quote_tweet"] = True
-        out["text"] = text
+        out["text"] = text.strip()
         kept.append(out)
 
     dropped = find_duplicates(kept)

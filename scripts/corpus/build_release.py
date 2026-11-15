@@ -65,12 +65,16 @@ EXCLUDE_WORKS = {
                         "passages with commentary signed by several authors; "
                         "credited whole to Stanton it would count scripture as "
                         "her words",
+    # import_lincoln.py re-splits these two books. Its records carry the URL of
+    # the text file it cut them from, so this landing-page URL matches only the
+    # old split.
     GUTENBERG + "48364": "split wrong: the record titled Lincoln's Reply opens "
                          "with Douglas's opening speech, and the other holds the "
-                         "contents; needs a re-split",
+                         "contents; re-split by import_lincoln.py",
     GUTENBERG + "14721": "split wrong: records run past their own document into the "
                          "next ones (one is 321,228 chars), and the book ends in "
-                         "anecdotes about Lincoln told by others; needs a re-split",
+                         "anecdotes about Lincoln told by others; re-split by "
+                         "import_lincoln.py",
     GUTENBERG + "5": "superseded: the whole Constitution as one record, with the "
                      "Gutenberg header left on; the National Archives transcription "
                      "gives one record per article",
@@ -139,8 +143,15 @@ SPEAKER_LAST_DATE = {
     "john-marshall": "1835-07-06",
 }
 
-# Records whose stored day is a placeholder for a year or a month.
+# Records whose stored day is a placeholder for a year or a month, or a book
+# record whose date really is the first of a month (keyed by URL and title).
+LINCOLN_TEXTS = {n: f"https://www.gutenberg.org/cache/epub/{n}/pg{n}.txt" for n in (14721, 48364)}
 DATE_PRECISION_OVERRIDES = {
+    (LINCOLN_TEXTS[48364], "Proclamation of Emancipation"): "day",
+    (LINCOLN_TEXTS[14721], "A Letter to Mrs. O.H. Browning. Springfield, Illinois. April 1, 1838"): "day",
+    (LINCOLN_TEXTS[14721], "From the Annual Message to Congress. December 1, 1862"): "day",
+    (LINCOLN_TEXTS[14721], "Emancipation Proclamation. January 1, 1863"): "day",
+    (LINCOLN_TEXTS[14721], "Letter to Secretary Stanton. Washington. March 1, 1864"): "day",
     "https://en.wikisource.org/wiki/The_War_Prayer": "year",
     "https://en.wikisource.org/wiki/Churchill's_1919_War_Office_Memorandum": "year",
 }
@@ -332,7 +343,8 @@ def normalize_date(rec, flags):
         if raw:
             flags["date_unparsed"].append(rec["id"])
         return None, "unknown", None
-    override = DATE_PRECISION_OVERRIDES.get(rec["source_url"])
+    override = (DATE_PRECISION_OVERRIDES.get(rec["source_url"])
+                or DATE_PRECISION_OVERRIDES.get((rec["source_url"], rec["title"])))
     if override:
         return raw, override, None
     if rec["source_name"] in DAY_PRECISION_SOURCES:
@@ -517,7 +529,9 @@ def rights_group(rec):
     """The unit a rights basis applies to: a book for Gutenberg, a speaker for
     Wikisource (one page per record), otherwise the source."""
     if rec["source_name"] == "project_gutenberg":
-        return "project_gutenberg:" + rec["source_url"].rsplit("/", 1)[-1]
+        # The ebook number, from a landing page (/ebooks/14721) or a text file
+        # (/cache/epub/14721/pg14721.txt).
+        return "project_gutenberg:" + re.search(r"/(?:ebooks|epub)/(\d+)", rec["source_url"]).group(1)
     if rec["source_name"] == "wikisource":
         return "wikisource:" + rec["speaker"]
     return rec["source_name"]

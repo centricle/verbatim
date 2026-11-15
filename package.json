@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "og": "node scripts/build-og.mjs"
+    "og": "node scripts/build-og.mjs",
+    "crashes": "node --env-file-if-exists=.env scripts/crashes/cli.mjs",
+    "test": "node --test 'scripts/**/*.test.mjs'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -22,6 +24,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
+    "csv-parse": "^7.0.3",
     "playwright": "~1.62.1",
     "sharp": "^0.35.5",
     "tailwindcss": "^4.1.8",

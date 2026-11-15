@@ -10,7 +10,7 @@ import sys
 
 from scrape import SPEAKERS
 
-CORPUS_DB = os.path.join(os.path.dirname(__file__), "corpus.db")
+from ingest import CORPUS_DB
 
 # ANSI colors
 BOLD = "\033[1m"

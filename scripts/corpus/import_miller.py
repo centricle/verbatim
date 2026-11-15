@@ -12,11 +12,11 @@ import tempfile
 import requests
 from bs4 import BeautifulSoup
 
-from ingest import bulk_insert, make_id, validate_record
+from ingest import bulk_insert, make_id, validate_record, RAW_DIR
 from scrape import SPEAKERS, classify_type
 
 TGZ_URL = "https://data.millercenter.org/miller_center_speeches.tgz"
-TMP_DIR = os.path.join(os.path.dirname(__file__), "tmp")
+TMP_DIR = RAW_DIR
 
 # Miller Center uses slightly different names for some presidents
 SLUG_ALIASES = {

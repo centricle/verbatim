@@ -7,7 +7,7 @@ import sys
 
 import requests
 
-from ingest import add_record, make_id, bulk_insert
+from ingest import add_record, make_id, bulk_insert, RAW_DIR
 
 SESSION = requests.Session()
 SESSION.headers.update({
@@ -65,7 +65,7 @@ SPEAKERS = {
 }
 
 
-TMP_DIR = os.path.join(os.path.dirname(__file__), "tmp")
+TMP_DIR = RAW_DIR
 
 
 def read_local_or_fetch(filename, url):

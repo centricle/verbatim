@@ -7,8 +7,18 @@ import os
 import sqlite3
 import sys
 
-CORPUS_JSONL = os.path.join(os.path.dirname(__file__), "corpus.jsonl")
-CORPUS_DB = os.path.join(os.path.dirname(__file__), "corpus.db")
+# Every path the pipeline reads or writes hangs off these constants, so no
+# script depends on the directory it is run from. The scrape (corpus.db,
+# corpus.jsonl, sources.json) lives in data/corpus/ under the repo root, which
+# is gitignored: none of it is committed. Raw downloads cache in
+# tmp/corpus/raw/, also ignored. Set CORPUS_DIR to keep the data elsewhere.
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+CORPUS_DIR = os.environ.get("CORPUS_DIR") or os.path.join(REPO_ROOT, "data", "corpus")
+RAW_DIR = os.path.join(REPO_ROOT, "tmp", "corpus", "raw")
+CORPUS_JSONL = os.path.join(CORPUS_DIR, "corpus.jsonl")
+CORPUS_DB = os.path.join(CORPUS_DIR, "corpus.db")
+SOURCES_LOG = os.path.join(CORPUS_DIR, "sources.json")
+EXPORT_DIR = os.path.join(CORPUS_DIR, "export")
 
 
 def user_agent():
@@ -55,6 +65,7 @@ def append_jsonl(record):
     rec = validate_record(record)
     if not rec:
         return None
+    os.makedirs(CORPUS_DIR, exist_ok=True)
     with open(CORPUS_JSONL, "a") as f:
         f.write(json.dumps(rec) + "\n")
     return rec
@@ -62,6 +73,7 @@ def append_jsonl(record):
 
 def init_db(db_path=None):
     db_path = db_path or CORPUS_DB
+    os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS statements (

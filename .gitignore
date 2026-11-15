@@ -1,5 +1,9 @@
 __pycache__/
 *.pyc
+.venv/
+# Corpus scrape (corpus.db, corpus.jsonl, sources.json, exports): rebuilt by
+# scripts/corpus/, never committed
+/data/corpus/
 CLAUDE.md
 ROADMAP.md
 tmp/

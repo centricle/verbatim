@@ -19,14 +19,14 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-from ingest import bulk_insert, make_id, user_agent
+from ingest import bulk_insert, make_id, user_agent, RAW_DIR
 
 SESSION = requests.Session()
 SESSION.headers.update({
     "User-Agent": user_agent()
 })
 
-TMP_DIR = os.path.join(os.path.dirname(__file__), "tmp")
+TMP_DIR = RAW_DIR
 
 
 def read_local_or_fetch(filename, url):

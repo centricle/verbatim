@@ -5,8 +5,7 @@ import os
 import re
 import sqlite3
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "corpus.db")
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "corpus")
+from ingest import CORPUS_DB as DB_PATH, EXPORT_DIR as OUTPUT_DIR
 
 
 def slugify(text):

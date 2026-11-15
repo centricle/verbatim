@@ -20,9 +20,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from ingest import add_record, make_id
+from ingest import SOURCES_LOG, add_record, make_id
 
-SOURCES_LOG = os.path.join(os.path.dirname(__file__), "sources.json")
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": USER_AGENT})

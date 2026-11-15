@@ -64,6 +64,9 @@ EXCLUDE_WORKS = {
                         "passages with commentary signed by several authors; "
                         "credited whole to Stanton it would count scripture as "
                         "her words",
+    GUTENBERG + "48364": "split wrong: the record titled Lincoln's Reply opens "
+                         "with Douglas's opening speech, and the other holds the "
+                         "contents; needs a re-split",
     GUTENBERG + "14721": "split wrong: records run past their own document into the "
                          "next ones (one is 321,228 chars), and the book ends in "
                          "anecdotes about Lincoln told by others; needs a re-split",
@@ -121,6 +124,8 @@ EXCLUDE_PAGES = {
     WS + "Furman_v._Georgia": STUB,
     WS + "Schenck_v._United_States": STUB,
     WS + "Gregg_v._Georgia": STUB,
+    WS + "The_Morals_of_Chess": "stub: 140 characters, not the essay",
+    WS + "The_Whistle_(Franklin)": "stub: 189 characters, not the essay",
     WS + "Miranda_v._Arizona/Opinion_of_the_Court":
         "partial: the first 12,819 characters of the Court's opinion, then a "
         "footnote; re-import from a full-text source",
@@ -169,10 +174,39 @@ GENRE = {
     "tweet": "post", "truth_social": "post",
 }
 
-# Rights basis per record group (see rights_group). Every group starts as
-# "pending" and gets its basis from the licensing review. A group set to
-# "exclude" stays in corpus.db and out of the release.
-RIGHTS = defaultdict(lambda: "pending")
+# Rights basis per record group (see rights_group), settled by the licensing
+# review on 2026-11-15. Bases: "us-gov-work" (17 USC 105: federal officers'
+# official work, court opinions) and "pd-expired" (published before 1931 in the
+# US). A group with a reason instead stays in corpus.db and out of the release.
+RIGHTS = {
+    "federal_register": "us-gov-work",
+    "cornell_lii": "us-gov-work",
+}
+NO_BASIS = {
+    TWEETS: "no rights basis: third-party archive with no license; X's terms "
+            "bar scraping; no basis for pre-2017 posts, and in-term posts as "
+            "government work is an open question",
+    "ucsb_american_presidency_project": "no rights basis: debate transcripts "
+            "are not government work; UCSB's terms bar republishing and the "
+            "sponsors reserve all rights",
+    "international_churchill_society": "no rights basis: the Churchill estate "
+            "holds the rights and the host's terms are personal use only",
+    "american_rhetoric": "no rights basis in this copy: the host claims its "
+            "transcripts; floor and committee speeches come from government "
+            "sources instead",
+    "wikisource:winston-churchill": "no rights basis: post-1930 Churchill is the "
+            "estate's; the 1940 Commons speeches come from Hansard instead",
+}
+
+# Miller Center: speeches before 1931 are public domain by age. Later ones are
+# government work only when given in office as part of the job; convention,
+# campaign, debate and candidate-era speeches are not.
+MILLER_PARTISAN = re.compile(
+    r"Democratic National Convention|Republican National Convention|Accept.*Nomination|"
+    r"Acceptance Speech|Nominee Acceptance|Acceptance of the Democratic|Debate with|"
+    r"Presidential Debate|Campaign Speech|Campaign Rally|Election Night|Victory|"
+    r"Checkers|Time for Choosing|Ministerial|Candidacy|Election Eve|City Upon",
+    re.IGNORECASE)
 
 # Near-duplicate threshold: the share of the shorter record's 5-word shingles
 # found in the longer one. Only records sharing a speaker and date, or a work and
@@ -462,6 +496,26 @@ def rights_group(rec):
     return rec["source_name"]
 
 
+def rights_basis(rec, group, d, title):
+    """(basis, None) for a record that may be released, or (None, reason)."""
+    if group in NO_BASIS:
+        return None, NO_BASIS[group]
+    if group in RIGHTS:
+        return RIGHTS[group], None
+    if rec["source_name"] == "miller_center":
+        if d and d < "1931":
+            return "pd-expired", None
+        if MILLER_PARTISAN.search(title):
+            return None, ("no rights basis: convention, campaign, debate or "
+                          "candidate-era speech, not an official duty")
+        return "us-gov-work", None
+    if rec["source_name"] == "wikisource" and rec["type"] == "opinion":
+        return "us-gov-work", None
+    if rec["source_name"] in ("project_gutenberg", "wikisource"):
+        return "pd-expired", None
+    return None, f"no rights basis recorded for {group}"
+
+
 WORD = re.compile(r"[a-z0-9']+")
 
 
@@ -595,9 +649,9 @@ def build(db_path):
             flags["genre_unmapped"].append(rec["id"])
 
         group = rights_group(rec)
-        rights = RIGHTS[group]
-        if rights == "exclude":
-            excluded.append((rec["id"], "rights", group))
+        rights, reason = rights_basis(rec, group, d, title)
+        if reason:
+            excluded.append((rec["id"], "rights", reason))
             continue
 
         out = {

@@ -505,6 +505,8 @@
   .note-body { margin-top: 0.6rem; }
   .note-body > * + * { margin-top: 0.6em; }
   .note-body strong { font-weight: 600; color: var(--color-ink); }
+  .note-list { padding-left: 1.1em; list-style: disc; }
+  .note-list > li + li { margin-top: 0.35em; }
   /* A summary set in its own case, for copy that must render exactly as written. */
   .note--as-written summary {
     text-transform: none;
@@ -598,6 +600,14 @@
   }
   .figure-source .byline-role { flex-basis: auto; }
   .figure-source .byline-source { font-size: 0.8rem; font-weight: 400; }
+  /* What a figure leaves out, with counts read from the data. Empty until the chart fills it. */
+  .figure-note {
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--color-ink-dim);
+  }
+  .figure-note:empty { display: none; }
 
   /* SVG charts are drawn at 1:1 pixel scale, so these sizes are true sizes. */
   .chart { display: block; overflow: visible; }
@@ -808,6 +818,28 @@
   .cell-clip--narrow { max-width: 11rem; }
 
   /*
+   * Crash narratives. The narrative is the record, so it opens in place
+   * rather than living in a title attribute (which touch screens never show).
+   * Closed, the summary is one clipped line (two below 768px); open, the full
+   * text reads with the line breaks it was filed with.
+   */
+  .narrative summary {
+    list-style: none;
+    cursor: pointer;
+    max-width: 13rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .narrative summary::-webkit-details-marker { display: none; }
+  .narrative summary:hover { color: var(--color-ink); }
+  .narrative[open] summary {
+    max-width: 34rem;
+    white-space: pre-line;
+    color: var(--color-ink);
+  }
+
+  /*
    * Below 768px each row is set as an appendix entry instead of a seven-column
    * line: senator and amount as the entry head; date, ticker, type and owner
    * beneath (date and ticker on minimum widths, so tickers align down the
@@ -934,6 +966,24 @@
       -webkit-line-clamp: 2;
       line-clamp: 2;
       overflow: hidden;
+    }
+    .record-table td.cell-narrative {
+      display: block;
+      -webkit-line-clamp: none;
+      line-clamp: none;
+      overflow: visible;
+    }
+    .narrative summary {
+      max-width: none;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+    .narrative[open] summary {
+      display: block;
+      white-space: pre-line;
     }
     .record-table td[data-label]::before {
       content: attr(data-label);

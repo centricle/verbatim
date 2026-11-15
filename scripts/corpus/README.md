@@ -95,8 +95,12 @@ dates (the tweet scrape lost its years, which come back from the status ids),
 collections (`core`, `executive`, `tweets`, `voices`), a normalized `genre` beside the
 original `type`, a rights basis per work, amendment dates (from `amendments.json`,
 which reconciles three government sources and states its conventions), the
-Miller Center pages its bulk download leaves out (`miller_urls.json`), and
-near-duplicates. Each excluded or
+Miller Center pages its bulk download leaves out (`miller_urls.json`), what
+publishers and editors added around the words (GPO's Federal Register header,
+page markers and footer, with the FR Doc number kept as an `fr_doc` field; HTML
+entities left as text; editors' captions, headnotes and footnotes in the Twain
+and Churchill books), dates a source prints wrong (`DATE_FIXES`, each quoting the
+record that settles it), and near-duplicates. Each excluded or
 changed record is listed in the report with the rule that did it. Rerunning on
 the same `corpus.db` gives byte-identical output.
 

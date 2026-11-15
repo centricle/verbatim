@@ -71,7 +71,8 @@ function CrashesByMonth({ stats, onFilter }) {
     });
 
     const narrow = fullWidth < 560;
-    const margin = { top: 34, right: 4, bottom: 26, left: 40 };
+    // Narrow screens may need a second row of rule labels (see below).
+    const margin = { top: narrow ? 64 : 34, right: 4, bottom: 26, left: 40 };
     const width = fullWidth - margin.left - margin.right;
     const height = (narrow ? 240 : 300) - margin.top - margin.bottom;
 
@@ -123,22 +124,46 @@ function CrashesByMonth({ stats, onFilter }) {
         .on('click', (event, d) => { if (onFilter) onFilter({ key: 'year', value: d.data.key.slice(0, 4) }); });
     });
 
-    // Amendment rules: placed within their month by day, labeled above the plot.
-    for (const [name, iso, said] of AMENDMENTS) {
+    // Amendment rules: placed within their month by day, labeled above the
+    // plot. A label sits right of its rule, or left of it where it would run
+    // past the plot's edge, and drops a row where it would overlap the label
+    // before it (at 390 the two rules are about 100px apart). Rules are drawn
+    // first and labels carry a halo in the ground color, so a rule passing
+    // behind a label does not strike through it.
+    const ROW = 30;
+    const rules = AMENDMENTS.flatMap(([name, iso, said]) => {
       const key = `${iso.slice(0, 7)}-01`;
-      if (!x(key) && x(key) !== 0) continue;
+      if (x(key) === undefined) return [];
       const days = new Date(Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0)).getUTCDate();
       const px = Math.round(x(key) + x.step() * ((Number(iso.slice(8, 10)) - 1) / days)) + 0.5;
+      return [{ name, said, px }];
+    });
+    for (const { px } of rules) {
       svg.append('line')
         .attr('class', 'baseline')
         .attr('x1', px).attr('x2', px)
         .attr('y1', -margin.top + 4).attr('y2', height);
+    }
+    const placed = [];
+    for (const { name, said, px } of rules) {
       const text = svg.append('text')
         .attr('class', 'value-label')
-        .attr('x', px + 4)
-        .attr('y', -margin.top + 12);
-      text.append('tspan').text(name);
-      text.append('tspan').attr('x', px + 4).attr('dy', '1.2em').text(said);
+        .style('paint-order', 'stroke')
+        .style('stroke', 'var(--color-ground)')
+        .style('stroke-width', '4px')
+        .style('stroke-linejoin', 'round');
+      const a = text.append('tspan').text(name);
+      const b = text.append('tspan').attr('dy', '1.2em').text(said);
+      const w = Math.ceil(Math.max(a.node().getComputedTextLength(), b.node().getComputedTextLength()));
+      const flip = px + 4 + w > width + margin.right;
+      const left = flip ? px - 4 - w : px + 4;
+      let row = 0;
+      while (placed.some((p) => p.row === row && left < p.right + 8 && left + w > p.left - 8)) row += 1;
+      placed.push({ left, right: left + w, row });
+      const ax = flip ? px - 4 : px + 4;
+      text.attr('text-anchor', flip ? 'end' : 'start').attr('y', -margin.top + 12 + row * ROW);
+      a.attr('x', ax);
+      b.attr('x', ax);
     }
 
     svg.append('line')

@@ -813,6 +813,8 @@
     white-space: nowrap;
   }
   .cell-nowrap { white-space: nowrap; }
+  /* A table cell ignores max-width, so a long value that must not clip wraps instead. */
+  .cell-wrap { white-space: normal; min-width: 9rem; }
   .cell-clip {
     max-width: 16rem;
     overflow: hidden;
@@ -831,7 +833,7 @@
   .narrative summary {
     list-style: none;
     cursor: pointer;
-    max-width: 13rem;
+    max-width: 12rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

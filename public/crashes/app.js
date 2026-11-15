@@ -28,7 +28,7 @@ createExplorer({
     return html`
       <tr>
         <td class="cell-dim cell-nowrap cell-trail">${d.incident_date || '—'}</td>
-        <td class="cell-name cell-lead">${vehicle(d)}</td>
+        <td class="cell-name cell-lead cell-wrap">${vehicle(d)}</td>
         <td><span class="tx-type ${systemClass}">${systemLabel}</span></td>
         <td class="cell-dim cell-clip cell-clip--narrow" title="${d.reporting_entity || ''}">${d.reporting_entity || '—'}</td>
         <td class="cell-dim">${place(d)}</td>

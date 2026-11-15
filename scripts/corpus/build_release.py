@@ -101,25 +101,21 @@ EXCLUDE_IDS = {
 EXCLUDE_RETWEETS = True
 
 # Speaker corrections, keyed by source_url. Each author is the one the opinion's
-# own first line names ("Mr. Justice FORTAS delivered the opinion of the
-# Court"); an unsigned per curiam opinion is credited to the Court.
+# own first line names ("Mr. Justice CURTIS dissenting"); an unsigned per curiam
+# opinion is credited to the Court. import_opinions.py credits its records the
+# same way, so the records it replaced need no entry here.
 WS = "https://en.wikisource.org/wiki/"
 SPEAKER_FIXES = {
     WS + "Dred_Scott_v._Sandford/Dissent_Curtis": "benjamin-curtis",
     WS + "Plessy_v._Ferguson/Opinion_of_the_Court": "henry-brown",
     WS + "Lochner_v._New_York/Opinion_of_the_Court": "rufus-peckham",
-    WS + "Mapp_v._Ohio": "tom-clark",
-    WS + "Heart_of_Atlanta_Motel,_Inc._v._United_States": "tom-clark",
-    WS + "Tinker_v._Des_Moines_Independent_Community_School_District": "abe-fortas",
-    WS + "Brandenburg_v._Ohio": "supreme-court",
-    WS + "Furman_v._Georgia": "supreme-court",
     WS + "Bush_v._Gore/Opinion_of_the_Court": "supreme-court",
 }
 
-# Opinion records that are not the opinion. They stay out until a full-text
-# source replaces them; the authors above still apply to that re-import.
-STUB = ("not the opinion: a syllabus, header or disambiguation page; "
-        "re-import from a full-text source")
+# Opinion records that are not the opinion. import_opinions.py imports each of
+# these opinions in full from another page, so these stay out for good.
+STUB = ("not the opinion: a syllabus, header or disambiguation page; the "
+        "opinion comes from Cornell LII or Wikisource instead")
 EXCLUDE_PAGES = {
     WS + "Heart_of_Atlanta_Motel,_Inc._v._United_States": STUB,
     WS + "Engel_v._Vitale": STUB,
@@ -134,7 +130,7 @@ EXCLUDE_PAGES = {
     WS + "The_Whistle_(Franklin)": "stub: 189 characters, not the essay",
     WS + "Miranda_v._Arizona/Opinion_of_the_Court":
         "partial: the first 12,819 characters of the Court's opinion, then a "
-        "footnote; re-import from a full-text source",
+        "footnote; the full opinion comes from Cornell LII instead",
 }
 
 # Speakers who cannot have spoken after a date. A record past it is flagged in

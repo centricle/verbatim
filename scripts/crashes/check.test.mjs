@@ -70,7 +70,7 @@ test('a stale version fails', async () => {
   const input = await setup();
   const i = input.loaded.findIndex((r) => r.report_id === '540-10173');
   input.loaded[i] = { ...input.loaded[i], report_version: 1 };
-  assert.ok(compare(input).some((f) => /540-10173: loaded v1, raw latest v2/.test(f)));
+  assert.ok(compare(input).some((f) => /^not the latest version in 1 rows: 540-10173: loaded v1, raw latest v2/.test(f)));
 });
 
 test('a row the source does not have fails', async () => {

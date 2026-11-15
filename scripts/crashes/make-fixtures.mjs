@@ -7,8 +7,9 @@
 // cut down to the columns parse.mjs reads. The cut is what keeps the archive's
 // investigating officer name, phone and email columns out of the repo.
 //
-// The source's byte-level quirks are reproduced, not normalized: CRLF row
-// ends with bare LF inside narratives, a bare quote inside an unquoted
+// The source's byte-level quirks are reproduced, not normalized: row ends as
+// each generation writes them (CRLF in the archive, LF in the current files),
+// line breaks inside narratives as filed, a bare quote inside an unquoted
 // narrative, and the archive's one invalid UTF-8 byte.
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
@@ -69,7 +70,8 @@ for (const src of SOURCES) {
     lines.push(COLUMNS.map((c) => field(rec[c])).join(','));
   }
   // U+FFFD is where the source had a lone 0xE2; write the byte back.
-  const parts = (lines.join('\r\n') + '\r\n').split('\uFFFD');
+  const eol = src.generation === 'archive' ? '\r\n' : '\n';
+  const parts = (lines.join(eol) + eol).split('\uFFFD');
   const bufs = parts.flatMap((p, i) => (i ? [Buffer.from([0xe2]), Buffer.from(p)] : [Buffer.from(p)]));
   await writeFile(resolve(HERE, 'fixtures', src.file), Buffer.concat(bufs));
   console.log(`fixtures/${src.file}: ${PICKS[src.file].length} rows`);

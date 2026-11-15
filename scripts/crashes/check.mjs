@@ -4,9 +4,13 @@
 // Three views of the same data have to agree:
 //
 // 1. Raw: a scan of each downloaded file that does not use the CSV parser.
-//    Every record in NHTSA's files starts a CRLF-terminated line with
-//    `<Report ID>,<Report Version>,` (narratives break lines with bare LF),
-//    so counting those line starts counts records independently.
+//    Every record in NHTSA's files starts a line with
+//    `<Report ID>,<Report Version>,`, so counting those line starts counts
+//    records independently. Row ends differ by generation (CRLF in the
+//    archive, LF in the current files, each with the other inside
+//    narratives), so the scan splits on both. A narrative line that happened
+//    to start like a record would be counted too, and the check would fail:
+//    the scan can overcount, never miss.
 // 2. Parsed: parse.mjs over the same files.
 // 3. Loaded: every row of the table, every column the loader writes.
 //
@@ -25,7 +29,7 @@ const RECORD_START = /^(\d+-\d+),(\d+),/;
 
 export function rawScan(text) {
   const pairs = [];
-  for (const line of text.split('\r\n')) {
+  for (const line of text.split(/\r?\n/)) {
     const m = RECORD_START.exec(line);
     if (m) pairs.push(`${m[1]} v${m[2]}`);
   }
@@ -96,11 +100,12 @@ export function compare({ raw, parsed, expected, placeholders, loaded }) {
   if (extra.length) fail(`loaded but not in source (${extra.length}): ${extra.slice(0, 5).join(', ')}`);
 
   const diffs = new Map();
+  const stale = [];
   for (const want of expected) {
     const got = loadedById.get(want.report_id);
     if (!got) continue;
     if (got.report_version !== maxVersion.get(want.report_id)) {
-      fail(`${want.report_id}: loaded v${got.report_version}, raw latest v${maxVersion.get(want.report_id)}`);
+      stale.push(`${want.report_id}: loaded v${got.report_version}, raw latest v${maxVersion.get(want.report_id)}`);
     }
     for (const col of COLUMNS) {
       if (norm(got[col]) !== norm(want[col])) {
@@ -109,6 +114,7 @@ export function compare({ raw, parsed, expected, placeholders, loaded }) {
       }
     }
   }
+  if (stale.length) fail(`not the latest version in ${stale.length} rows: ${stale.slice(0, 5).join('; ')}`);
   for (const [col, ids] of diffs) {
     fail(`${col} differs in ${ids.length} rows: ${ids.slice(0, 5).join(', ')}`);
   }

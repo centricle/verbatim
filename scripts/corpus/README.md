@@ -16,6 +16,7 @@ never duplicates a record.
 | Miller Center, University of Virginia | `import_miller.py` | Presidential speeches (bulk download, `data.millercenter.org`) |
 | Federal Register API | `import_federal_register.py` | Executive orders and proclamations |
 | Project Gutenberg | `import_founding.py` | Declaration of Independence, Constitution, Bill of Rights, Federalist Papers |
+| National Archives | `import_constitution.py` | The Constitution's Preamble and seven Articles and the 27 amendments, one record each, from the archive's transcriptions (the release uses these in place of the Gutenberg Constitution and Bill of Rights) |
 | UCSB American Presidency Project | `import_debates.py` | General-election presidential and VP debate transcripts, 1960 to 2024 |
 | WikiSource, American Rhetoric, Project Gutenberg | `import_congress.py` | Landmark Congressional floor speeches |
 | WikiSource, Cornell LII | `import_scotus.py` | Landmark Supreme Court opinions |
@@ -60,6 +61,7 @@ export CORPUS_UA_CONTACT="you@example.com"
 python3 scripts/corpus/import_miller.py            # --dry-run to preview, --inspect to see the JSON
 python3 scripts/corpus/import_federal_register.py
 python3 scripts/corpus/import_founding.py
+python3 scripts/corpus/import_constitution.py      # --dry-run to parse and check only
 python3 scripts/corpus/import_debates.py
 # ...then any of the other import_*.py and deepen_*.py scripts, in any order
 ```
@@ -83,7 +85,9 @@ and `release-report.json`. The rules cover works the importers got wrong (a
 novel filed under a statesman, a book split in the wrong places), retweets,
 dates (the tweet scrape lost its years, which come back from the status ids),
 collections (`core`, `executive`, `tweets`, `voices`), a normalized `genre` beside the
-original `type`, a rights basis per work, and near-duplicates. Each excluded or
+original `type`, a rights basis per work, amendment dates (from `amendments.json`,
+which reconciles three government sources and states its conventions), and
+near-duplicates. Each excluded or
 changed record is listed in the report with the rule that did it. Rerunning on
 the same `corpus.db` gives byte-identical output.
 

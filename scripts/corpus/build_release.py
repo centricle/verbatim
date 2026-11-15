@@ -12,8 +12,9 @@ The rules are data at the top of this file, so a change to what the release
 contains is a reviewable diff. The build is deterministic: the same corpus.db
 gives byte-identical output.
 
-Order: exclude whole works, exclude single records, fix speakers, normalize dates,
-assign collection and genre, attach the rights basis, drop near-duplicates.
+Order: exclude whole works, exclude single records, fix speakers, normalize dates
+(amendments take theirs from amendments.json), assign collection and genre,
+attach the rights basis, drop near-duplicates.
 
 Usage (from the repo root):
   python3 scripts/corpus/build_release.py            # build
@@ -70,6 +71,11 @@ EXCLUDE_WORKS = {
     GUTENBERG + "14721": "split wrong: records run past their own document into the "
                          "next ones (one is 321,228 chars), and the book ends in "
                          "anecdotes about Lincoln told by others; needs a re-split",
+    GUTENBERG + "5": "superseded: the whole Constitution as one record, with the "
+                     "Gutenberg header left on; the National Archives transcription "
+                     "gives one record per article",
+    GUTENBERG + "2": "superseded: the Bill of Rights as one record; the National "
+                     "Archives transcription gives one record per amendment",
 }
 
 # Single records that are front matter, not the speaker's words. Keyed by
@@ -148,8 +154,17 @@ DATE_PRECISION_OVERRIDES = {
 DAY_PRECISION_SOURCES = {
     "federal_register", "miller_center", "ucsb_american_presidency_project",
     "american_rhetoric", "cornell_lii", "international_churchill_society",
-    "wikisource",
+    "wikisource", "national_archives",
 }
+
+# Amendment dates, reconciled across the National Archives, the Constitution
+# Annotated and the House Manual, with the convention each date follows. An
+# amendment's record date is its ratification; the proposal and certification
+# dates ride along as fields.
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "amendments.json"),
+          encoding="utf-8") as _f:
+    AMENDMENTS = {a["number"]: a for a in json.load(_f)["amendments"]}
+AMENDMENT_TITLE = re.compile(r"^Amendment ([IVXL]+)$")
 
 # Collections. Trend charts count the core only. Tweets and the two literary
 # voices are kept apart, and so are Federal Register orders and proclamations:
@@ -181,6 +196,7 @@ GENRE = {
 RIGHTS = {
     "federal_register": "us-gov-work",
     "cornell_lii": "us-gov-work",
+    "national_archives": "us-gov-work",
 }
 NO_BASIS = {
     TWEETS: "no rights basis: third-party archive with no license; X's terms "
@@ -631,6 +647,13 @@ def build(db_path):
             if found:
                 changed.append((rec["id"], "date", f"{d} ({precision}) -> {found} (heading)"))
                 d, precision = found, "day"
+        amendment = None
+        m = AMENDMENT_TITLE.match(title)
+        if m and rec["source_name"] == "national_archives":
+            amendment = AMENDMENTS[m.group(1)]
+            if d != amendment["date"]:
+                changed.append((rec["id"], "date", f"{d} -> {amendment['date']} (amendments.json)"))
+                d, precision = amendment["date"], "day"
         last = SPEAKER_LAST_DATE.get(speaker)
         if last and d and d > last:
             flags["speaker_after_death"].append(rec["id"])
@@ -670,6 +693,10 @@ def build(db_path):
         }
         if timestamp:
             out["timestamp"] = timestamp
+        if amendment:
+            out["proposed"] = amendment["proposed"]
+            if amendment["certified"]:
+                out["certified"] = amendment["certified"]
         if rec["source_name"] == TWEETS and text.startswith('"@'):
             out["quote_tweet"] = True
         out["text"] = text.strip()

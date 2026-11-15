@@ -369,13 +369,16 @@ def scrape_twitter_archive(speaker, dry_run=False):
         date_str = None
         created = tweet.get("created_at", "") or tweet.get("date", "")
         if created:
+            # Parse the whole string. Slicing it to 25 characters cut the year off
+            # the Twitter format ("Mon Dec 31 23:58:13 +0000 2018" is 30), so every
+            # parse failed and fell through to the bare "Mon Dec 31" below.
             for fmt in ("%a %b %d %H:%M:%S %z %Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
                 try:
-                    date_str = datetime.strptime(created[:25].strip(), fmt).strftime("%Y-%m-%d")
+                    date_str = datetime.strptime(created.strip(), fmt).strftime("%Y-%m-%d")
                     break
                 except ValueError:
                     continue
-            if not date_str and len(created) >= 10:
+            if not date_str and re.match(r"\d{4}-\d{2}-\d{2}", created):
                 date_str = created[:10]
 
         records.append({

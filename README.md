@@ -1,81 +1,86 @@
 # Verbatim
 
-**250 years of American political speech, searchable.**
-
-43,990+ records from 91 speakers spanning 1776 to 2025. The Federalist Papers, the Constitution, the Bill of Rights, the Declaration of Independence, presidential speeches, executive orders, proclamations, press conferences, and yes, tweets. One full-text search index.
+Primary source data, made explorable. Public datasets from their original
+publishers, made searchable, filterable and charted, with nothing added.
 
 **Live:** [verbatim.fyi](https://verbatim.fyi)
 
-## Why
+## Explorers
 
-The founding documents are the most time-tested political texts in the American tradition. The confusion is the interpretation layer. The clarity is the actual words.
+| Route | Dataset |
+|---|---|
+| [`/compas/`](https://verbatim.fyi/compas/) | COMPAS recidivism risk scores, from ProPublica’s “Machine Bias” analysis |
+| [`/trades/`](https://verbatim.fyi/trades/) | Senate stock trade disclosures filed under the STOCK Act |
+| [`/incidents/`](https://verbatim.fyi/incidents/) | The Washington Post Fatal Force database of fatal police shootings |
+| [`/finance/`](https://verbatim.fyi/finance/) | 2024 federal campaign finance, one row per candidate, from the FEC |
+| [`/qi/`](https://verbatim.fyi/qi/) | Qualified immunity cases in the federal courts of appeals, from the Institute for Justice |
+| [`/vs/`](https://verbatim.fyi/vs/) | Vs.: two historical speakers on one topic, quoted side by side |
 
-Search "tariffs" and get Hamilton in 1791 next to executive orders from 2025 making the same structural argument. Search "foreign" and Washington's Farewell Address sits alongside modern proclamations. The anxiety about external manipulation is a continuous thread from the founding to this week.
+The five data explorers each have full-text search, filters, charts and a
+paginated table. Every search and filter is written to the URL, so any view
+can be linked.
 
-The tool exists because the builder needed it.
+## Data sources
+
+| Dataset | Publisher | Source | Coverage | Terms |
+|---|---|---|---|---|
+| COMPAS | ProPublica | [`propublica/compas-analysis`](https://github.com/propublica/compas-analysis), `compas-scores-two-years.csv` | Broward County, Fla., defendants screened 2013 to 2014 | ProPublica Data Store [standard terms of use](https://projects.propublica.org/datastore/terms/): cite ProPublica; no stand-alone redistribution of the raw data |
+| Senate trades | U.S. Senate, Office of Public Records (eFD) | [Senate Stock Watcher](https://github.com/timothycarambat/senate-stock-watcher-data), a JSON aggregation of [eFD](https://efdsearch.senate.gov/search/home/) periodic transaction reports | Transactions dated 2012 to 2021; the aggregation was last updated in March 2021 | The aggregation states no license. The reports carry the Ethics in Government Act restriction (5 U.S.C. app. § 105(c)): no commercial use other than by news media, and no use in soliciting money |
+| Fatal Force | The Washington Post | [`washingtonpost/data-police-shootings`](https://github.com/washingtonpost/data-police-shootings), v2 CSV | Fatal shootings by on-duty police officers, 2015 to 2024 | [CC BY-NC-SA 4.0](https://github.com/washingtonpost/data-police-shootings/blob/master/LICENSE) |
+| Campaign finance | Federal Election Commission | [All candidates file](https://www.fec.gov/campaign-finance-data/all-candidates-file-description/), `weball24` ([bulk data](https://www.fec.gov/data/browse-data/?tab=bulk-data)) | The 2023 to 2024 election cycle | U.S. government data. The FEC’s [sale-or-use restriction](https://www.fec.gov/updates/sale-or-use-contributor-information/) (52 U.S.C. § 30111(a)(4)) covers individual contributor information; this file holds candidate-level totals only |
+| Qualified immunity | Institute for Justice | [*Unaccountable*](https://ij.org/report/unaccountable/) report data | Federal appellate opinions, 2010 to 2020 | See the publisher’s report page |
+| Vs. quotations | Ten historical speakers | Published speeches, letters and writings | 1765 to 1943 | Short quotations, each with its source title and date |
+
+### How the data was loaded
+
+Each dataset was loaded once from the source above. COMPAS was loaded with
+`import_compas.py`, written for the site’s original Supabase database; the
+loaders for the other four were one-off scripts and were not kept. All five
+moved to [Neon](https://neon.tech) Postgres in May 2026. `db/schema.sql` is
+the schema they live in now: one table per dataset plus a `search_*` and a
+`*_stats` stored function for each.
+
+Record counts are not listed here because the API reports them:
+`curl -s https://verbatim.fyi/api/trades?action=stats | jq .total`.
 
 ## Stack
 
-- **Frontend:** Vanilla JS + Tailwind 4 + Vite
-- **Database:** Supabase (Postgres with tsvector FTS + GIN index)
-- **Hosting:** Netlify (static deploy)
-- **Data pipeline:** Python (scrape/import → local SQLite → sync to Supabase)
+- Plain HTML pages and vanilla JS, built with Vite 6 and styled with Tailwind 4
+- React 19 and D3 for the charts only, mounted into static pages
+- Netlify Functions for the API, calling Postgres stored functions on Neon
+- Hosted on Netlify
 
-No framework. No server. Browser talks directly to Supabase.
+## Local development
 
-## Corpus Sources
-
-| Source | Records | Content |
-|--------|---------|---------|
-| Trump Tweet Archive (GitHub) | 36,167 | Trump tweets 2009-2018 |
-| Federal Register API | 5,885 | Executive orders + proclamations |
-| Miller Center (UVA) | 1,052 | Presidential speeches (all 45 presidents) |
-| Project Gutenberg | 88 | Federalist Papers, Constitution, Bill of Rights, Declaration |
-
-Tweets are opt-in via toggle. Default view shows the 7,025-record non-tweet corpus.
-
-## Local Development
+Requires Node 22 and a Postgres database loaded with `db/schema.sql`.
 
 ```bash
 npm install
-npm run dev          # Vite dev server on port 8033
+cp .env.example .env    # set DATABASE_URL
+npx netlify dev         # http://localhost:7033, pages and /api together
 ```
 
-The frontend connects directly to the production Supabase instance. No local server needed for browsing.
+`npm run dev` starts Vite alone, which serves the pages without `/api`.
+`npm run build` writes the site to `dist/`. `npm run og` regenerates the
+per-page social cards from a running copy of the site.
 
-### Data Pipeline (corpus curation)
+## Layout
 
-Requires Python 3.9+ and `pip install -r requirements.txt`.
-
-```bash
-# Import from sources
-python import_miller.py                    # Miller Center presidential speeches
-python import_federal_register.py          # Federal Register EOs + proclamations
-python import_founding.py                  # Founding documents from Gutenberg
-
-# Sync local SQLite → Supabase
-SUPABASE_SERVICE_KEY=... python sync_to_supabase.py
-```
-
-The pipeline writes to local `corpus.db` (SQLite) for curation, then syncs to Supabase for production. The DB file is gitignored (118MB, regenerable).
-
-## Record Schema
-
-```json
-{
-  "id": "<sha256 of speaker:text>",
-  "speaker": "alexander-hamilton",
-  "date": "1787-10-27",
-  "type": "essay",
-  "source_url": "https://www.gutenberg.org/ebooks/1404",
-  "source_name": "project_gutenberg",
-  "text": "...",
-  "title": "Federalist No. 1"
-}
-```
-
-Types: `tweet`, `speech`, `address`, `remarks`, `press_conference`, `press_gaggle`, `interview`, `statement`, `executive_order`, `proclamation`, `memo`, `letter`, `founding_document`, `essay`
+| Path | What it holds |
+|---|---|
+| `public/` | The pages (Vite’s root), one HTML entry per page in `vite.config.js` |
+| `public/static/` | Files served as-is at `/`: fonts, social cards, `_redirects` |
+| `public/js/explorer.js` | The shared explorer module: state, URL, requests, table, pager |
+| `public/<explorer>/app.js` | Each explorer’s configuration: filters, row markup, charts |
+| `src/viz/` | Chart components, one per chart |
+| `netlify/functions/` | The API, one function per explorer (`/api/<explorer>`) |
+| `db/schema.sql` | Tables and stored functions |
+| `scripts/build-og.mjs` | Social card generator |
+| `import_compas.py` | COMPAS loader |
 
 ## License
 
-Code: MIT. Corpus data is public domain (US government works, Project Gutenberg, public tweet archives).
+The code is MIT licensed (see [`LICENSE`](LICENSE)). The data is not covered
+by that license: each dataset remains under its publisher’s terms, listed
+above. Apart from the Vs. quotations, this repository holds no dataset
+records; they live in the database.

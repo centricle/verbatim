@@ -291,5 +291,9 @@ export function createExplorer(cfg) {
       addOptions(stats);
       return cfg.charts?.(stats, { onFilter });
     })
-    .catch((err) => console.error(err));
+    .catch((err) => {
+      console.error(err);
+      // Stops the loading hairline (app.css) on the plots that never drew.
+      for (const el of document.querySelectorAll('.figure-plot:empty')) el.setAttribute('aria-busy', 'false');
+    });
 }

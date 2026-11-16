@@ -75,6 +75,8 @@ async function run(state) {
   inflight = ctrl;
   const p = new URLSearchParams({ action: 'terms', series: state.series });
   for (const t of state.terms) p.append('t', t);
+  // Loading hairline and dimmed chart until the new counts are drawn (app.css).
+  plot.setAttribute('aria-busy', 'true');
   let data;
   try {
     const res = await fetch(`/api/corpus?${p}`, { signal: ctrl.signal });
@@ -84,10 +86,15 @@ async function run(state) {
     if (err.name === 'AbortError') return;
     console.error(err);
     status.textContent = 'Could not load the counts. Try again.';
+    plot.setAttribute('aria-busy', 'false');
     return;
   }
   if (ctrl !== inflight) return;
-  render(state, data);
+  try {
+    await render(state, data);
+  } finally {
+    if (ctrl === inflight) plot.setAttribute('aria-busy', 'false');
+  }
 }
 
 function render(state, data) {
@@ -129,7 +136,8 @@ function render(state, data) {
     ? html`<span class="byline-role">List</span><a href="${s.source_url}" target="_blank" rel="noopener" class="byline-source source-link">${s.source_name}</a>`
     : '';
 
-  chart.then(({ mountTermRate }) => mountTermRate(plot, {
+  table(data, ok);
+  return chart.then(({ mountTermRate }) => mountTermRate(plot, {
     data,
     members,
     ratifications: RATIFICATIONS,
@@ -142,7 +150,6 @@ function render(state, data) {
       location.href = `/corpus/?${q}`;
     },
   }));
-  table(data, ok);
 }
 
 // 1934, 1935, 1936, 1942 -> "1934–1936, 1942"

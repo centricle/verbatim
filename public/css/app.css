@@ -639,7 +639,46 @@
   .key-party-lib { background: var(--color-party-lib); }
   .key-party-gre { background: var(--color-party-gre); }
   .key-party-ind { background: var(--color-party-ind); }
-  .figure-plot { min-height: 220px; }
+  .figure-plot { min-height: 220px; position: relative; }
+  /* Loading. A plot box stays empty until its data and the chart chunk have
+     both arrived, and /over-time/ marks its plot aria-busy while it fetches
+     new counts. A short hairline sweeps until then, after a delay so a fast
+     load never shows it. aria-busy="false" on a box still empty means the
+     load failed and stops it (explorer.js, over-time/app.js). No text, so
+     /incidents/ gains no copy. */
+  .figure-plot:empty:not([aria-busy="false"])::after,
+  .figure-plot[aria-busy="true"]::after {
+    content: '';
+    position: absolute;
+    top: 110px; /* half the empty box */
+    left: 50%;
+    width: 8rem;
+    height: 1px;
+    margin-left: -4rem;
+    background:
+      linear-gradient(90deg, transparent, var(--color-ink-dim), transparent) no-repeat,
+      var(--color-rule);
+    background-size: 40% 100%, 100% 100%;
+    pointer-events: none;
+    animation: plot-wait 0.2s 0.3s both, plot-sweep 1.2s ease-in-out 0.3s infinite;
+  }
+  /* Over a chart already drawn: in the gap under the figure head (its
+     0.9rem margin), clear of the chart's own top labels; the chart dims. */
+  .figure-plot[aria-busy="true"]:not(:empty)::after { top: -0.45rem; }
+  .figure-plot[aria-busy="true"] > svg { opacity: 0.45; transition: opacity 0.2s 0.3s; }
+  @keyframes plot-wait { from { opacity: 0; } }
+  @keyframes plot-sweep {
+    from { background-position: -70% 0, 0 0; }
+    to { background-position: 170% 0, 0 0; }
+  }
+  @keyframes plot-pulse { to { opacity: 0.3; } }
+  @media (prefers-reduced-motion: reduce) {
+    .figure-plot:empty:not([aria-busy="false"])::after,
+    .figure-plot[aria-busy="true"]::after {
+      background-size: 100% 100%, 100% 100%;
+      animation: plot-wait 0.2s 0.3s both, plot-pulse 1s ease-in-out 0.5s infinite alternate;
+    }
+  }
   .figure-source {
     margin-top: 0.7rem;
     padding-top: 0.45rem;

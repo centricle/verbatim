@@ -2,6 +2,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://verbatim.fyi/</loc></url>
   <url><loc>https://verbatim.fyi/corpus/</loc></url>
+  <url><loc>https://verbatim.fyi/amendments/</loc></url>
+  <url><loc>https://verbatim.fyi/over-time/</loc></url>
   <url><loc>https://verbatim.fyi/compas/</loc></url>
   <url><loc>https://verbatim.fyi/trades/</loc></url>
   <url><loc>https://verbatim.fyi/incidents/</loc></url>

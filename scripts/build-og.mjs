@@ -21,6 +21,8 @@ const PAGES = [
   ['home', '/'],
   ['about', '/about.html'],
   ['corpus', '/corpus/'],
+  ['amendments', '/amendments/'],
+  ['over-time', '/over-time/'],
   ['compas', '/compas/'],
   ['trades', '/trades/'],
   ['incidents', '/incidents/'],

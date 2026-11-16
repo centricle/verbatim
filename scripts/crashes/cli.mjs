@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { SOURCES, DICTIONARY } from './sources.mjs';
 import { build, decode, parseFile } from './parse.mjs';
 import { compare, rawScan, COLUMNS } from './check.mjs';
-import { withClient, inTransaction, insertBatches } from './db.mjs';
+import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RAW = resolve(ROOT, 'tmp/crashes/raw');

@@ -85,9 +85,14 @@ BEGIN
       FROM corpus_statements WHERE date IS NOT NULL GROUP BY 1) s),
     'by_genre', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.count DESC, s.genre), '[]'::jsonb) FROM (
       SELECT genre, count(*) AS count FROM corpus_statements GROUP BY genre) s),
-    'by_speaker', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.count DESC, s.speaker_name), '[]'::jsonb) FROM (
-      SELECT speaker, speaker_name, count(*) AS count FROM corpus_statements
-      GROUP BY speaker, speaker_name ORDER BY count DESC, speaker_name LIMIT 15) s),
+    -- One row per speaker: first and last dated year, ordered by first record.
+    -- Ordered by date, never by count, so the figure ranks nobody (IA session,
+    -- 2026-11-15). Every speaker sits in one collection; min() just picks it.
+    'speaker_span', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.first, s.last, s.speaker_name), '[]'::jsonb) FROM (
+      SELECT speaker, speaker_name, min(collection) AS collection,
+        min(extract(year FROM date))::int AS first, max(extract(year FROM date))::int AS last,
+        count(*) AS count
+      FROM corpus_statements WHERE date IS NOT NULL GROUP BY speaker, speaker_name) s),
     'speaker_list', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.speaker_name), '[]'::jsonb) FROM (
       SELECT DISTINCT speaker, speaker_name FROM corpus_statements) s),
     'genre_list', (SELECT coalesce(jsonb_agg(genre ORDER BY genre), '[]'::jsonb) FROM (

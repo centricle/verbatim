@@ -58,7 +58,7 @@ function startExplorer() {
   createExplorer({
     prefix: 'corpus',
     endpoint: '/api/corpus',
-    filters: ['speaker', 'genre', 'collection', 'from', 'to'],
+    filters: ['speaker', 'genre', 'collection', 'series', 'from', 'to'],
     noun: 'records',
     emptyText: 'No records match your search and filters.',
     errorText: 'Could not load records. Try again.',

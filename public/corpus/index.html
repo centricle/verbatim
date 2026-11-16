@@ -168,7 +168,7 @@
               <p class="kicker mb-2">Appendix</p>
               <h2 id="appendix-title" class="appendix-title">Records</h2>
             </div>
-            <p class="figure-caption md:col-span-6 md:col-start-7 self-end">Search titles and text, or narrow by speaker, genre, collection and years. A search finds forms of a word (“tax” finds “taxes”) and an exact phrase in quotation marks; very common words such as “the” are not searched. Records are listed oldest first. Selecting a bar in any figure sets the matching filter. Select a title to read the record in full.</p>
+            <p class="figure-caption md:col-span-6 md:col-start-7 self-end">Search titles and text, or narrow by speaker, genre, collection, series and years. A search finds forms of a word (“tax” finds “taxes”) and an exact phrase in quotation marks; very common words such as “the” are not searched. Records are listed oldest first. Selecting a bar in any figure sets the matching filter. Select a title to read the record in full.</p>
           </div>
 
           <form id="corpus-search-form" class="flex flex-wrap items-end gap-3 mb-6">
@@ -184,6 +184,12 @@
               <option value="">All collections</option>
               <option value="core">Core</option>
               <option value="voices">Voices</option>
+            </select>
+            <!-- Keys and labels as scripts/corpus/series.json has them. -->
+            <select id="filter-series" aria-label="Filter by series" class="field flex-1 md:flex-none">
+              <option value="">All series</option>
+              <option value="sotu">State of the Union</option>
+              <option value="inaugural">Inaugural addresses</option>
             </select>
             <!-- The two years wrap as one unit. -->
             <div class="flex gap-3 basis-full min-w-0 md:basis-auto md:flex-none">

@@ -20,6 +20,7 @@ import sharp from 'sharp';
 const PAGES = [
   ['home', '/'],
   ['about', '/about.html'],
+  ['corpus', '/corpus/'],
   ['compas', '/compas/'],
   ['trades', '/trades/'],
   ['incidents', '/incidents/'],

@@ -1,5 +1,5 @@
 // Shared behavior for the dataset explorers (trades, compas, incidents,
-// finance, qi, crashes). Each page is the same machine: a search box, filter selects,
+// finance, qi, crashes, corpus). Each page is the same machine: a search box, filter selects,
 // a paged table fed by `/api/<x>?action=search`, and chart islands fed by
 // `?action=stats` that set a filter when clicked. The page's app.js supplies
 // only what differs: its endpoint, filter keys, row markup and charts.
@@ -66,6 +66,18 @@ export function html(strings, ...values) {
   return new Markup(out);
 }
 
+// A search snippet with its matches marked. search_corpus (db/corpus.sql)
+// wraps each match in U+0001 ... U+0002 rather than markup. The snippet is
+// split on those pairs and every piece escaped like any other value; only
+// then does each match get its <mark>. A marker without its partner is
+// dropped. No markup from the database is ever rendered.
+export function highlight(text) {
+  const parts = String(text ?? '').split(/(\u0001[^\u0001\u0002]*\u0002)/);
+  return new Markup(parts.map((part) => (part.startsWith('\u0001') && part.endsWith('\u0002')
+    ? `<mark>${interpolate(part.slice(1, -1))}</mark>`
+    : interpolate(part.replace(/[\u0001\u0002]/g, '')))).join(''));
+}
+
 // ---- Explorer -------------------------------------------------------------
 
 async function getJson(url, signal) {
@@ -80,8 +92,9 @@ async function getJson(url, signal) {
  *                                `-results`, `-results-info`, `-pagination`, `-prev`,
  *                                `-next`, `-page-info`.
  * @param {string} cfg.endpoint   `/api/<x>`.
- * @param {string[]} cfg.filters  Filter keys. Each is a `#filter-<key>` select, a URL
- *                                param and an API param of the same name.
+ * @param {string[]} cfg.filters  Filter keys. Each is a `#filter-<key>` control (a
+ *                                select, or an input such as a year), a URL param
+ *                                and an API param of the same name.
  * @param {(row: object) => Markup} cfg.row  One `<tr>`, built with `html`.
  * @param {string} cfg.noun       Plural noun in "Showing 1–50 of 7,740 <noun>".
  * @param {string} cfg.emptyText  Results line when nothing matches.
@@ -106,7 +119,7 @@ export function createExplorer(cfg) {
   const prevBtn = byId('prev');
   const nextBtn = byId('next');
   const pageInfo = byId('page-info');
-  const selects = Object.fromEntries(
+  const controls = Object.fromEntries(
     cfg.filters.map((key) => [key, document.getElementById(`filter-${key}`)]),
   );
   const keys = ['q', ...cfg.filters];
@@ -134,7 +147,7 @@ export function createExplorer(cfg) {
 
   function syncControls() {
     searchInput.value = state.q;
-    for (const key of cfg.filters) selects[key].value = state[key];
+    for (const key of cfg.filters) controls[key].value = state[key];
   }
 
   // Every user action also takes the search box's current text, submitted or
@@ -210,18 +223,25 @@ export function createExplorer(cfg) {
   }
 
   // Chart click: same path as choosing the option by hand. A value the select
-  // has no option for clears the filter rather than filtering invisibly.
-  function onFilter({ key, value }) {
-    const select = selects[key];
-    if (!select) return;
-    select.value = value;
-    commit({ [key]: select.value, page: 1 });
+  // has no option for clears the filter rather than filtering invisibly. A
+  // chart can set several filters at once, `{ set: { from, to } }`, as one
+  // history entry and one search.
+  function onFilter(arg) {
+    const pairs = arg.set ? Object.entries(arg.set) : [[arg.key, arg.value]];
+    const changes = {};
+    for (const [key, value] of pairs) {
+      const control = controls[key];
+      if (!control) continue;
+      control.value = value;
+      changes[key] = control.value;
+    }
+    if (Object.keys(changes).length) commit({ ...changes, page: 1 });
   }
 
   function addOptions(stats) {
     const lists = cfg.options?.(stats) ?? {};
     for (const [key, pairs] of Object.entries(lists)) {
-      const select = selects[key];
+      const select = controls[key];
       for (const [value, label] of pairs) {
         const option = document.createElement('option');
         option.value = value;
@@ -233,12 +253,19 @@ export function createExplorer(cfg) {
     }
   }
 
+  // Enter in a typed control (a year) submits the form, and need not fire
+  // change first, so typed controls are read here. Selects are not: before
+  // stats arrive, one cannot yet hold a deep-linked value (top of this file).
+  const typed = () => Object.fromEntries(cfg.filters
+    .filter((key) => controls[key].tagName !== 'SELECT')
+    .map((key) => [key, controls[key].value.trim()]));
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    commit({ page: 1 });
+    commit({ ...typed(), page: 1 });
   });
   for (const key of cfg.filters) {
-    selects[key].addEventListener('change', () => commit({ [key]: selects[key].value, page: 1 }));
+    controls[key].addEventListener('change', () => commit({ [key]: controls[key].value.trim(), page: 1 }));
   }
   prevBtn.addEventListener('click', () => {
     if (state.page > 1) commit({ page: state.page - 1 });

@@ -11,17 +11,17 @@ import { useContainerWidth, measureText, fitText } from './chart-size.js';
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ESC[c]);
 
-function RankedBars({ data, label, value, noun, filterKey, onFilter }) {
+function RankedBars({ data, label, value, noun, filterKey, onFilter, display }) {
   const svgRef = useRef();
   const fullWidth = useContainerWidth(svgRef);
 
   useEffect(() => {
     if (!data?.length || !fullWidth) return;
-    const rows = data.map((d) => ({ key: String(d[label]), n: Number(d[value]) }));
+    const rows = data.map((d) => ({ key: String(d[label]), text: display ? display(d) : String(d[label]), n: Number(d[value]) }));
 
     d3.select(svgRef.current).selectAll('*').remove();
 
-    const labelWidth = measureText(svgRef.current, rows.map((d) => d.key), 'cat-label');
+    const labelWidth = measureText(svgRef.current, rows.map((d) => d.text), 'cat-label');
     const valueWidth = measureText(svgRef.current, rows.map((d) => d.n.toLocaleString()), 'value-label');
     const margin = { top: 4, right: valueWidth + 10, bottom: 4, left: Math.min(labelWidth, Math.round(fullWidth * 0.45)) + 12 };
     const rowHeight = 24;
@@ -51,7 +51,7 @@ function RankedBars({ data, label, value, noun, filterKey, onFilter }) {
       .on('mouseenter', function () { d3.select(this).style('opacity', 0.8); })
       .on('mouseleave', function () { d3.select(this).style('opacity', 1); hideTooltip(); })
       .on('mousemove', (event, d) => {
-        showTooltip(event, `<strong>${esc(d.key)}</strong><br>${d.n.toLocaleString()} ${esc(noun)}`);
+        showTooltip(event, `<strong>${esc(d.text)}</strong><br>${d.n.toLocaleString()} ${esc(noun)}`);
       })
       .on('click', (event, d) => { if (onFilter) onFilter({ key: filterKey, value: d.key }); });
 
@@ -63,7 +63,7 @@ function RankedBars({ data, label, value, noun, filterKey, onFilter }) {
       .attr('y', (d) => y(d.key) + y.bandwidth() / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'end')
-      .text((d) => d.key)
+      .text((d) => d.text)
       .each(function () { fitText(this, margin.left - 12); });
 
     svg.selectAll('.value-label')
@@ -93,6 +93,9 @@ function RankedBars({ data, label, value, noun, filterKey, onFilter }) {
  * @param {string} opts.noun       Plural noun for the tooltip ("reports").
  * @param {string} opts.filterKey  Explorer filter a bar sets.
  * @param {Function} [opts.onFilter]
+ * @param {(row: object) => string} [opts.display]  Text for a bar's label and tooltip
+ *                                when it differs from the value the filter takes
+ *                                (a speaker's name for a slug).
  */
 export function mountRankedBars(container, data, opts) {
   if (!container) return;

@@ -227,13 +227,30 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "miller_urls.
     MILLER_URLS = json.load(_f)["urls"]
 
 # Display name per speaker slug, printed by the site wherever a speaker is
-# named. Justices are named as the Supreme Court's own list of justices names
-# them, except that both Harlans keep "John Marshall" in full, since that list
-# gives each as "John M. Harlan". A record whose speaker has no entry is
-# written without a name, and check_release.py fails it.
+# named. One source per role (settled 2026-11-15):
+#   - Presidents: the White House's own list (whitehouse.gov/presidents). It
+#     is not consistent about middle initials ("Gerald Ford", "Harry S.
+#     Truman"); that is the list's own style, kept as printed.
+#   - Justices: the Supreme Court's list of justices in its initials form,
+#     except that both Harlans keep "John Marshall" in full, since that list
+#     gives each as "John M. Harlan". The Court's members_text.aspx prints full
+#     middle names ("Roger Brooke Taney") and both Harlans identically; not used.
+#   - Members of Congress and writers: the name they published under. The
+#     Biographical Directory's full legal names ("Shirley Anita Chisholm") are
+#     not used.
+# A record whose speaker has no entry is written without a name, and
+# check_release.py fails it.
+#
+# Each entry also carries `sort`, an index-style surname key ("Twain, Mark",
+# "Van Buren, Martin"; bodies under their first word). The site's speaker
+# filter orders by it; nothing here writes it into the release.
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "speakers.json"),
           encoding="utf-8") as _f:
-    SPEAKER_NAMES = json.load(_f)
+    _SPEAKERS = json.load(_f)
+for _slug, _entry in _SPEAKERS.items():
+    if not _entry.get("name") or not _entry.get("sort"):
+        sys.exit(f"speakers.json: {_slug} needs both name and sort")
+SPEAKER_NAMES = {slug: entry["name"] for slug, entry in _SPEAKERS.items()}
 
 # Collections. Trend charts count the core only. Tweets and the two literary
 # voices are kept apart, and so are Federal Register orders and proclamations:

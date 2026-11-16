@@ -1,87 +1,342 @@
 {
-  "abe-fortas": "Abe Fortas",
-  "abraham-lincoln": "Abraham Lincoln",
-  "alexander-hamilton": "Alexander Hamilton",
-  "andrew-jackson": "Andrew Jackson",
-  "andrew-johnson": "Andrew Johnson",
-  "antonin-scalia": "Antonin Scalia",
-  "barack-obama": "Barack Obama",
-  "barbara-jordan": "Barbara Jordan",
-  "benjamin-curtis": "Benjamin R. Curtis",
-  "benjamin-franklin": "Benjamin Franklin",
-  "benjamin-harrison": "Benjamin Harrison",
-  "bill-clinton": "Bill Clinton",
-  "calvin-coolidge": "Calvin Coolidge",
-  "chester-a-arthur": "Chester A. Arthur",
-  "constitutional-convention": "Constitutional Convention",
-  "continental-congress": "Continental Congress",
-  "donald-trump": "Donald Trump",
-  "dwight-d-eisenhower": "Dwight D. Eisenhower",
-  "earl-warren": "Earl Warren",
-  "edward-sanford": "Edward T. Sanford",
-  "elizabeth-cady-stanton": "Elizabeth Cady Stanton",
-  "felix-frankfurter": "Felix Frankfurter",
-  "franklin-d-roosevelt": "Franklin D. Roosevelt",
-  "franklin-pierce": "Franklin Pierce",
-  "frederick-douglass": "Frederick Douglass",
-  "george-h-w-bush": "George H. W. Bush",
-  "george-w-bush": "George W. Bush",
-  "george-washington": "George Washington",
-  "gerald-ford": "Gerald Ford",
-  "grover-cleveland": "Grover Cleveland",
-  "harry-blackmun": "Harry A. Blackmun",
-  "harry-s-truman": "Harry S. Truman",
-  "henry-brown": "Henry B. Brown",
-  "herbert-hoover": "Herbert Hoover",
-  "hugo-black": "Hugo L. Black",
-  "james-a-garfield": "James A. Garfield",
-  "james-buchanan": "James Buchanan",
-  "james-k-polk": "James K. Polk",
-  "james-madison": "James Madison",
-  "james-monroe": "James Monroe",
-  "jimmy-carter": "Jimmy Carter",
-  "joe-biden": "Joe Biden",
-  "john-adams": "John Adams",
-  "john-f-kennedy": "John F. Kennedy",
-  "john-harlan": "John Marshall Harlan",
-  "john-jay": "John Jay",
-  "john-marshall": "John Marshall",
-  "john-marshall-harlan-ii": "John Marshall Harlan II",
-  "john-paul-stevens": "John Paul Stevens",
-  "john-quincy-adams": "John Quincy Adams",
-  "john-roberts": "John G. Roberts Jr.",
-  "john-tyler": "John Tyler",
-  "lyndon-b-johnson": "Lyndon B. Johnson",
-  "mark-twain": "Mark Twain",
-  "martin-van-buren": "Martin Van Buren",
-  "millard-fillmore": "Millard Fillmore",
-  "oliver-wendell-holmes": "Oliver Wendell Holmes Jr.",
-  "owen-roberts": "Owen J. Roberts",
-  "potter-stewart": "Potter Stewart",
-  "richard-nixon": "Richard Nixon",
-  "robert-jackson": "Robert H. Jackson",
-  "roger-taney": "Roger B. Taney",
-  "ronald-reagan": "Ronald Reagan",
-  "rufus-peckham": "Rufus W. Peckham",
-  "rutherford-b-hayes": "Rutherford B. Hayes",
-  "samuel-alito": "Samuel A. Alito Jr.",
-  "shirley-chisholm": "Shirley Chisholm",
-  "stephen-douglas": "Stephen A. Douglas",
-  "supreme-court": "Supreme Court",
-  "susan-b-anthony": "Susan B. Anthony",
-  "theodore-roosevelt": "Theodore Roosevelt",
-  "thomas-jefferson": "Thomas Jefferson",
-  "tom-clark": "Tom C. Clark",
-  "ulysses-s-grant": "Ulysses S. Grant",
-  "united-states-congress": "United States Congress",
-  "warren-burger": "Warren E. Burger",
-  "warren-g-harding": "Warren G. Harding",
-  "william-brennan": "William J. Brennan Jr.",
-  "william-henry-harrison": "William Henry Harrison",
-  "william-howard-taft": "William Howard Taft",
-  "william-mckinley": "William McKinley",
-  "william-rehnquist": "William H. Rehnquist",
-  "winston-churchill": "Winston Churchill",
-  "woodrow-wilson": "Woodrow Wilson",
-  "zachary-taylor": "Zachary Taylor"
+  "abe-fortas": {
+    "name": "Abe Fortas",
+    "sort": "Fortas, Abe"
+  },
+  "abraham-lincoln": {
+    "name": "Abraham Lincoln",
+    "sort": "Lincoln, Abraham"
+  },
+  "alexander-hamilton": {
+    "name": "Alexander Hamilton",
+    "sort": "Hamilton, Alexander"
+  },
+  "andrew-jackson": {
+    "name": "Andrew Jackson",
+    "sort": "Jackson, Andrew"
+  },
+  "andrew-johnson": {
+    "name": "Andrew Johnson",
+    "sort": "Johnson, Andrew"
+  },
+  "antonin-scalia": {
+    "name": "Antonin Scalia",
+    "sort": "Scalia, Antonin"
+  },
+  "barack-obama": {
+    "name": "Barack Obama",
+    "sort": "Obama, Barack"
+  },
+  "barbara-jordan": {
+    "name": "Barbara Jordan",
+    "sort": "Jordan, Barbara"
+  },
+  "benjamin-curtis": {
+    "name": "Benjamin R. Curtis",
+    "sort": "Curtis, Benjamin R."
+  },
+  "benjamin-franklin": {
+    "name": "Benjamin Franklin",
+    "sort": "Franklin, Benjamin"
+  },
+  "benjamin-harrison": {
+    "name": "Benjamin Harrison",
+    "sort": "Harrison, Benjamin"
+  },
+  "bill-clinton": {
+    "name": "Bill Clinton",
+    "sort": "Clinton, Bill"
+  },
+  "calvin-coolidge": {
+    "name": "Calvin Coolidge",
+    "sort": "Coolidge, Calvin"
+  },
+  "chester-a-arthur": {
+    "name": "Chester A. Arthur",
+    "sort": "Arthur, Chester A."
+  },
+  "constitutional-convention": {
+    "name": "Constitutional Convention",
+    "sort": "Constitutional Convention"
+  },
+  "continental-congress": {
+    "name": "Continental Congress",
+    "sort": "Continental Congress"
+  },
+  "donald-trump": {
+    "name": "Donald Trump",
+    "sort": "Trump, Donald"
+  },
+  "dwight-d-eisenhower": {
+    "name": "Dwight D. Eisenhower",
+    "sort": "Eisenhower, Dwight D."
+  },
+  "earl-warren": {
+    "name": "Earl Warren",
+    "sort": "Warren, Earl"
+  },
+  "edward-sanford": {
+    "name": "Edward T. Sanford",
+    "sort": "Sanford, Edward T."
+  },
+  "elizabeth-cady-stanton": {
+    "name": "Elizabeth Cady Stanton",
+    "sort": "Stanton, Elizabeth Cady"
+  },
+  "felix-frankfurter": {
+    "name": "Felix Frankfurter",
+    "sort": "Frankfurter, Felix"
+  },
+  "franklin-d-roosevelt": {
+    "name": "Franklin D. Roosevelt",
+    "sort": "Roosevelt, Franklin D."
+  },
+  "franklin-pierce": {
+    "name": "Franklin Pierce",
+    "sort": "Pierce, Franklin"
+  },
+  "frederick-douglass": {
+    "name": "Frederick Douglass",
+    "sort": "Douglass, Frederick"
+  },
+  "george-h-w-bush": {
+    "name": "George H. W. Bush",
+    "sort": "Bush, George H. W."
+  },
+  "george-w-bush": {
+    "name": "George W. Bush",
+    "sort": "Bush, George W."
+  },
+  "george-washington": {
+    "name": "George Washington",
+    "sort": "Washington, George"
+  },
+  "gerald-ford": {
+    "name": "Gerald Ford",
+    "sort": "Ford, Gerald"
+  },
+  "grover-cleveland": {
+    "name": "Grover Cleveland",
+    "sort": "Cleveland, Grover"
+  },
+  "harry-blackmun": {
+    "name": "Harry A. Blackmun",
+    "sort": "Blackmun, Harry A."
+  },
+  "harry-s-truman": {
+    "name": "Harry S. Truman",
+    "sort": "Truman, Harry S."
+  },
+  "henry-brown": {
+    "name": "Henry B. Brown",
+    "sort": "Brown, Henry B."
+  },
+  "herbert-hoover": {
+    "name": "Herbert Hoover",
+    "sort": "Hoover, Herbert"
+  },
+  "hugo-black": {
+    "name": "Hugo L. Black",
+    "sort": "Black, Hugo L."
+  },
+  "james-a-garfield": {
+    "name": "James A. Garfield",
+    "sort": "Garfield, James A."
+  },
+  "james-buchanan": {
+    "name": "James Buchanan",
+    "sort": "Buchanan, James"
+  },
+  "james-k-polk": {
+    "name": "James K. Polk",
+    "sort": "Polk, James K."
+  },
+  "james-madison": {
+    "name": "James Madison",
+    "sort": "Madison, James"
+  },
+  "james-monroe": {
+    "name": "James Monroe",
+    "sort": "Monroe, James"
+  },
+  "jimmy-carter": {
+    "name": "Jimmy Carter",
+    "sort": "Carter, Jimmy"
+  },
+  "joe-biden": {
+    "name": "Joe Biden",
+    "sort": "Biden, Joe"
+  },
+  "john-adams": {
+    "name": "John Adams",
+    "sort": "Adams, John"
+  },
+  "john-f-kennedy": {
+    "name": "John F. Kennedy",
+    "sort": "Kennedy, John F."
+  },
+  "john-harlan": {
+    "name": "John Marshall Harlan",
+    "sort": "Harlan, John Marshall"
+  },
+  "john-jay": {
+    "name": "John Jay",
+    "sort": "Jay, John"
+  },
+  "john-marshall": {
+    "name": "John Marshall",
+    "sort": "Marshall, John"
+  },
+  "john-marshall-harlan-ii": {
+    "name": "John Marshall Harlan II",
+    "sort": "Harlan, John Marshall, II"
+  },
+  "john-paul-stevens": {
+    "name": "John Paul Stevens",
+    "sort": "Stevens, John Paul"
+  },
+  "john-quincy-adams": {
+    "name": "John Quincy Adams",
+    "sort": "Adams, John Quincy"
+  },
+  "john-roberts": {
+    "name": "John G. Roberts Jr.",
+    "sort": "Roberts, John G., Jr."
+  },
+  "john-tyler": {
+    "name": "John Tyler",
+    "sort": "Tyler, John"
+  },
+  "lyndon-b-johnson": {
+    "name": "Lyndon B. Johnson",
+    "sort": "Johnson, Lyndon B."
+  },
+  "mark-twain": {
+    "name": "Mark Twain",
+    "sort": "Twain, Mark"
+  },
+  "martin-van-buren": {
+    "name": "Martin Van Buren",
+    "sort": "Van Buren, Martin"
+  },
+  "millard-fillmore": {
+    "name": "Millard Fillmore",
+    "sort": "Fillmore, Millard"
+  },
+  "oliver-wendell-holmes": {
+    "name": "Oliver Wendell Holmes Jr.",
+    "sort": "Holmes, Oliver Wendell, Jr."
+  },
+  "owen-roberts": {
+    "name": "Owen J. Roberts",
+    "sort": "Roberts, Owen J."
+  },
+  "potter-stewart": {
+    "name": "Potter Stewart",
+    "sort": "Stewart, Potter"
+  },
+  "richard-nixon": {
+    "name": "Richard Nixon",
+    "sort": "Nixon, Richard"
+  },
+  "robert-jackson": {
+    "name": "Robert H. Jackson",
+    "sort": "Jackson, Robert H."
+  },
+  "roger-taney": {
+    "name": "Roger B. Taney",
+    "sort": "Taney, Roger B."
+  },
+  "ronald-reagan": {
+    "name": "Ronald Reagan",
+    "sort": "Reagan, Ronald"
+  },
+  "rufus-peckham": {
+    "name": "Rufus W. Peckham",
+    "sort": "Peckham, Rufus W."
+  },
+  "rutherford-b-hayes": {
+    "name": "Rutherford B. Hayes",
+    "sort": "Hayes, Rutherford B."
+  },
+  "samuel-alito": {
+    "name": "Samuel A. Alito Jr.",
+    "sort": "Alito, Samuel A., Jr."
+  },
+  "shirley-chisholm": {
+    "name": "Shirley Chisholm",
+    "sort": "Chisholm, Shirley"
+  },
+  "stephen-douglas": {
+    "name": "Stephen A. Douglas",
+    "sort": "Douglas, Stephen A."
+  },
+  "supreme-court": {
+    "name": "Supreme Court",
+    "sort": "Supreme Court"
+  },
+  "susan-b-anthony": {
+    "name": "Susan B. Anthony",
+    "sort": "Anthony, Susan B."
+  },
+  "theodore-roosevelt": {
+    "name": "Theodore Roosevelt",
+    "sort": "Roosevelt, Theodore"
+  },
+  "thomas-jefferson": {
+    "name": "Thomas Jefferson",
+    "sort": "Jefferson, Thomas"
+  },
+  "tom-clark": {
+    "name": "Tom C. Clark",
+    "sort": "Clark, Tom C."
+  },
+  "ulysses-s-grant": {
+    "name": "Ulysses S. Grant",
+    "sort": "Grant, Ulysses S."
+  },
+  "united-states-congress": {
+    "name": "United States Congress",
+    "sort": "United States Congress"
+  },
+  "warren-burger": {
+    "name": "Warren E. Burger",
+    "sort": "Burger, Warren E."
+  },
+  "warren-g-harding": {
+    "name": "Warren G. Harding",
+    "sort": "Harding, Warren G."
+  },
+  "william-brennan": {
+    "name": "William J. Brennan Jr.",
+    "sort": "Brennan, William J., Jr."
+  },
+  "william-henry-harrison": {
+    "name": "William Henry Harrison",
+    "sort": "Harrison, William Henry"
+  },
+  "william-howard-taft": {
+    "name": "William Howard Taft",
+    "sort": "Taft, William Howard"
+  },
+  "william-mckinley": {
+    "name": "William McKinley",
+    "sort": "McKinley, William"
+  },
+  "william-rehnquist": {
+    "name": "William H. Rehnquist",
+    "sort": "Rehnquist, William H."
+  },
+  "winston-churchill": {
+    "name": "Winston Churchill",
+    "sort": "Churchill, Winston"
+  },
+  "woodrow-wilson": {
+    "name": "Woodrow Wilson",
+    "sort": "Wilson, Woodrow"
+  },
+  "zachary-taylor": {
+    "name": "Zachary Taylor",
+    "sort": "Taylor, Zachary"
+  }
 }

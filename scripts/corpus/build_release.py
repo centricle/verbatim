@@ -226,6 +226,15 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "miller_urls.
           encoding="utf-8") as _f:
     MILLER_URLS = json.load(_f)["urls"]
 
+# Display name per speaker slug, printed by the site wherever a speaker is
+# named. Justices are named as the Supreme Court's own list of justices names
+# them, except that both Harlans keep "John Marshall" in full, since that list
+# gives each as "John M. Harlan". A record whose speaker has no entry is
+# written without a name, and check_release.py fails it.
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "speakers.json"),
+          encoding="utf-8") as _f:
+    SPEAKER_NAMES = json.load(_f)
+
 # Collections. Trend charts count the core only. Tweets and the two literary
 # voices are kept apart, and so are Federal Register orders and proclamations:
 # the API starts in 1993, so in the core they would put a step in every trend
@@ -951,6 +960,7 @@ def build(db_path):
         out = {
             "id": rec["id"],
             "speaker": speaker,
+            "speaker_name": SPEAKER_NAMES.get(speaker),
             "date": d,
             "date_precision": precision,
             "collection": collection,

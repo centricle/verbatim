@@ -5,6 +5,10 @@ Reads data/corpus/release.jsonl (written by build_release.py) and checks:
 
   - ids are unique and every record has text, a genre and an http(s) source URL
   - no text contains a NUL character (Postgres text cannot hold one)
+  - no core or voices title or text holds a control character other than tab,
+    newline or carriage return: the site's search marks matches with U+0001
+    and U+0002 and trusts that the text has neither
+  - every record names its speaker (speakers.json has the slug)
   - every date is ISO with a precision of day, month or year, or is empty with
     precision "unknown"
   - every collection is core, executive, tweets or voices
@@ -30,6 +34,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_release import RELEASE_JSONL, SPEAKER_LAST_DATE  # noqa: E402
 
 COLLECTIONS = {"core", "executive", "tweets", "voices"}
+SITE_COLLECTIONS = {"core", "voices"}  # what scripts/corpus/cli.mjs loads into Postgres
+CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 PRECISIONS = {"day", "month", "year"}
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 AMENDMENT = re.compile(r"\bAmendment ([IVXL]+)\b")
@@ -55,6 +61,11 @@ def check(records):
             fail["empty text"].append(rid)
         if "\x00" in (r.get("text") or ""):
             fail["NUL in text"].append(rid)
+        if r.get("collection") in SITE_COLLECTIONS and (
+                CONTROL.search(r.get("text") or "") or CONTROL.search(r.get("title") or "")):
+            fail["control character in a site record"].append(rid)
+        if not r.get("speaker_name"):
+            fail["speaker has no name"].append(rid)
         if not r.get("genre"):
             fail["no genre"].append(rid)
         if not re.match(r"^https?://", r.get("source_url") or ""):

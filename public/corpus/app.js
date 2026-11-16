@@ -1,0 +1,164 @@
+import { createExplorer, html, highlight } from '../js/explorer.js';
+
+// Labels for the release's values. A value missing here prints as itself,
+// sentence-cased, rather than not at all.
+const GENRES = {
+  speech: 'Speech', writing: 'Writing', letter: 'Letter', document: 'Document',
+  opinion: 'Opinion', statement: 'Statement', executive_action: 'Executive action',
+  press_conference: 'Press conference', debate: 'Debate',
+};
+const TYPES = {
+  address: 'Address', speech: 'Speech', remarks: 'Remarks', floor_speech: 'Floor speech',
+  press_conference: 'Press conference', statement: 'Statement', letter: 'Letter', essay: 'Essay',
+  founding_document: 'Founding document', proclamation: 'Proclamation',
+  executive_order: 'Executive order', memo: 'Memo', opinion: 'Opinion', debate: 'Debate',
+};
+const COLLECTIONS = { core: 'Core', voices: 'Voices' };
+const SOURCES = {
+  national_archives: 'National Archives',
+  cornell_lii: 'Legal Information Institute, Cornell Law School',
+  govinfo: 'GovInfo, U.S. Government Publishing Office',
+  miller_center: 'Miller Center, University of Virginia',
+  wikisource: 'Wikisource',
+  project_gutenberg: 'Project Gutenberg',
+  historic_hansard: 'Historic Hansard, UK Parliament',
+};
+const RIGHTS = {
+  'pd-expired': 'Public domain: the copyright has expired',
+  'us-gov-work': 'Public domain: a work of the United States government',
+  'license:OPL-3.0': 'Open Parliament Licence v3.0',
+};
+
+const label = (map, key) => map[key] || String(key || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+  'September', 'October', 'November', 'December'];
+
+// As exact as the record's date: "March 1, 1722", "December 1787" or "1758".
+function formatDate(iso, precision) {
+  if (!iso) return 'Undated';
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  if (precision === 'year') return String(y);
+  if (precision === 'month') return `${MONTHS[m - 1]} ${y}`;
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+// Without a search, the snippet is the record's first 320 characters: cut it
+// back to a whole word and mark the cut. A search snippet is ts_headline's
+// fragments and is shown as they come.
+function excerpt(d) {
+  const s = d.snippet || '';
+  if (s.includes('\u0001') || Number(d.chars) <= s.length) return s;
+  return `${s.replace(/\s+\S*$/, '')} …`;
+}
+
+const params = new URLSearchParams(location.search);
+if (params.get('id')) showRecord(params.get('id'));
+else startExplorer();
+
+function startExplorer() {
+  // Started now so the chunks load while the first search and stats are in flight.
+  const charts = Promise.all([
+    import('../../src/viz/corpus-by-decade.jsx'),
+    import('../../src/viz/ranked-bars.jsx'),
+  ]);
+
+  createExplorer({
+    prefix: 'corpus',
+    endpoint: '/api/corpus',
+    filters: ['speaker', 'genre', 'collection', 'from', 'to'],
+    noun: 'records',
+    emptyText: 'No records match your search and filters.',
+    errorText: 'Could not load records. Try again.',
+    row: (d) => html`
+      <tr>
+        <td class="cell-dim cell-nowrap cell-trail">${formatDate(d.date, d.date_precision)}</td>
+        <td class="cell-name cell-lead cell-wrap"><a class="text-link" href="/corpus/?id=${d.id}">${d.title}</a></td>
+        <td class="cell-dim">${d.speaker_name}</td>
+        <td class="cell-dim">${label(TYPES, d.type)}</td>
+        <td class="cell-dim cell-push">${label(COLLECTIONS, d.collection)}</td>
+        <td class="cell-dim cell-wide cell-excerpt">${highlight(excerpt(d))}</td>
+      </tr>
+    `,
+    options: (stats) => ({
+      speaker: (stats.speaker_list || []).map((s) => [s.speaker, s.speaker_name]),
+      genre: (stats.genre_list || []).map((g) => [g, label(GENRES, g)]),
+    }),
+    charts: async (stats, opts) => {
+      const [{ mountCorpusByDecade }, { mountRankedBars }] = await charts;
+      mountCorpusByDecade(document.getElementById('viz-by-decade'), stats, {
+        ...opts,
+        noteEl: document.getElementById('viz-by-decade-note'),
+      });
+      const bars = { value: 'count', noun: 'records', onFilter: opts.onFilter };
+      mountRankedBars(document.getElementById('viz-by-genre'), stats.by_genre, {
+        ...bars, label: 'genre', filterKey: 'genre', display: (d) => label(GENRES, d.genre),
+      });
+      mountRankedBars(document.getElementById('viz-by-speaker'), stats.by_speaker, {
+        ...bars, label: 'speaker', filterKey: 'speaker', display: (d) => d.speaker_name,
+      });
+    },
+  });
+}
+
+// ---- Record view (/corpus/?id=…) -------------------------------------------
+
+// Project Gutenberg's plain texts are hard-wrapped at about 70 characters, so
+// a single line break inside one of their paragraphs is the edition's line
+// end, not the author's: those paragraphs are reflowed. Every other source's
+// line breaks are kept (salutations, addresses, verse).
+const REFLOW_SOURCES = new Set(['project_gutenberg']);
+
+function paragraphs(r) {
+  const paras = r.text.split(/\n[ \t]*\n/).map((p) => p.trim()).filter(Boolean);
+  return REFLOW_SOURCES.has(r.source_name) ? paras.map((p) => p.replace(/\s*\n\s*/g, ' ')) : paras;
+}
+
+async function showRecord(id) {
+  document.getElementById('corpus-index').classList.add('hidden');
+  const view = document.getElementById('corpus-record');
+  view.classList.remove('hidden');
+  const status = document.getElementById('record-status');
+
+  let res;
+  try {
+    res = await fetch(`/api/corpus?${new URLSearchParams({ action: 'get', id })}`);
+  } catch (err) {
+    console.error(err);
+    status.textContent = 'Could not load this record. Try again.';
+    return;
+  }
+  if (res.status === 404) {
+    status.textContent = 'No record has this address.';
+    return;
+  }
+  if (!res.ok) {
+    status.textContent = 'Could not load this record. Try again.';
+    return;
+  }
+  const r = await res.json();
+  status.textContent = '';
+  status.classList.add('hidden');
+
+  document.title = `${r.title} — Verbatim`;
+  document.getElementById('record-kicker').textContent =
+    `${label(TYPES, r.type)} · ${label(COLLECTIONS, r.collection)}`;
+  document.getElementById('record-title').textContent = r.title;
+  document.getElementById('record-speaker').textContent = r.speaker_name;
+  document.getElementById('record-date').textContent = formatDate(r.date, r.date_precision);
+
+  // An amendment's record date is the completion of ratification; its
+  // proposal and certification ride along (scripts/corpus/build_release.py).
+  const meta = [
+    ...(r.proposed ? [['Ratified', formatDate(r.date, r.date_precision)], ['Proposed', formatDate(r.proposed, 'day')]] : []),
+    ...(r.certified ? [['Certified', formatDate(r.certified, 'day')]] : []),
+    ['Source', html`<a href="${r.source_url}" target="_blank" rel="noopener" class="source-link">${label(SOURCES, r.source_name)}</a>`],
+    ['Rights', label(RIGHTS, r.rights)],
+    ...(r.attribution ? [['Attribution', r.attribution]] : []),
+  ];
+  document.getElementById('record-meta').innerHTML = meta
+    .map(([term, value]) => html`<div class="record-meta-row"><dt>${term}</dt><dd>${value}</dd></div>`)
+    .join('');
+
+  document.getElementById('record-text').innerHTML = paragraphs(r).map((p) => html`<p>${p}</p>`).join('');
+}

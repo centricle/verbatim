@@ -70,9 +70,12 @@ export function html(strings, ...values) {
 // wraps each match in U+0001 ... U+0002 rather than markup. The snippet is
 // split on those pairs and every piece escaped like any other value; only
 // then does each match get its <mark>. A marker without its partner is
-// dropped. No markup from the database is ever rendered.
+// dropped. No markup from the database is ever rendered. ts_headline marks
+// each word of a phrase on its own; matches separated only by whitespace are
+// joined first, so a phrase reads as one highlight.
 export function highlight(text) {
-  const parts = String(text ?? '').split(/(\u0001[^\u0001\u0002]*\u0002)/);
+  const joined = String(text ?? '').replace(/\u0002(\s+)\u0001/g, '$1');
+  const parts = joined.split(/(\u0001[^\u0001\u0002]*\u0002)/);
   return new Markup(parts.map((part) => (part.startsWith('\u0001') && part.endsWith('\u0002')
     ? `<mark>${interpolate(part.slice(1, -1))}</mark>`
     : interpolate(part.replace(/[\u0001\u0002]/g, '')))).join(''));

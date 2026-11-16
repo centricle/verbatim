@@ -102,7 +102,7 @@
   }
 
   mark {
-    background: color-mix(in oklch, var(--color-source) 14%, transparent);
+    background: color-mix(in oklch, var(--color-source) 24%, transparent);
     color: inherit;
     padding: 0 2px;
   }
@@ -1004,6 +1004,57 @@
       color: var(--color-ink-dim);
     }
   }
+
+  /*
+   * Corpus excerpts: a search snippet with each match in <mark>, or a
+   * record's opening. Below 768px the .cell-wide rules above clamp it; three
+   * lines there, since a match can sit past the second.
+   */
+  .cell-excerpt {
+    white-space: normal;
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+  @media (min-width: 768px) {
+    .cell-excerpt { min-width: 18rem; max-width: 30rem; }
+  }
+  @media (max-width: 767px) {
+    .record-table td.cell-excerpt { -webkit-line-clamp: 3; line-clamp: 3; }
+  }
+
+  /* ---------- Corpus record view (/corpus/?id=) ---------- */
+  .record-meta {
+    border-top: 1px solid var(--color-rule);
+    padding-top: 0.6rem;
+    font-size: 0.86rem;
+    line-height: 1.45;
+    color: var(--color-ink-dim);
+    overflow-wrap: anywhere;
+  }
+  .record-meta-row + .record-meta-row { margin-top: 0.55rem; }
+  /* Record titles run long ("His Majesty's Government (House of Commons, 13 May
+     1940)"), so the record view sets them a size down from a page headline. */
+  .headline--record { font-size: clamp(1.9rem, 1rem + 3vw, 3.3rem); line-height: 1.04; }
+  .record-meta dt {
+    font-family: var(--font-label);
+    font-stretch: 87.5%;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+  }
+  /* Line breaks inside a paragraph are kept: app.js has already reflowed the
+     sources whose breaks are an edition's, not the author's. */
+  .record-text {
+    max-width: 38rem;
+    padding-bottom: 4rem;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+  .record-text p { white-space: pre-line; }
+  .record-text p + p { margin-top: 0.9em; }
 
   .pager {
     display: flex;

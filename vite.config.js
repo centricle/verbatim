@@ -22,6 +22,7 @@ export default defineConfig({
         vs: resolve(__dirname, 'public/vs/index.html'),
         qi: resolve(__dirname, 'public/qi/index.html'),
         crashes: resolve(__dirname, 'public/crashes/index.html'),
+        corpus: resolve(__dirname, 'public/corpus/index.html'),
       },
     },
   },

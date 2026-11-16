@@ -16,6 +16,9 @@ Reads data/corpus/release.jsonl (written by build_release.py) and checks:
   - no two core records share a title and a date
   - no speaker is credited with words dated after their death
   - the core holds the 27 amendments, each as its own dated record
+  - every series value names a series in series.json and sits on a core
+    speech that answers to a member of its list, and no member answers to
+    more than one record
 
 Usage (from the repo root):
   python3 scripts/corpus/check_release.py [--release PATH]
@@ -31,7 +34,7 @@ import sys
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_release import RELEASE_JSONL, SPEAKER_LAST_DATE  # noqa: E402
+from build_release import RELEASE_JSONL, SERIES, SPEAKER_LAST_DATE, series_matches  # noqa: E402
 
 COLLECTIONS = {"core", "executive", "tweets", "voices"}
 SITE_COLLECTIONS = {"core", "voices"}  # what scripts/corpus/cli.mjs loads into Postgres
@@ -99,6 +102,29 @@ def check(records):
     for (title, d), ids in sorted(core_title_date.items(), key=lambda kv: kv[0][0]):
         if len(ids) > 1:
             fail["core title and date shared"].extend(ids)
+
+    for r in records:
+        key = r.get("series")
+        if key is None:
+            continue
+        if key not in SERIES:
+            fail["series not in series.json"].append(r.get("id"))
+        elif r.get("collection") != "core" or r.get("genre") != "speech" or not r.get("date"):
+            fail["series on a record that is not a dated core speech"].append(r.get("id"))
+    for key, spec in SERIES.items():
+        pattern = re.compile(spec["title_pattern"])
+        marked = [r for r in records if r.get("series") == key and r.get("date")]
+        answered, claimed = set(), set()
+        for m in sorted(spec["members"], key=lambda m: m.get("date") is None):
+            hits = series_matches(m, marked, pattern, claimed)
+            if len(hits) > 1:
+                fail[f"series {key}: a member matches more than one record"].extend(r["id"] for r in hits)
+            for r in hits:
+                answered.add(r["id"])
+                claimed.add(r["id"])
+        for r in marked:
+            if r["id"] not in answered:
+                fail[f"series {key}: record answers to no member"].append(r["id"])
 
     missing = [n for n in ROMAN if n not in amendments]
     if missing:

@@ -220,6 +220,13 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "amendments.j
     AMENDMENTS = {a["number"]: a for a in json.load(_f)["amendments"]}
 AMENDMENT_TITLE = re.compile(r"^Amendment ([IVXL]+)$")
 
+# Series: recurring occasions whose members come from one cited list each
+# (scripts/corpus/series.json). See assign_series.
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "series.json"),
+          encoding="utf-8") as _f:
+    SERIES = json.load(_f)["series"]
+SERIES_WINDOW_DAYS = 3
+
 # Miller Center speeches whose bulk-download record has no URL: the page for
 # each, keyed by title, every one fetched and checked against the title.
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "miller_urls.json"),
@@ -287,6 +294,16 @@ RIGHTS = {
     "national_archives": "us-gov-work",
     "historic_hansard": "license:OPL-3.0",
     "govinfo": "us-gov-work",
+    # State of the Union volumes (scripts/corpus/import_gutenberg_sotu.py):
+    # presidents' messages to Congress, 1934 to 2001, federal government
+    # works. Without these the Gutenberg fallback below would call them
+    # pd-expired, which holds only before 1931.
+    "project_gutenberg:5038": "us-gov-work",
+    "project_gutenberg:5039": "us-gov-work",
+    "project_gutenberg:5040": "us-gov-work",
+    "project_gutenberg:5043": "us-gov-work",
+    "project_gutenberg:5045": "us-gov-work",
+    "project_gutenberg:5049": "us-gov-work",
 }
 
 # Attribution text each license requires, in the licensor's words.
@@ -1013,7 +1030,56 @@ def build(db_path):
     return release, excluded, changed, flags
 
 
-def report(release, excluded, changed, flags, db_path):
+def _days_apart(a, b):
+    return abs((date.fromisoformat(a[:10]) - date.fromisoformat(b[:10])).days)
+
+
+def series_matches(member, records, pattern, claimed=()):
+    """The core speeches a series member can be: its speaker's, with a title
+    the series' pattern accepts, within SERIES_WINDOW_DAYS of the member's
+    date, or in its year when the list gives only a year. Records in
+    `claimed` are left out."""
+    hits = []
+    for r in records:
+        if r["speaker"] != member["speaker"] or r["id"] in claimed or not pattern.search(r["title"]):
+            continue
+        if member.get("date"):
+            if _days_apart(r["date"], member["date"]) <= SERIES_WINDOW_DAYS:
+                hits.append(r)
+        elif r["date"][:4] == str(member["year"]):
+            hits.append(r)
+    return hits
+
+
+def assign_series(release):
+    """Set `series` on the core record each list member names, and return the
+    report's series section. Members with a date go first, so a member the
+    list gives only a year for (a written message) never takes the address a
+    dated member already took in the same year. A member with more than one
+    match marks them all, and check_release.py fails it; a member with none
+    is listed as absent."""
+    core = [r for r in release if r["collection"] == "core" and r["genre"] == "speech" and r["date"]]
+    section = {}
+    for key, spec in SERIES.items():
+        pattern = re.compile(spec["title_pattern"])
+        claimed, absent, ambiguous = set(), [], []
+        for m in sorted(spec["members"], key=lambda m: m.get("date") is None):
+            hits = series_matches(m, core, pattern, claimed)
+            if not hits:
+                absent.append(m)
+            if len(hits) > 1:
+                ambiguous.append({"member": m, "ids": [r["id"] for r in hits]})
+            for r in hits:
+                if r.get("series") and r["series"] != key:
+                    ambiguous.append({"member": m, "ids": [r["id"]], "also": r["series"]})
+                r["series"] = key
+                claimed.add(r["id"])
+        section[key] = {"members": len(spec["members"]), "records": len(claimed),
+                        "absent": absent, "ambiguous": ambiguous}
+    return section
+
+
+def report(release, excluded, changed, flags, db_path, series=None):
     by = lambda key: dict(sorted(Counter(key(r) for r in release).items()))  # noqa: E731
     decade = lambda r: f"{r['collection']}:{r['date'][:3]}0s" if r["date"] else f"{r['collection']}:undated"  # noqa: E731
     same_title = defaultdict(list)
@@ -1037,6 +1103,7 @@ def report(release, excluded, changed, flags, db_path):
         "by_decade": by(decade),
         "quote_tweets": sum(1 for r in release if r.get("quote_tweet")),
         "flags": {k: sorted(v) for k, v in sorted(flags.items())},
+        "series": series or {},
         "same_title_in_work": {f"{u} | {t}": ids for (u, t), ids in sorted(same_title.items())
                                if len(ids) > 1},
         "changed": [list(c) for c in changed],
@@ -1051,7 +1118,8 @@ def main():
     args = ap.parse_args()
 
     release, excluded, changed, flags = build(args.db)
-    rep = report(release, excluded, changed, flags, args.db)
+    series = assign_series(release)
+    rep = report(release, excluded, changed, flags, args.db, series)
 
     with open(RELEASE_JSONL, "w", encoding="utf-8") as f:
         for r in release:
@@ -1063,6 +1131,9 @@ def main():
     print(f"{rep['records']} records, {rep['chars']:,} chars -> {os.path.relpath(RELEASE_JSONL)}")
     print(f"{rep['excluded']} excluded: {rep['excluded_by_rule']}")
     print(f"flags: { {k: len(v) for k, v in rep['flags'].items()} }")
+    for key, sec in series.items():
+        print(f"series {key}: {sec['records']} records for {sec['members']} members, "
+              f"{len(sec['absent'])} absent, {len(sec['ambiguous'])} ambiguous")
     if args.summary:
         for key in ("excluded_by_reason", "by_collection", "chars_by_collection",
                     "by_genre", "by_precision", "by_decade"):

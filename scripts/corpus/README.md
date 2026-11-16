@@ -26,6 +26,7 @@ never duplicates a record.
 | Project Gutenberg, WikiSource | `import_churchill.py`, `import_douglass.py`, `import_franklin.py`, `import_suffrage.py`, `import_twain.py` | Speeches, letters and essays by non-presidential voices |
 | Project Gutenberg, WikiSource | `deepen_lincoln.py`, `deepen_voices.py` | Additional records for speakers with thin coverage |
 | Project Gutenberg | `import_lincoln.py` | Two Lincoln books re-split one record per document, in place of `deepen_lincoln.py`'s split of them; the Ottawa debate's opening speech is credited to Douglas |
+| Project Gutenberg | `import_gutenberg_sotu.py` | State of the Union messages missing from the Miller Center download: Roosevelt 1934 to 1940, 1942 and 1945, Truman 1946 to 1953, Eisenhower 1961, Nixon 1973, Carter 1981 |
 | Public archive mirror | `scrape.py --source twitter` | Archived social media posts |
 
 Each script's docstring lists its exact sources (Gutenberg ebook numbers,

@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Speeches, Writings and Founding Documents — Verbatim</title>
-  <meta name="description" content="The Constitution and its amendments, presidential addresses and papers, Supreme Court opinions, speeches in Congress, and the speeches and writings of the founders, Frederick Douglass, Elizabeth Cady Stanton and Susan B. Anthony, as their sources published them. Search by word or phrase, speaker, genre and year.">
+  <meta name="description" content="The Constitution and its amendments, presidential addresses and papers, Supreme Court opinions, speeches in Congress, and other speeches, letters and essays, as their sources published them. Search by word or phrase, speaker, genre and year.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://verbatim.fyi/og/corpus.webp">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="Verbatim">
   <meta property="og:title" content="Speeches, Writings and Founding Documents — Verbatim">
-  <meta property="og:description" content="The Constitution and its amendments, presidential addresses and papers, Supreme Court opinions, speeches in Congress, and the speeches and writings of the founders, Frederick Douglass, Elizabeth Cady Stanton and Susan B. Anthony, as their sources published them. Search by word or phrase, speaker, genre and year.">
+  <meta property="og:description" content="The Constitution and its amendments, presidential addresses and papers, Supreme Court opinions, speeches in Congress, and other speeches, letters and essays, as their sources published them. Search by word or phrase, speaker, genre and year.">
   <meta property="og:url" content="https://verbatim.fyi/corpus/">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://verbatim.fyi/og/corpus.webp">
@@ -35,14 +35,19 @@
     <div class="page-wrap">
       <div class="masthead-bar">
         <a href="/" class="wordmark">Verbatim</a>
-        <nav class="masthead-nav hidden md:flex" aria-label="Datasets and pages">
+        <nav class="masthead-nav hidden md:flex" aria-label="Sections">
           <a href="/corpus/" class="nav-link" aria-current="page">Corpus</a>
-          <a href="/compas/" class="nav-link">COMPAS</a>
-          <a href="/trades/" class="nav-link">Trades</a>
-          <a href="/incidents/" class="nav-link">Incidents</a>
-          <a href="/finance/" class="nav-link">Finance</a>
-          <a href="/qi/" class="nav-link">Immunity</a>
-          <a href="/crashes/" class="nav-link">Crashes</a>
+          <details class="nav-menu">
+            <summary class="nav-link">Record<svg class="nav-caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></summary>
+            <div class="nav-menu-panel">
+              <a href="/trades/" class="nav-link">Senate Stock Trades</a>
+              <a href="/compas/" class="nav-link">COMPAS</a>
+              <a href="/incidents/" class="nav-link">Fatal Force</a>
+              <a href="/finance/" class="nav-link">Campaign Finance</a>
+              <a href="/qi/" class="nav-link">Qualified Immunity</a>
+              <a href="/crashes/" class="nav-link">Crashes</a>
+            </div>
+          </details>
           <a href="/vs/" class="nav-link">Vs.</a>
           <a href="/about.html" class="nav-link">About</a>
         </nav>
@@ -51,14 +56,17 @@
           <svg class="icon-close hidden w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <nav id="mobile-menu" class="mobile-menu hidden md:hidden" aria-label="Datasets and pages">
+      <nav id="mobile-menu" class="mobile-menu hidden md:hidden" aria-label="Sections">
         <a href="/corpus/" class="nav-link" aria-current="page">Corpus</a>
-        <a href="/compas/" class="nav-link">COMPAS</a>
-        <a href="/trades/" class="nav-link">Trades</a>
-        <a href="/incidents/" class="nav-link">Incidents</a>
-        <a href="/finance/" class="nav-link">Finance</a>
-        <a href="/qi/" class="nav-link">Immunity</a>
-        <a href="/crashes/" class="nav-link">Crashes</a>
+        <div class="mobile-menu-group" role="group" aria-labelledby="mobile-menu-record">
+          <p id="mobile-menu-record" class="kicker kicker-dim mobile-menu-label">Record</p>
+          <a href="/trades/" class="nav-link">Senate Stock Trades</a>
+          <a href="/compas/" class="nav-link">COMPAS</a>
+          <a href="/incidents/" class="nav-link">Fatal Force</a>
+          <a href="/finance/" class="nav-link">Campaign Finance</a>
+          <a href="/qi/" class="nav-link">Qualified Immunity</a>
+          <a href="/crashes/" class="nav-link">Crashes</a>
+        </div>
         <a href="/vs/" class="nav-link">Vs.</a>
         <a href="/about.html" class="nav-link">About</a>
       </nav>
@@ -75,13 +83,13 @@
           <div class="md:col-span-7 md:row-start-2">
             <p class="dek">
               The Constitution and each of its amendments, presidential addresses and papers, Supreme Court
-              opinions, speeches in Congress, and the speeches, letters and essays of the founders,
-              Frederick Douglass, Elizabeth Cady Stanton and Susan B. Anthony.
+              opinions, speeches in Congress, and other speeches, letters and essays.<span id="corpus-reach"></span>
             </p>
             <p class="prose mt-5">
-              A second collection, Voices, holds speeches and essays by Mark Twain and Winston Churchill.
-              Every record is the text as its source published it, with its date, its source and the basis
-              for publishing it here. Search it. Filter it.
+              A second collection, Voices, holds speeches and essays by Mark Twain and Winston Churchill,
+              two of the speakers quoted in <a href="/vs/" class="text-link">Vs.</a> Each figure counts it
+              apart from Core. Every record is the text as its source published it, with its date, its
+              source and the basis for publishing it here. Search it. Filter it.
             </p>
           </div>
           <aside class="md:col-span-4 md:col-start-9 md:row-start-2 space-y-7">
@@ -101,7 +109,6 @@
                     by the completion of its ratification. Undated records are listed last.</li>
                   <li>Left out: records with no basis for republishing them here, such as tweets, debate
                     transcripts and campaign speeches, and compiled works credited to a single author.</li>
-                  <li>Each figure counts Core and Voices separately.</li>
                   <li>Contains Parliamentary information licensed under the
                     <a href="https://www.parliament.uk/site-information/copyright-parliament/open-parliament-licence/" target="_blank" rel="noopener" class="source-link">Open Parliament Licence v3.0</a>.</li>
                 </ul>
@@ -129,22 +136,26 @@
             <p id="viz-by-decade-note" class="figure-note"></p>
           </figure>
 
-          <figure class="figure">
+          <figure class="figure figure--wide">
             <figcaption class="figure-head">
               <span class="figure-num">Figure 2</span>
-              <span class="figure-title">Records by genre</span>
-              <span class="figure-caption">Records in each genre, most first. Select a bar to filter the appendix to that genre.</span>
+              <span class="figure-title">Speakers over time</span>
+              <span class="figure-caption">Each speaker’s first and last dated record, one row per speaker, in order of first record. Select a row to filter the appendix to that speaker.</span>
+              <span class="legend" aria-hidden="true">
+                <span class="legend-item"><span class="key key-series-1"></span>Core</span>
+                <span class="legend-item"><span class="key key-series-2"></span>Voices</span>
+              </span>
             </figcaption>
-            <div id="viz-by-genre" role="img" aria-label="Figure 2: records by genre" class="figure-plot"></div>
+            <div id="viz-speaker-span" role="img" aria-label="Figure 2: each speaker's first and last dated record, in order of first record" class="figure-plot"></div>
           </figure>
 
           <figure class="figure">
             <figcaption class="figure-head">
               <span class="figure-num">Figure 3</span>
-              <span class="figure-title">Records by speaker</span>
-              <span class="figure-caption">The 15 speakers with the most records, most first. Select a bar to filter the appendix to that speaker.</span>
+              <span class="figure-title">Records by genre</span>
+              <span class="figure-caption">Records in each genre, most first. Select a bar to filter the appendix to that genre.</span>
             </figcaption>
-            <div id="viz-by-speaker" role="img" aria-label="Figure 3: records by speaker" class="figure-plot"></div>
+            <div id="viz-by-genre" role="img" aria-label="Figure 3: records by genre" class="figure-plot"></div>
           </figure>
         </div>
       </section>

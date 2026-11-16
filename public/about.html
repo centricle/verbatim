@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>About — Verbatim</title>
-  <meta name="description" content="Six public datasets, one interface, zero editorial. COMPAS, Senate trades, fatal shootings, campaign finance, qualified immunity, automated driving and driver assistance crashes.">
+  <meta name="description" content="The words and the record, one interface, zero editorial. A corpus of speeches, writings and founding documents, and datasets on Senate trades, COMPAS, fatal shootings, campaign finance, qualified immunity, automated driving and driver assistance crashes.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://verbatim.fyi/og/about.webp">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="Verbatim">
   <meta property="og:title" content="About — Verbatim">
-  <meta property="og:description" content="Six public datasets, one interface, zero editorial. COMPAS, Senate trades, fatal shootings, campaign finance, qualified immunity, automated driving and driver assistance crashes.">
+  <meta property="og:description" content="The words and the record, one interface, zero editorial. A corpus of speeches, writings and founding documents, and datasets on Senate trades, COMPAS, fatal shootings, campaign finance, qualified immunity, automated driving and driver assistance crashes.">
   <meta property="og:url" content="https://verbatim.fyi/about">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://verbatim.fyi/og/about.webp">
@@ -35,14 +35,19 @@
     <div class="page-wrap">
       <div class="masthead-bar">
         <a href="/" class="wordmark">Verbatim</a>
-        <nav class="masthead-nav hidden md:flex" aria-label="Datasets and pages">
+        <nav class="masthead-nav hidden md:flex" aria-label="Sections">
           <a href="/corpus/" class="nav-link">Corpus</a>
-          <a href="/compas/" class="nav-link">COMPAS</a>
-          <a href="/trades/" class="nav-link">Trades</a>
-          <a href="/incidents/" class="nav-link">Incidents</a>
-          <a href="/finance/" class="nav-link">Finance</a>
-          <a href="/qi/" class="nav-link">Immunity</a>
-          <a href="/crashes/" class="nav-link">Crashes</a>
+          <details class="nav-menu">
+            <summary class="nav-link">Record<svg class="nav-caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></summary>
+            <div class="nav-menu-panel">
+              <a href="/trades/" class="nav-link">Senate Stock Trades</a>
+              <a href="/compas/" class="nav-link">COMPAS</a>
+              <a href="/incidents/" class="nav-link">Fatal Force</a>
+              <a href="/finance/" class="nav-link">Campaign Finance</a>
+              <a href="/qi/" class="nav-link">Qualified Immunity</a>
+              <a href="/crashes/" class="nav-link">Crashes</a>
+            </div>
+          </details>
           <a href="/vs/" class="nav-link">Vs.</a>
           <a href="/about.html" class="nav-link" aria-current="page">About</a>
         </nav>
@@ -51,14 +56,17 @@
           <svg class="icon-close hidden w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <nav id="mobile-menu" class="mobile-menu hidden md:hidden" aria-label="Datasets and pages">
+      <nav id="mobile-menu" class="mobile-menu hidden md:hidden" aria-label="Sections">
         <a href="/corpus/" class="nav-link">Corpus</a>
-        <a href="/compas/" class="nav-link">COMPAS</a>
-        <a href="/trades/" class="nav-link">Trades</a>
-        <a href="/incidents/" class="nav-link">Incidents</a>
-        <a href="/finance/" class="nav-link">Finance</a>
-        <a href="/qi/" class="nav-link">Immunity</a>
-        <a href="/crashes/" class="nav-link">Crashes</a>
+        <div class="mobile-menu-group" role="group" aria-labelledby="mobile-menu-record">
+          <p id="mobile-menu-record" class="kicker kicker-dim mobile-menu-label">Record</p>
+          <a href="/trades/" class="nav-link">Senate Stock Trades</a>
+          <a href="/compas/" class="nav-link">COMPAS</a>
+          <a href="/incidents/" class="nav-link">Fatal Force</a>
+          <a href="/finance/" class="nav-link">Campaign Finance</a>
+          <a href="/qi/" class="nav-link">Qualified Immunity</a>
+          <a href="/crashes/" class="nav-link">Crashes</a>
+        </div>
         <a href="/vs/" class="nav-link">Vs.</a>
         <a href="/about.html" class="nav-link" aria-current="page">About</a>
       </nav>
@@ -80,27 +88,35 @@
             <p class="dek">
               I wanted to search what the founders actually wrote. Not someone’s interpretation. Not a curated excerpt in a textbook. The actual text, alongside everything that came after, in one index. That was the first project. Then it kept going.
             </p>
+
+            <h2 class="subhead pt-6">The words</h2>
+            <p>
+              What was said and written, as its source published it. Every record carries its date, its source and the basis for publishing it here.
+            </p>
+            <ul class="dataset-list">
+              <li><a href="/corpus/" class="dataset-name">Speeches, Writings and Founding Documents</a>The Constitution and each of its amendments, presidential addresses and papers, Supreme Court opinions, speeches in Congress, and other speeches, letters and essays. Search the full text, or read any record whole.</li>
+              <li><a href="/vs/" class="dataset-name">Vs.</a>Curated debates using real quotes. Churchill vs. Twain, Lincoln vs. Jefferson. Two voices, one topic, side by side.</li>
+            </ul>
+
+            <h2 class="subhead pt-6">The record</h2>
             <p>
               Public data should be publicly explorable. Government agencies publish datasets that are technically available but practically inaccessible: bulk downloads, PDFs, paywalled FOIA responses, formats that require a data pipeline to read. Verbatim takes those datasets and makes them searchable, filterable, and visible.
             </p>
-
-            <h2 class="subhead pt-6">What’s here</h2>
-            <p>
-              Six datasets and one curated feature. Each dataset is a public record that was already available in theory, now available in practice.
-            </p>
             <ul class="dataset-list">
-              <li><a href="/compas/" class="dataset-name">COMPAS</a>7,214 criminal defendants scored by an algorithm that predicts recidivism. The data ProPublica used to show the algorithm was biased against Black defendants.</li>
-              <li><a href="/trades/" class="dataset-name">Senate Stock Trades</a>7,740 stock transactions disclosed by U.S. senators under the STOCK Act. Every purchase, every sale, every ticker.</li>
-              <li><a href="/incidents/" class="dataset-name">Fatal Police Shootings</a>The Washington Post’s Fatal Force database. 10,430 people killed by on-duty police officers since 2015.</li>
+              <li><a href="/trades/" class="dataset-name">Senate Stock Trades</a>7,740 stock transactions disclosed by U.S. senators under the STOCK Act.</li>
+              <li><a href="/compas/" class="dataset-name">COMPAS</a>7,214 criminal defendants, their COMPAS recidivism scores and their outcomes. The data ProPublica published with its analysis of the algorithm.</li>
+              <li><a href="/incidents/" class="dataset-name">Fatal Police Shootings</a>The Washington Post’s Fatal Force database. 10,430 people shot and killed by on-duty police officers since 2015.</li>
               <li><a href="/finance/" class="dataset-name">Campaign Finance</a>3,457 FEC-registered candidates for the 2024 cycle. Who raised what, from where.</li>
-              <li><a href="/qi/" class="dataset-name">Qualified Immunity</a>5,500+ federal appellate qualified immunity cases, 2010&ndash;2020. The Institute for Justice’s comprehensive dataset of how courts apply the doctrine.</li>
+              <li><a href="/qi/" class="dataset-name">Qualified Immunity</a>5,500+ federal appellate qualified immunity cases, 2010&ndash;2020, as the Institute for Justice collected them.</li>
               <li><a href="/crashes/" class="dataset-name">Automated Driving and Driver Assistance Crashes</a>Every crash report filed with NHTSA under Standing General Order 2021-01 by the makers and operators of vehicles with automated driving systems or Level 2 driver assistance. Narratives and redactions as filed.</li>
-              <li><a href="/vs/" class="dataset-name">Vs.</a>Curated debates using real quotes. Churchill vs. Twain, Lincoln vs. Jefferson. Two voices, one topic, side by side.</li>
             </ul>
 
             <h2 class="subhead pt-6">The approach</h2>
             <p>
-              Each dataset gets the same treatment: search, filter, paginate, visualize. No editorializing, no analysis, no conclusions. The data speaks or it doesn’t. Verbatim provides the microphone, not the script.
+              Everything gets the same treatment: search, filter, visualize. No editorializing, no analysis, no conclusions. The data speaks or it doesn’t. Verbatim provides the microphone, not the script.
+            </p>
+            <p>
+              Choosing what to index is a judgment, and so is setting two speakers side by side in Vs. The curation is editorial; the words are not.
             </p>
             <p>
               The name is the tell. Not “interpreted.” Not “analyzed.” Not “summarized.” Verbatim.

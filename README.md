@@ -1,7 +1,8 @@
 # Verbatim
 
-Primary source data, made explorable. Public datasets from their original
-publishers, made searchable, filterable and charted, with nothing added.
+Primary source data, made explorable. A corpus of speeches, writings and
+founding documents, and public datasets from their original publishers, made
+searchable, filterable and charted, with nothing added.
 
 **Live:** [verbatim.fyi](https://verbatim.fyi)
 
@@ -9,6 +10,7 @@ publishers, made searchable, filterable and charted, with nothing added.
 
 | Route | Dataset |
 |---|---|
+| [`/corpus/`](https://verbatim.fyi/corpus/) | Speeches, writings and founding documents: the Constitution and its amendments, presidential addresses and papers, Supreme Court opinions, speeches in Congress, and other speeches, letters and essays |
 | [`/compas/`](https://verbatim.fyi/compas/) | COMPAS recidivism risk scores, from ProPublica’s “Machine Bias” analysis |
 | [`/trades/`](https://verbatim.fyi/trades/) | Senate stock trade disclosures filed under the STOCK Act |
 | [`/incidents/`](https://verbatim.fyi/incidents/) | The Washington Post Fatal Force database of fatal police shootings |
@@ -25,6 +27,7 @@ can be linked.
 
 | Dataset | Publisher | Source | Coverage | Terms |
 |---|---|---|---|---|
+| Corpus | The source named on each record | Miller Center, Project Gutenberg, WikiSource, the National Archives, Cornell LII, Historic Hansard and govinfo; [`scripts/corpus/README.md`](scripts/corpus/README.md) lists each importer and its sources | Dated records from 1722 to 2025 | Differs by source. Each record carries the basis for publishing it here; records with none are left out |
 | COMPAS | ProPublica | [`propublica/compas-analysis`](https://github.com/propublica/compas-analysis), `compas-scores-two-years.csv` | Broward County, Fla., defendants screened 2013 to 2014 | ProPublica Data Store [standard terms of use](https://projects.propublica.org/datastore/terms/): cite ProPublica; no stand-alone redistribution of the raw data |
 | Senate trades | U.S. Senate, Office of Public Records (eFD) | [Senate Stock Watcher](https://github.com/timothycarambat/senate-stock-watcher-data), a JSON aggregation of [eFD](https://efdsearch.senate.gov/search/home/) periodic transaction reports | Transactions dated 2012 to 2021; the aggregation was last updated in March 2021 | The aggregation states no license. The reports carry the Ethics in Government Act restriction (5 U.S.C. app. § 105(c)): no commercial use other than by news media, and no use in soliciting money |
 | Fatal Force | The Washington Post | [`washingtonpost/data-police-shootings`](https://github.com/washingtonpost/data-police-shootings), v2 CSV | Fatal shootings by on-duty police officers, 2015 to 2024 | [CC BY-NC-SA 4.0](https://github.com/washingtonpost/data-police-shootings/blob/master/LICENSE) |

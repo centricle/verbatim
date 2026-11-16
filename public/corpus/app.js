@@ -1,4 +1,5 @@
 import { createExplorer, html, highlight } from '../js/explorer.js';
+import SPEAKERS from '../../scripts/corpus/speakers.json';
 
 // Labels for the release's values. A value missing here prints as itself,
 // sentence-cased, rather than not at all.
@@ -61,6 +62,7 @@ function startExplorer() {
   const charts = Promise.all([
     import('../../src/viz/corpus-by-decade.jsx'),
     import('../../src/viz/ranked-bars.jsx'),
+    import('../../src/viz/corpus-speaker-span.jsx'),
   ]);
 
   createExplorer({
@@ -81,21 +83,32 @@ function startExplorer() {
       </tr>
     `,
     options: (stats) => ({
-      speaker: (stats.speaker_list || []).map((s) => [s.speaker, s.speaker_name]),
+      // Surname order, like an index; the label still reads first name first.
+      speaker: (stats.speaker_list || [])
+        .map((s) => [s.speaker, s.speaker_name, SPEAKERS[s.speaker]?.sort || s.speaker_name])
+        .sort((a, b) => a[2].localeCompare(b[2], 'en', { sensitivity: 'base' }))
+        .map(([slug, name]) => [slug, name]),
       genre: (stats.genre_list || []).map((g) => [g, label(GENRES, g)]),
     }),
     charts: async (stats, opts) => {
-      const [{ mountCorpusByDecade }, { mountRankedBars }] = await charts;
+      // The dek's reach, read off the data so it never goes stale in the HTML.
+      const reach = document.getElementById('corpus-reach');
+      const span = stats.year_range;
+      if (reach && stats.speaker_list?.length && span?.min) {
+        reach.textContent = ` ${stats.speaker_list.length.toLocaleString()} speakers, ${span.min} to ${span.max}.`;
+      }
+
+      const [{ mountCorpusByDecade }, { mountRankedBars }, { mountCorpusSpeakerSpan }] = await charts;
       mountCorpusByDecade(document.getElementById('viz-by-decade'), stats, {
         ...opts,
         noteEl: document.getElementById('viz-by-decade-note'),
       });
-      const bars = { value: 'count', noun: 'records', onFilter: opts.onFilter };
-      mountRankedBars(document.getElementById('viz-by-genre'), stats.by_genre, {
-        ...bars, label: 'genre', filterKey: 'genre', display: (d) => label(GENRES, d.genre),
+      mountCorpusSpeakerSpan(document.getElementById('viz-speaker-span'), stats.speaker_span, {
+        onFilter: opts.onFilter,
       });
-      mountRankedBars(document.getElementById('viz-by-speaker'), stats.by_speaker, {
-        ...bars, label: 'speaker', filterKey: 'speaker', display: (d) => d.speaker_name,
+      mountRankedBars(document.getElementById('viz-by-genre'), stats.by_genre, {
+        value: 'count', noun: 'records', onFilter: opts.onFilter,
+        label: 'genre', filterKey: 'genre', display: (d) => label(GENRES, d.genre),
       });
     },
   });

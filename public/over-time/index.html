@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Words Over Time — Verbatim</title>
+  <meta name="description" content="Uses of up to three words per million words in each year’s State of the Union messages or inaugural addresses, counted in the Verbatim corpus.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://verbatim.fyi/og/over-time.webp">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Verbatim">
+  <meta property="og:title" content="Words Over Time — Verbatim">
+  <meta property="og:description" content="Uses of up to three words per million words in each year’s State of the Union messages or inaugural addresses, counted in the Verbatim corpus.">
+  <meta property="og:url" content="https://verbatim.fyi/over-time/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://verbatim.fyi/og/over-time.webp">
+  <link rel="canonical" href="https://verbatim.fyi/over-time/">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2311161f'/><path d='M8 7l8 18 8-18' fill='none' stroke='%23f8fafd' stroke-width='3.4'/></svg>">
+  <link rel="preload" href="/fonts/newsreader-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/nav.js" defer></script>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZNE2YMX77V"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZNE2YMX77V');
+  </script>
+</head>
+<body class="min-h-screen flex flex-col">
+  <a href="#main-content" class="skip-link">Skip to content</a>
+  <header class="masthead">
+    <div class="page-wrap">
+      <div class="masthead-bar">
+        <a href="/" class="wordmark">Verbatim</a>
+        <nav class="masthead-nav hidden md:flex" aria-label="Sections">
+          <a href="/corpus/" class="nav-link">Corpus</a>
+          <details class="nav-menu">
+            <summary class="nav-link">Record<svg class="nav-caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></summary>
+            <div class="nav-menu-panel">
+              <a href="/trades/" class="nav-link">Senate Stock Trades</a>
+              <a href="/compas/" class="nav-link">COMPAS</a>
+              <a href="/incidents/" class="nav-link">Fatal Force</a>
+              <a href="/finance/" class="nav-link">Campaign Finance</a>
+              <a href="/qi/" class="nav-link">Qualified Immunity</a>
+              <a href="/crashes/" class="nav-link">Crashes</a>
+            </div>
+          </details>
+          <a href="/vs/" class="nav-link">Vs.</a>
+          <a href="/about.html" class="nav-link">About</a>
+        </nav>
+        <button id="mobile-menu-button" class="menu-button md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <svg class="icon-menu w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          <svg class="icon-close hidden w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <nav id="mobile-menu" class="mobile-menu hidden md:hidden" aria-label="Sections">
+        <a href="/corpus/" class="nav-link">Corpus</a>
+        <div class="mobile-menu-group" role="group" aria-labelledby="mobile-menu-record">
+          <p id="mobile-menu-record" class="kicker kicker-dim mobile-menu-label">Record</p>
+          <a href="/trades/" class="nav-link">Senate Stock Trades</a>
+          <a href="/compas/" class="nav-link">COMPAS</a>
+          <a href="/incidents/" class="nav-link">Fatal Force</a>
+          <a href="/finance/" class="nav-link">Campaign Finance</a>
+          <a href="/qi/" class="nav-link">Qualified Immunity</a>
+          <a href="/crashes/" class="nav-link">Crashes</a>
+        </div>
+        <a href="/vs/" class="nav-link">Vs.</a>
+        <a href="/about.html" class="nav-link">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="flex-1">
+    <article>
+      <header class="story-head page-wrap">
+        <p class="kicker"><a href="/corpus/" class="text-link">Corpus</a></p>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-7">
+          <h1 class="headline md:col-span-10">Words Over Time</h1>
+          <div class="md:col-span-7 md:row-start-2">
+            <p class="dek">
+              Up to three words counted in one series of addresses, the State of the Union or the inaugural
+              addresses, as uses per million words in each year’s records. With no word entered, the figure
+              shows the words each year’s records hold.
+            </p>
+          </div>
+          <aside class="md:col-span-4 md:col-start-9 md:row-start-2 space-y-7">
+            <p class="byline credit">
+              <span class="byline-role">Text</span>
+              <span class="byline-source">The sources named on each record</span>
+              <span class="byline-index">Indexed by Verbatim</span>
+            </p>
+            <details class="note">
+              <summary>How words are counted</summary>
+              <div class="note-body">
+                <ul class="note-list">
+                  <li>A word counts in all its forms: “liberty” and “liberties” count together, as a search of the
+                    corpus finds them.</li>
+                  <li>A year’s words are every word in its records, a hyphenated word counted once. Each part of a
+                    hyphenated word also counts as a use, so “self-government” is a use of “government”.</li>
+                  <li>Very common words such as “the” are not counted. Each box takes one word.</li>
+                  <li>Which records belong to a series is set by the list named under the figure.</li>
+                </ul>
+              </div>
+            </details>
+          </aside>
+        </div>
+      </header>
+
+      <section class="page-wrap" aria-labelledby="figure-title">
+        <form id="terms-form" class="terms-form" role="search" aria-label="Words to count">
+          <select id="series" class="field" aria-label="Series"></select>
+          <div class="term-fields">
+            <label class="term-field"><span class="key key-series-1" aria-hidden="true"></span><input type="text" name="t" maxlength="40" autocomplete="off" spellcheck="false" placeholder="A word" aria-label="First word" class="field field--search"></label>
+            <label class="term-field"><span class="key key-series-2" aria-hidden="true"></span><input type="text" name="t" maxlength="40" autocomplete="off" spellcheck="false" placeholder="A second" aria-label="Second word" class="field field--search"></label>
+            <label class="term-field"><span class="key key-series-3" aria-hidden="true"></span><input type="text" name="t" maxlength="40" autocomplete="off" spellcheck="false" placeholder="A third" aria-label="Third word" class="field field--search"></label>
+          </div>
+          <button type="submit" class="button">Count</button>
+        </form>
+        <p id="terms-status" class="results-info terms-status" aria-live="polite"></p>
+
+        <figure class="figure">
+          <figcaption class="figure-head">
+            <span class="figure-num">Figure 1</span>
+            <span class="figure-title" id="figure-title">Words per year</span>
+            <span class="figure-caption" id="figure-caption"></span>
+          </figcaption>
+          <div id="viz-term-rate" role="img" aria-label="Figure 1" class="figure-plot"></div>
+          <p id="viz-term-rate-note" class="figure-note"></p>
+          <p id="figure-source" class="figure-source"></p>
+        </figure>
+
+        <details class="note counts">
+          <summary>Counts by year</summary>
+          <div class="counts-table-scroll">
+            <table id="counts-table" class="counts-table"></table>
+          </div>
+        </details>
+      </section>
+    </article>
+  </main>
+
+  <footer class="colophon">
+    <div class="page-wrap colophon-inner">
+      <div class="colophon-links">
+        <a href="/" class="wordmark">Verbatim</a>
+        <a href="/about.html">About</a>
+      </div>
+      <a href="https://centricle.com" target="_blank" rel="noopener">A Centricle Project</a>
+    </div>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

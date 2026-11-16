@@ -1,5 +1,6 @@
 import { createExplorer, html, highlight } from '../js/explorer.js';
 import SPEAKERS from '../../scripts/corpus/speakers.json';
+import { formatDate } from '../js/format.js';
 
 // Labels for the release's values. A value missing here prints as itself,
 // sentence-cased, rather than not at all.
@@ -32,17 +33,6 @@ const RIGHTS = {
 
 const label = (map, key) => map[key] || String(key || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-  'September', 'October', 'November', 'December'];
-
-// As exact as the record's date: "March 1, 1722", "December 1787" or "1758".
-function formatDate(iso, precision) {
-  if (!iso) return 'Undated';
-  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-  if (precision === 'year') return String(y);
-  if (precision === 'month') return `${MONTHS[m - 1]} ${y}`;
-  return `${MONTHS[m - 1]} ${d}, ${y}`;
-}
 
 // Without a search, the snippet is the record's first 320 characters: cut it
 // back to a whole word and mark the cut. A search snippet is ts_headline's

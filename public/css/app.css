@@ -1104,6 +1104,59 @@
   .record-text p { white-space: pre-line; }
   .record-text p + p { margin-top: 0.9em; }
 
+  /* ---------- Amendments (/amendments/) ----------
+     One entry per amendment: title, dates and sources in a left column, the
+     text in the reading column, stacked below 768. */
+  .amendment-index {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.95rem;
+    border-top: 1px solid var(--color-ink);
+    padding-block: 0.7rem 1rem;
+    font-family: var(--font-label);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .amendment-index-link { color: var(--color-ink-dim); text-decoration: none; }
+  .amendment-index-link:hover { color: var(--color-ink); text-decoration: underline; text-underline-offset: 0.18em; }
+  .amendment {
+    border-top: 1px solid var(--color-rule);
+    padding-top: 1.6rem;
+    scroll-margin-top: 1rem;
+  }
+  @media (min-width: 768px) {
+    .amendment {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: 2rem;
+    }
+    .amendment-head { grid-column: 1 / span 4; }
+    .amendment-text { grid-column: 6 / span 7; }
+  }
+  .amendment-title {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2rem);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.8rem;
+  }
+  .amendment-record { margin-top: 0.7rem; font-size: 0.86rem; }
+  .record-text.amendment-text { padding-top: 1.2rem; padding-bottom: 2.2rem; }
+  @media (min-width: 768px) {
+    .record-text.amendment-text { padding-top: 0; }
+  }
+  .amendment-section {
+    font-family: var(--font-label);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-dim);
+  }
+  .record-text .amendment-section + p { margin-top: 0.35em; }
+
   .pager {
     display: flex;
     align-items: center;

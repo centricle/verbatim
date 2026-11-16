@@ -23,6 +23,7 @@ export default defineConfig({
         qi: resolve(__dirname, 'public/qi/index.html'),
         crashes: resolve(__dirname, 'public/crashes/index.html'),
         corpus: resolve(__dirname, 'public/corpus/index.html'),
+        amendments: resolve(__dirname, 'public/amendments/index.html'),
       },
     },
   },

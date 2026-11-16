@@ -5,6 +5,7 @@
 //   npm run corpus -- load       replace every row of corpus_statements in one transaction
 //   npm run corpus -- check      compare raw, parsed and loaded records field by field
 //   npm run corpus -- sample N   N stratified random rows to tmp/corpus/sample.json
+//   npm run corpus -- terms      rebuild the /over-time/ term counts from the loaded rows
 //
 // The input is data/corpus/release.jsonl, written by build_release.py (Python,
 // same directory; check_release.py must pass first). This side never reads
@@ -34,6 +35,18 @@ async function schemaCmd() {
   const ddl = await readFile(resolve(ROOT, 'db/corpus.sql'), 'utf8');
   await withClient((client) => client.query(ddl));
   console.log('applied db/corpus.sql');
+}
+
+// corpus_rebuild_terms (db/corpus.sql) replaces both count tables in this
+// transaction; about 40 seconds over the series records.
+async function termsCmd() {
+  const t0 = Date.now();
+  const { rows } = await withClient((client) => inTransaction(client, () =>
+    client.query('SELECT corpus_rebuild_terms() AS summary')));
+  for (const s of rows[0].summary) {
+    console.log(`${s.series}: ${s.records} records in ${s.years} years, ${Number(s.words).toLocaleString()} words, ${Number(s.term_rows).toLocaleString()} term rows`);
+  }
+  console.log(`rebuilt term counts in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 }
 
 async function loadCmd() {
@@ -106,8 +119,9 @@ async function main(argv) {
     case 'load': await loadCmd(); break;
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
+    case 'terms': await termsCmd(); break;
     default:
-      console.error('usage: cli.mjs schema|load|check [--table t]|sample N');
+      console.error('usage: cli.mjs schema|load|check [--table t]|sample N|terms');
       process.exitCode = 2;
   }
 }

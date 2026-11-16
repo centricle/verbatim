@@ -61,6 +61,70 @@ END; $$;
 
 
 --
+-- Name: corpus_amendments(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.corpus_amendments() RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $_$
+  WITH a AS (
+    SELECT s.*, substring(s.title FROM '^Amendment ([IVXL]+)$') AS numeral
+    FROM corpus_statements s
+    WHERE s.collection = 'core' AND s.source_name = 'national_archives'
+      AND s.title ~ '^Amendment [IVXL]+$'
+  )
+  SELECT coalesce(jsonb_agg(jsonb_build_object('id', id, 'numeral', numeral, 'title', title,
+      'date', date, 'proposed', proposed, 'certified', certified,
+      'source_name', source_name, 'source_url', source_url, 'rights', rights, 'text', text)
+    ORDER BY array_position(ARRAY['I','II','III','IV','V','VI','VII','VIII','IX','X',
+      'XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX',
+      'XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII'], numeral)), '[]'::jsonb)
+  FROM a;
+$_$;
+
+
+--
+-- Name: corpus_rebuild_terms(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.corpus_rebuild_terms() RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE result jsonb;
+BEGIN
+  DELETE FROM corpus_term_year;
+  DELETE FROM corpus_series_year;
+
+  CREATE TEMP TABLE corpus_tokens ON COMMIT DROP AS
+    SELECT s.series, extract(year FROM s.date)::int AS year, s.id, d.alias, d.lexemes
+    FROM corpus_statements s, LATERAL ts_debug('english'::regconfig, s.text) d
+    WHERE s.series IS NOT NULL AND s.date IS NOT NULL;
+
+  INSERT INTO corpus_series_year (series, year, words, records, speakers)
+    SELECT t.series, t.year, t.words, t.records,
+      (SELECT array_agg(DISTINCT s.speaker_name ORDER BY s.speaker_name) FROM corpus_statements s
+       WHERE s.series = t.series AND extract(year FROM s.date)::int = t.year)
+    FROM (
+      SELECT series, year,
+        count(*) FILTER (WHERE alias IN ('asciiword', 'word', 'numword', 'asciihword', 'hword', 'numhword')) AS words,
+        count(DISTINCT id) AS records
+      FROM corpus_tokens GROUP BY series, year) t;
+
+  INSERT INTO corpus_term_year (series, lexeme, year, n)
+    SELECT series, lexeme, year, count(*)
+    FROM corpus_tokens, unnest(lexemes) AS lexeme
+    WHERE cardinality(lexemes) > 0
+    GROUP BY series, lexeme, year;
+
+  SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.series), '[]'::jsonb) INTO result FROM (
+    SELECT y.series, sum(y.records) AS records, sum(y.words) AS words, count(*) AS years,
+      (SELECT count(*) FROM corpus_term_year t WHERE t.series = y.series) AS term_rows
+    FROM corpus_series_year y GROUP BY y.series) s;
+  RETURN result;
+END; $$;
+
+
+--
 -- Name: corpus_stats(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -100,6 +164,37 @@ BEGIN
   ) INTO result;
   RETURN result;
 END; $$;
+
+
+--
+-- Name: corpus_term_series(text, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.corpus_term_series(p_series text, p_terms text[]) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+  WITH input AS (
+    SELECT t.term, t.ord,
+      (SELECT array_agg(v.lexeme) FROM unnest(to_tsvector('english'::regconfig, t.term)) v) AS lexemes
+    FROM unnest(p_terms[1:3]) WITH ORDINALITY AS t(term, ord)
+  )
+  SELECT jsonb_build_object(
+    'series', p_series,
+    'years', (SELECT coalesce(jsonb_agg(jsonb_build_object('year', year, 'words', words, 'records', records,
+                'speakers', speakers) ORDER BY year), '[]'::jsonb)
+              FROM corpus_series_year WHERE series = p_series),
+    'terms', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+        'input', i.term,
+        'lexeme', CASE WHEN cardinality(i.lexemes) = 1 THEN i.lexemes[1] END,
+        'status', CASE WHEN i.lexemes IS NULL THEN 'stopword'
+                       WHEN cardinality(i.lexemes) > 1 THEN 'multiple' ELSE 'ok' END,
+        'counts', CASE WHEN cardinality(i.lexemes) = 1 THEN
+            (SELECT coalesce(jsonb_agg(jsonb_build_object('year', c.year, 'n', c.n) ORDER BY c.year), '[]'::jsonb)
+             FROM corpus_term_year c WHERE c.series = p_series AND c.lexeme = i.lexemes[1])
+          ELSE '[]'::jsonb END) ORDER BY i.ord), '[]'::jsonb)
+      FROM input i)
+  );
+$$;
 
 
 --
@@ -217,10 +312,10 @@ END; $$;
 
 
 --
--- Name: search_corpus(text, text, text, text, integer, integer, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: search_corpus(text, text, text, text, text, integer, integer, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.search_corpus(search_query text DEFAULT NULL::text, filter_speaker text DEFAULT NULL::text, filter_genre text DEFAULT NULL::text, filter_collection text DEFAULT NULL::text, year_from integer DEFAULT NULL::integer, year_to integer DEFAULT NULL::integer, sort_by text DEFAULT 'date'::text, sort_dir text DEFAULT 'asc'::text, page_num integer DEFAULT 1, page_size integer DEFAULT 50) RETURNS jsonb
+CREATE FUNCTION public.search_corpus(search_query text DEFAULT NULL::text, filter_speaker text DEFAULT NULL::text, filter_genre text DEFAULT NULL::text, filter_collection text DEFAULT NULL::text, filter_series text DEFAULT NULL::text, year_from integer DEFAULT NULL::integer, year_to integer DEFAULT NULL::integer, sort_by text DEFAULT 'date'::text, sort_dir text DEFAULT 'asc'::text, page_num integer DEFAULT 1, page_size integer DEFAULT 50) RETURNS jsonb
     LANGUAGE plpgsql STABLE
     AS $$
 DECLARE total_count bigint; result jsonb; q tsquery; date_from date; date_to date; opts text;
@@ -238,6 +333,7 @@ BEGIN
     AND (filter_speaker IS NULL OR speaker = filter_speaker)
     AND (filter_genre IS NULL OR genre = filter_genre)
     AND (filter_collection IS NULL OR collection = filter_collection)
+    AND (filter_series IS NULL OR series = filter_series)
     AND (date_from IS NULL OR date >= date_from)
     AND (date_to IS NULL OR date < date_to);
 
@@ -255,6 +351,7 @@ BEGIN
         AND (filter_speaker IS NULL OR speaker = filter_speaker)
         AND (filter_genre IS NULL OR genre = filter_genre)
         AND (filter_collection IS NULL OR collection = filter_collection)
+        AND (filter_series IS NULL OR series = filter_series)
         AND (date_from IS NULL OR date >= date_from)
         AND (date_to IS NULL OR date < date_to)
       ORDER BY
@@ -574,6 +671,24 @@ CREATE TABLE public.compas_defendants (
 
 
 --
+-- Name: corpus_series_year; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.corpus_series_year (
+    series text NOT NULL,
+    year integer NOT NULL,
+    words integer NOT NULL,
+    records integer NOT NULL,
+    speakers text[] NOT NULL
+);
+ALTER TABLE ONLY public.corpus_series_year ALTER COLUMN series SET (pg_attver=248189240);
+ALTER TABLE ONLY public.corpus_series_year ALTER COLUMN year SET (pg_attver=248189240);
+ALTER TABLE ONLY public.corpus_series_year ALTER COLUMN words SET (pg_attver=248189240);
+ALTER TABLE ONLY public.corpus_series_year ALTER COLUMN records SET (pg_attver=248189240);
+ALTER TABLE ONLY public.corpus_series_year ALTER COLUMN speakers SET (pg_attver=248189240);
+
+
+--
 -- Name: corpus_statements; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -596,6 +711,7 @@ CREATE TABLE public.corpus_statements (
     certified date,
     text text NOT NULL,
     tsv tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('english'::regconfig, title), 'A'::"char") || setweight(to_tsvector('english'::regconfig, text), 'B'::"char"))) STORED,
+    series text,
     CONSTRAINT corpus_statements_check CHECK (((date IS NULL) = (date_precision = 'unknown'::text))),
     CONSTRAINT corpus_statements_collection_check CHECK ((collection = ANY (ARRAY['core'::text, 'voices'::text]))),
     CONSTRAINT corpus_statements_date_precision_check CHECK ((date_precision = ANY (ARRAY['day'::text, 'month'::text, 'year'::text, 'unknown'::text]))),
@@ -619,6 +735,23 @@ ALTER TABLE ONLY public.corpus_statements ALTER COLUMN proposed SET (pg_attver=1
 ALTER TABLE ONLY public.corpus_statements ALTER COLUMN certified SET (pg_attver=172542016);
 ALTER TABLE ONLY public.corpus_statements ALTER COLUMN text SET (pg_attver=172542016);
 ALTER TABLE ONLY public.corpus_statements ALTER COLUMN tsv SET (pg_attver=172542016);
+ALTER TABLE ONLY public.corpus_statements ALTER COLUMN series SET (pg_attver=248107256);
+
+
+--
+-- Name: corpus_term_year; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.corpus_term_year (
+    series text NOT NULL,
+    lexeme text NOT NULL,
+    year integer NOT NULL,
+    n integer NOT NULL
+);
+ALTER TABLE ONLY public.corpus_term_year ALTER COLUMN series SET (pg_attver=248143776);
+ALTER TABLE ONLY public.corpus_term_year ALTER COLUMN lexeme SET (pg_attver=248143776);
+ALTER TABLE ONLY public.corpus_term_year ALTER COLUMN year SET (pg_attver=248143776);
+ALTER TABLE ONLY public.corpus_term_year ALTER COLUMN n SET (pg_attver=248143776);
 
 
 --
@@ -866,11 +999,27 @@ ALTER TABLE ONLY public.compas_defendants
 
 
 --
+-- Name: corpus_series_year corpus_series_year_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.corpus_series_year
+    ADD CONSTRAINT corpus_series_year_pkey PRIMARY KEY (series, year);
+
+
+--
 -- Name: corpus_statements corpus_statements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.corpus_statements
     ADD CONSTRAINT corpus_statements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: corpus_term_year corpus_term_year_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.corpus_term_year
+    ADD CONSTRAINT corpus_term_year_pkey PRIMARY KEY (series, lexeme, year);
 
 
 --
@@ -967,6 +1116,13 @@ CREATE INDEX idx_corpus_date ON public.corpus_statements USING btree (date);
 --
 
 CREATE INDEX idx_corpus_genre ON public.corpus_statements USING btree (genre);
+
+
+--
+-- Name: idx_corpus_series; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_corpus_series ON public.corpus_statements USING btree (series);
 
 
 --

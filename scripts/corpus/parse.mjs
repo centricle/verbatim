@@ -32,6 +32,7 @@ export const LOAD_COLUMNS = [
   ['proposed', 'date'],
   ['certified', 'date'],
   ['text', 'text'],
+  ['series', 'text'],
 ];
 export const COLUMNS = LOAD_COLUMNS.map(([name]) => name);
 

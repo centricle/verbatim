@@ -14,6 +14,17 @@ const yearOrNull = (raw) => {
 }
 
 const ID = /^[0-9a-f]{64}$/
+// A series key as scripts/corpus/series.json writes it; an unknown one
+// matches no record.
+const SERIES = /^[a-z]{1,20}$/
+const seriesOrNull = (raw) => (SERIES.test(raw || '') ? raw : null)
+
+// Terms for /over-time/: `t` repeated, at most three, each one word as typed.
+// Postgres reduces each to its lexeme and says when it can't.
+function terms(event) {
+  const raw = event.multiValueQueryStringParameters?.t ?? [event.queryStringParameters?.t]
+  return raw.filter(Boolean).map((t) => t.trim().slice(0, 40)).filter(Boolean).slice(0, 3)
+}
 
 export async function handler(event) {
   const params = event.queryStringParameters || {}
@@ -21,6 +32,18 @@ export async function handler(event) {
 
   if (params.action === 'stats') {
     const [row] = await sql`SELECT corpus_stats() as data`
+    return json(row.data)
+  }
+
+  if (params.action === 'terms') {
+    const series = seriesOrNull(params.series)
+    if (!series) return json({ error: 'unknown series' }, 400)
+    const [row] = await sql`SELECT corpus_term_series(${series}, ${terms(event)}::text[]) as data`
+    return json(row.data)
+  }
+
+  if (params.action === 'amendments') {
+    const [row] = await sql`SELECT corpus_amendments() as data`
     return json(row.data)
   }
 
@@ -32,7 +55,8 @@ export async function handler(event) {
 
   const [row] = await sql`SELECT search_corpus(
     ${params.q || null}, ${params.speaker || null}, ${params.genre || null},
-    ${params.collection || null}, ${yearOrNull(params.from)}, ${yearOrNull(params.to)},
+    ${params.collection || null}, ${seriesOrNull(params.series)},
+    ${yearOrNull(params.from)}, ${yearOrNull(params.to)},
     ${params.sortBy || 'date'}, ${params.sortDir || 'asc'},
     ${pageNum(params.page)}, ${pageSize(params.pageSize)}
   ) as data`

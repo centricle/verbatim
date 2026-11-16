@@ -33,14 +33,22 @@ CREATE TABLE IF NOT EXISTS public.corpus_statements (
     setweight(to_tsvector('english'::regconfig, title), 'A') ||
     setweight(to_tsvector('english'::regconfig, text), 'B')
   ) STORED,
+  series text,
   CHECK ((date IS NULL) = (date_precision = 'unknown'))
 );
+
+-- A series is a recurring occasion (the State of the Union, inaugural
+-- addresses) whose membership comes from one cited list,
+-- scripts/corpus/series.json. NULL for every other record. Added after the
+-- table was first created, hence the ALTER.
+ALTER TABLE public.corpus_statements ADD COLUMN IF NOT EXISTS series text;
 
 CREATE INDEX IF NOT EXISTS idx_corpus_speaker ON public.corpus_statements (speaker);
 CREATE INDEX IF NOT EXISTS idx_corpus_genre ON public.corpus_statements (genre);
 CREATE INDEX IF NOT EXISTS idx_corpus_collection ON public.corpus_statements (collection);
 CREATE INDEX IF NOT EXISTS idx_corpus_date ON public.corpus_statements (date);
 CREATE INDEX IF NOT EXISTS idx_corpus_tsv ON public.corpus_statements USING gin (tsv);
+CREATE INDEX IF NOT EXISTS idx_corpus_series ON public.corpus_statements (series);
 
 -- Search. websearch_to_tsquery takes what people type ("quoted phrases",
 -- or, -excluded) and never raises an error on input. The snippet is
@@ -50,11 +58,15 @@ CREATE INDEX IF NOT EXISTS idx_corpus_tsv ON public.corpus_statements USING gin 
 -- scripts/corpus/check_release.py fails any record whose text holds either.
 -- ts_headline reads a record's whole text, so it runs only on the page of
 -- rows being returned, never on the full match set.
+-- filter_series was added after the first release, and a new parameter is a
+-- new signature, which CREATE OR REPLACE cannot reach: drop the old one.
+DROP FUNCTION IF EXISTS public.search_corpus(text, text, text, text, integer, integer, text, text, integer, integer);
 CREATE OR REPLACE FUNCTION public.search_corpus(
   search_query text DEFAULT NULL,
   filter_speaker text DEFAULT NULL,
   filter_genre text DEFAULT NULL,
   filter_collection text DEFAULT NULL,
+  filter_series text DEFAULT NULL,
   year_from integer DEFAULT NULL,
   year_to integer DEFAULT NULL,
   sort_by text DEFAULT 'date',
@@ -79,6 +91,7 @@ BEGIN
     AND (filter_speaker IS NULL OR speaker = filter_speaker)
     AND (filter_genre IS NULL OR genre = filter_genre)
     AND (filter_collection IS NULL OR collection = filter_collection)
+    AND (filter_series IS NULL OR series = filter_series)
     AND (date_from IS NULL OR date >= date_from)
     AND (date_to IS NULL OR date < date_to);
 
@@ -96,6 +109,7 @@ BEGIN
         AND (filter_speaker IS NULL OR speaker = filter_speaker)
         AND (filter_genre IS NULL OR genre = filter_genre)
         AND (filter_collection IS NULL OR collection = filter_collection)
+        AND (filter_series IS NULL OR series = filter_series)
         AND (date_from IS NULL OR date >= date_from)
         AND (date_to IS NULL OR date < date_to)
       ORDER BY
@@ -124,6 +138,28 @@ CREATE OR REPLACE FUNCTION public.get_corpus_statement(statement_id text) RETURN
     'attribution', attribution, 'proposed', proposed, 'certified', certified,
     'text', text)
   FROM corpus_statements WHERE id = statement_id;
+$$;
+
+-- The 27 amendments in order, for /amendments/. Each is a core record titled
+-- "Amendment <numeral>" from the National Archives
+-- (scripts/corpus/import_constitution.py), dated by the completion of its
+-- ratification. Order comes from the numeral, since I to X share a date.
+CREATE OR REPLACE FUNCTION public.corpus_amendments() RETURNS jsonb
+  LANGUAGE sql STABLE
+  AS $$
+  WITH a AS (
+    SELECT s.*, substring(s.title FROM '^Amendment ([IVXL]+)$') AS numeral
+    FROM corpus_statements s
+    WHERE s.collection = 'core' AND s.source_name = 'national_archives'
+      AND s.title ~ '^Amendment [IVXL]+$'
+  )
+  SELECT coalesce(jsonb_agg(jsonb_build_object('id', id, 'numeral', numeral, 'title', title,
+      'date', date, 'proposed', proposed, 'certified', certified,
+      'source_name', source_name, 'source_url', source_url, 'rights', rights, 'text', text)
+    ORDER BY array_position(ARRAY['I','II','III','IV','V','VI','VII','VIII','IX','X',
+      'XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX',
+      'XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII'], numeral)), '[]'::jsonb)
+  FROM a;
 $$;
 
 CREATE OR REPLACE FUNCTION public.corpus_stats() RETURNS jsonb
@@ -162,3 +198,98 @@ BEGIN
   ) INTO result;
   RETURN result;
 END; $$;
+
+-- Term counts for /over-time/: per series and year, how many words the
+-- records hold and how often each lexeme occurs. Rebuilt from the records by
+-- `npm run corpus -- terms` after every load; nothing else writes them.
+--
+-- Counted from each record's text (not its title) with ts_debug and the
+-- `english` configuration the search uses, so a count is of what a search for
+-- that word finds: "liberty" and "liberties" are one lexeme, and each part of
+-- a hyphenated word counts as well as the whole. Never counted from tsv, whose
+-- positions stop at 16,383 and would undercount the longest records. Words are
+-- the word tokens, a hyphenated word once.
+CREATE TABLE IF NOT EXISTS public.corpus_series_year (
+  series text NOT NULL,
+  year integer NOT NULL,
+  words integer NOT NULL,
+  records integer NOT NULL,
+  speakers text[] NOT NULL,
+  PRIMARY KEY (series, year)
+);
+
+CREATE TABLE IF NOT EXISTS public.corpus_term_year (
+  series text NOT NULL,
+  lexeme text NOT NULL,
+  year integer NOT NULL,
+  n integer NOT NULL,
+  PRIMARY KEY (series, lexeme, year)
+);
+
+CREATE OR REPLACE FUNCTION public.corpus_rebuild_terms() RETURNS jsonb
+  LANGUAGE plpgsql
+  AS $$
+DECLARE result jsonb;
+BEGIN
+  DELETE FROM corpus_term_year;
+  DELETE FROM corpus_series_year;
+
+  CREATE TEMP TABLE corpus_tokens ON COMMIT DROP AS
+    SELECT s.series, extract(year FROM s.date)::int AS year, s.id, d.alias, d.lexemes
+    FROM corpus_statements s, LATERAL ts_debug('english'::regconfig, s.text) d
+    WHERE s.series IS NOT NULL AND s.date IS NOT NULL;
+
+  INSERT INTO corpus_series_year (series, year, words, records, speakers)
+    SELECT t.series, t.year, t.words, t.records,
+      (SELECT array_agg(DISTINCT s.speaker_name ORDER BY s.speaker_name) FROM corpus_statements s
+       WHERE s.series = t.series AND extract(year FROM s.date)::int = t.year)
+    FROM (
+      SELECT series, year,
+        count(*) FILTER (WHERE alias IN ('asciiword', 'word', 'numword', 'asciihword', 'hword', 'numhword')) AS words,
+        count(DISTINCT id) AS records
+      FROM corpus_tokens GROUP BY series, year) t;
+
+  INSERT INTO corpus_term_year (series, lexeme, year, n)
+    SELECT series, lexeme, year, count(*)
+    FROM corpus_tokens, unnest(lexemes) AS lexeme
+    WHERE cardinality(lexemes) > 0
+    GROUP BY series, lexeme, year;
+
+  SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.series), '[]'::jsonb) INTO result FROM (
+    SELECT y.series, sum(y.records) AS records, sum(y.words) AS words, count(*) AS years,
+      (SELECT count(*) FROM corpus_term_year t WHERE t.series = y.series) AS term_rows
+    FROM corpus_series_year y GROUP BY y.series) s;
+  RETURN result;
+END; $$;
+
+-- One series over time, for up to three terms. Each term is reduced to its
+-- lexeme with the same configuration as the counts: a term that reduces to
+-- none is a stopword (not counted), one that reduces to more than one is
+-- more than one word. `years` lists every year the series has a record;
+-- `counts` lists only years where the lexeme occurs, so a counted year
+-- missing from it is a zero, and a year missing from `years` has no record.
+CREATE OR REPLACE FUNCTION public.corpus_term_series(p_series text, p_terms text[]) RETURNS jsonb
+  LANGUAGE sql STABLE
+  AS $$
+  WITH input AS (
+    SELECT t.term, t.ord,
+      (SELECT array_agg(v.lexeme) FROM unnest(to_tsvector('english'::regconfig, t.term)) v) AS lexemes
+    FROM unnest(p_terms[1:3]) WITH ORDINALITY AS t(term, ord)
+  )
+  SELECT jsonb_build_object(
+    'series', p_series,
+    'years', (SELECT coalesce(jsonb_agg(jsonb_build_object('year', year, 'words', words, 'records', records,
+                'speakers', speakers) ORDER BY year), '[]'::jsonb)
+              FROM corpus_series_year WHERE series = p_series),
+    'terms', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+        'input', i.term,
+        'lexeme', CASE WHEN cardinality(i.lexemes) = 1 THEN i.lexemes[1] END,
+        'status', CASE WHEN i.lexemes IS NULL THEN 'stopword'
+                       WHEN cardinality(i.lexemes) > 1 THEN 'multiple' ELSE 'ok' END,
+        'counts', CASE WHEN cardinality(i.lexemes) = 1 THEN
+            (SELECT coalesce(jsonb_agg(jsonb_build_object('year', c.year, 'n', c.n) ORDER BY c.year), '[]'::jsonb)
+             FROM corpus_term_year c WHERE c.series = p_series AND c.lexeme = i.lexemes[1])
+          ELSE '[]'::jsonb END) ORDER BY i.ord), '[]'::jsonb)
+      FROM input i)
+  );
+$$;

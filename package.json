@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "og": "node scripts/build-og.mjs",
     "crashes": "node --env-file-if-exists=.env scripts/crashes/cli.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs'"
+    "test": "node --test 'scripts/**/*.test.mjs'",
+    "corpus": "node --env-file-if-exists=.env scripts/corpus/cli.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

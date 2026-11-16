@@ -102,7 +102,31 @@ entities left as text; editors' captions, headnotes and footnotes in the Twain
 and Churchill books), dates a source prints wrong (`DATE_FIXES`, each quoting the
 record that settles it), and near-duplicates. Each excluded or
 changed record is listed in the report with the rule that did it. Rerunning on
-the same `corpus.db` gives byte-identical output.
+the same `corpus.db` gives byte-identical output. Speakers' display names come
+from `speakers.json`.
+
+```bash
+python3 scripts/corpus/check_release.py    # invariants; exits 1 if any fails
+```
+
+## Into Postgres
+
+`/corpus/` searches the `core` and `voices` collections in Postgres (Neon).
+The Node side loads the release as it is and changes no value:
+
+```bash
+npm run corpus -- schema     # apply db/corpus.sql: table, search, stats, get-one
+npm run corpus -- load       # replace every row in one transaction
+npm run corpus -- check      # release vs loaded, every column; exits 1 on a mismatch
+npm run corpus -- sample 20  # stratified rows to tmp/corpus/sample.json for a reviewer
+npm test                     # check.mjs against fixtures with planted defects
+```
+
+`parse.mjs` picks the collections and columns, `check.mjs` compares a raw scan
+of `release.jsonl` (no JSON parser), the parsed rows and every loaded row.
+`make-fixtures.mjs` rebuilds `fixtures/release.jsonl` from real records cut to
+400 characters. After changing a stored function, regenerate `db/schema.sql`
+(its header says how).
 
 ## Searching it locally
 

@@ -299,11 +299,13 @@ GENRE = {
 }
 
 # Rights basis per record group (see rights_group), settled by the licensing
-# review on 2026-11-15. Bases: "us-gov-work" (17 USC 105: federal officers'
-# official work, court opinions), "pd-expired" (published before 1931 in the
-# US) and "license:<id>" (a license the publisher grants, whose attribution
-# rides along on each record). A group with a reason instead stays in corpus.db
-# and out of the release.
+# review on 2026-11-15 and revised 2026-11-18 (Churchill's Hansard speeches,
+# below). Bases: "us-gov-work" (17 USC 105: federal officers' official work,
+# court opinions), "pd-expired" (published before 1931 in the US) and
+# "license:<id>" (a license the publisher grants, whose attribution rides along
+# on each record). A license covers only what its licensor owns: it is a basis
+# for a record only when no one else holds rights in the words. A group with a
+# reason instead stays in corpus.db and out of the release.
 RIGHTS = {
     "federal_register": "us-gov-work",
     "cornell_lii": "us-gov-work",
@@ -327,6 +329,20 @@ ATTRIBUTION = {
     "license:OPL-3.0": "Contains Parliamentary information licensed under the "
                        "Open Parliament Licence v3.0.",
 }
+# Notices a source's own terms attach to its texts, whatever their rights
+# basis. Project Gutenberg's license (section 1.E.1) requires this sentence
+# wherever a text associated with the Project Gutenberg name is displayed,
+# with access to the full license; the record view links it. Copied from the
+# license text in the ebooks themselves.
+SOURCE_ATTRIBUTION = {
+    "project_gutenberg": "This eBook is for the use of anyone anywhere in the "
+        "United States and most other parts of the world at no cost and with "
+        "almost no restrictions whatsoever. You may copy it, give it away or "
+        "re-use it under the terms of the Project Gutenberg™ License included "
+        "with this eBook or online at www.gutenberg.org. If you are not located "
+        "in the United States, you will have to check the laws of the country "
+        "where you are located before using this eBook.",
+}
 NO_BASIS = {
     TWEETS: "no rights basis: third-party archive with no license; X's terms "
             "bar scraping; no basis for pre-2017 posts, and in-term posts as "
@@ -340,7 +356,15 @@ NO_BASIS = {
             "transcripts; floor and committee speeches come from government "
             "sources instead",
     "wikisource:winston-churchill": "no rights basis: post-1930 Churchill is the "
-            "estate's; the 1940 Commons speeches come from Hansard instead",
+            "estate's",
+    # The Open Parliament Licence covers Parliament's copyright in the report
+    # and, in its exemptions, excludes third-party rights Parliament has no
+    # power to license. The Churchill Archive says his speeches "remain in copyright
+    # and are administered by Curtis Brown on behalf of his Literary Estate",
+    # and a 1940 publication runs to about 2035 in the US as well (URAA).
+    "historic_hansard:winston-churchill": "no rights basis: the "
+            "Open Parliament Licence covers the report, not the Churchill "
+            "estate's rights in the speeches",
 }
 
 # Miller Center: speeches before 1931 are public domain by age. Later ones are
@@ -808,13 +832,14 @@ def disambiguate_titles(records, changed):
 
 def rights_group(rec):
     """The unit a rights basis applies to: a book for Gutenberg, a speaker for
-    Wikisource (one page per record), otherwise the source."""
+    Wikisource (one page per record) and Hansard (whose license reaches only
+    Parliament's rights, not a speaker's), otherwise the source."""
     if rec["source_name"] == "project_gutenberg":
         # The ebook number, from a landing page (/ebooks/14721) or a text file
         # (/cache/epub/14721/pg14721.txt).
         return "project_gutenberg:" + re.search(r"/(?:ebooks|epub)/(\d+)", rec["source_url"]).group(1)
-    if rec["source_name"] == "wikisource":
-        return "wikisource:" + rec["speaker"]
+    if rec["source_name"] in ("wikisource", "historic_hansard"):
+        return f"{rec['source_name']}:{rec['speaker']}"
     return rec["source_name"]
 
 
@@ -824,6 +849,8 @@ def rights_basis(rec, group, d, title):
         return None, NO_BASIS[group]
     if group in RIGHTS:
         return RIGHTS[group], None
+    if rec["source_name"] == "historic_hansard":
+        return RIGHTS["historic_hansard"], None
     if rec["source_name"] == "miller_center":
         if d and d < "1931":
             return "pd-expired", None
@@ -1031,6 +1058,8 @@ def build(db_path):
             out["timestamp"] = timestamp
         if rights in ATTRIBUTION:
             out["attribution"] = ATTRIBUTION[rights]
+        elif rec["source_name"] in SOURCE_ATTRIBUTION:
+            out["attribution"] = SOURCE_ATTRIBUTION[rec["source_name"]]
         if fr_doc:
             out["fr_doc"] = fr_doc
         if amendment:

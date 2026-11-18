@@ -3,9 +3,10 @@
 official report (Hansard), as published by the historic Hansard service.
 
 Hansard is Parliamentary copyright, licensed under the Open Parliament Licence
-v3.0, which allows republishing with the attribution build_release.py attaches
-to each record. Churchill's later broadcasts and speeches outside Parliament
-carry no such license and are not imported.
+v3.0. That license covers Parliament's rights in the report, not the Churchill
+Literary Estate's rights in the speeches, so build_release.py keeps these
+records in corpus.db and out of the release (NO_BASIS, 2026-11-18). Churchill's
+broadcasts and speeches outside Parliament are not imported.
 
 Each speech is the single contribution historic Hansard's anchor points to: the
 member's words as reported, without the column numbers printed in the margin.

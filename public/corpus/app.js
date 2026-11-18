@@ -34,6 +34,19 @@ const RIGHTS = {
 
 const label = (map, key) => map[key] || String(key || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
+// A source whose terms ask for access to its full license wherever its notice
+// is shown (Project Gutenberg's section 1.E.1). The notice itself rides on the
+// record (SOURCE_ATTRIBUTION in scripts/corpus/build_release.py).
+const LICENSE_LINKS = {
+  project_gutenberg: ['The Full Project Gutenberg License', 'https://www.gutenberg.org/policy/license.html'],
+};
+
+function attribution(r) {
+  const link = LICENSE_LINKS[r.source_name];
+  if (!link) return r.attribution;
+  return html`${r.attribution} <a href="${link[1]}" target="_blank" rel="noopener" class="source-link">${link[0]}</a>`;
+}
+
 
 // Without a search, the snippet is the record's first 320 characters: cut it
 // back to a whole word and mark the cut. A search snippet is ts_headline's
@@ -152,7 +165,7 @@ async function showRecord(id) {
     ...(r.certified ? [['Certified', formatDate(r.certified, 'day')]] : []),
     ['Source', html`<a href="${r.source_url}" target="_blank" rel="noopener" class="source-link">${label(SOURCES, r.source_name)}</a>`],
     ['Rights', label(RIGHTS, r.rights)],
-    ...(r.attribution ? [['Attribution', r.attribution]] : []),
+    ...(r.attribution ? [['Attribution', attribution(r)]] : []),
   ];
   document.getElementById('record-meta').innerHTML = meta
     .map(([term, value]) => html`<div class="record-meta-row"><dt>${term}</dt><dd>${value}</dd></div>`)

@@ -234,14 +234,14 @@ export function createExplorer(cfg) {
     } else {
       const start = (state.page - 1) * PAGE_SIZE + 1;
       const end = Math.min(state.page * PAGE_SIZE, total);
-      resultsInfo.textContent = `Showing ${start}–${end} of ${total.toLocaleString()} ${cfg.noun}`;
+      resultsInfo.textContent = `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()} ${cfg.noun}`;
     }
 
     resultsBody.innerHTML = rows.map(cfg.row).join('');
 
     if (totalPages > 1) {
       pagination.classList.remove('hidden');
-      pageInfo.textContent = `Page ${state.page} of ${totalPages.toLocaleString()}`;
+      pageInfo.textContent = `Page ${state.page.toLocaleString()} of ${totalPages.toLocaleString()}`;
       prevBtn.disabled = state.page <= 1;
       nextBtn.disabled = state.page >= totalPages;
     } else {

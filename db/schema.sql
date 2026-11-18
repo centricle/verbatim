@@ -13,7 +13,7 @@
 -- filled when each dataset was loaded; no trigger maintains them. Tables
 -- added since generate theirs (GENERATED ALWAYS AS ... STORED), and their
 -- authored DDL lives beside this file (db/crashes.sql, db/corpus.sql,
--- db/executive.sql, db/clemency.sql).
+-- db/executive.sql, db/clemency.sql, db/trades.sql).
 --
 -- Netlify functions in netlify/functions/ call the search_* and *_stats
 -- functions; sorting is whitelisted inside each function with CASE.
@@ -795,6 +795,53 @@ END; $$;
 
 
 --
+-- Name: search_stock_trades(text, text, text, text, text, text, integer, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.search_stock_trades(search_text text DEFAULT NULL::text, filter_chamber text DEFAULT NULL::text, filter_member text DEFAULT NULL::text, filter_type text DEFAULT NULL::text, filter_asset_type text DEFAULT NULL::text, filter_ticker text DEFAULT NULL::text, filter_year integer DEFAULT NULL::integer, sort_col text DEFAULT 'filed_date'::text, sort_dir text DEFAULT 'desc'::text, page_size integer DEFAULT 50, page_offset integer DEFAULT 0) RETURNS json
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE result json; q tsquery;
+BEGIN
+  IF search_text IS NOT NULL AND search_text <> '' THEN q := plainto_tsquery('english', search_text); END IF;
+  WITH filtered AS (
+    SELECT t.*, f.state_district, f.url, f.filed_date
+    FROM stock_trades t
+    JOIN trade_filings f USING (chamber, filing_id)
+    WHERE t.counted
+      AND (q IS NULL OR t.fts @@ q)
+      AND (filter_chamber IS NULL OR t.chamber = filter_chamber)
+      AND (filter_member IS NULL OR t.member = filter_member)
+      AND (filter_type IS NULL OR t.type = filter_type)
+      AND (filter_asset_type IS NULL OR t.asset_type = filter_asset_type)
+      AND (filter_ticker IS NULL OR t.ticker = filter_ticker)
+      AND (filter_year IS NULL OR EXTRACT(YEAR FROM t.transaction_date) = filter_year)
+  )
+  SELECT json_build_object(
+    'total', (SELECT count(*) FROM filtered),
+    'rows', coalesce((SELECT json_agg(row_to_json(r)) FROM (
+      SELECT chamber, filing_id, row_num, transaction_date, owner, ticker,
+        asset_description, asset_type, type, amount, member, bioguide,
+        state_district, filing_status, amends_filing_id, amends_row_num,
+        url, filed_date
+      FROM filtered
+      ORDER BY
+        CASE WHEN sort_col = 'filed_date' AND sort_dir = 'asc' THEN filed_date END ASC,
+        CASE WHEN sort_col = 'transaction_date' AND sort_dir = 'desc' THEN transaction_date END DESC NULLS LAST,
+        CASE WHEN sort_col = 'transaction_date' AND sort_dir = 'asc' THEN transaction_date END ASC NULLS LAST,
+        CASE WHEN sort_col = 'member' AND sort_dir = 'asc' THEN member END ASC,
+        CASE WHEN sort_col = 'member' AND sort_dir = 'desc' THEN member END DESC,
+        CASE WHEN sort_col = 'amount' AND sort_dir = 'desc' THEN trade_amount_low(amount) END DESC NULLS LAST,
+        CASE WHEN sort_col = 'amount' AND sort_dir = 'asc' THEN trade_amount_low(amount) END ASC NULLS LAST,
+        filed_date DESC, chamber, filing_id, row_num
+      LIMIT page_size OFFSET page_offset
+    ) r), '[]'::json)
+  ) INTO result;
+  RETURN result;
+END; $$;
+
+
+--
 -- Name: senate_trades_stats(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -860,6 +907,114 @@ BEGIN
   ) INTO result;
   RETURN result;
 END; $$;
+
+
+--
+-- Name: stock_trades_paper(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.stock_trades_paper(filter_chamber text DEFAULT NULL::text) RETURNS json
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT coalesce(json_agg(json_build_object('chamber', f.chamber, 'filing_id', f.filing_id,
+      'member', m.member, 'state_district', f.state_district, 'filed_date', f.filed_date, 'url', f.url)
+    ORDER BY f.filed_date DESC, f.filing_id), '[]'::json)
+  FROM trade_filings f JOIN trade_members m USING (bioguide)
+  WHERE f.kind = 'paper' AND (filter_chamber IS NULL OR f.chamber = filter_chamber)
+$$;
+
+
+--
+-- Name: stock_trades_stats(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.stock_trades_stats(filter_chamber text DEFAULT NULL::text) RETURNS json
+    LANGUAGE sql STABLE
+    AS $$
+  WITH t AS (
+    SELECT st.*, fl.filed_date FROM stock_trades st JOIN trade_filings fl USING (chamber, filing_id)
+    WHERE st.counted AND (filter_chamber IS NULL OR st.chamber = filter_chamber)
+  ), dated AS (
+    SELECT * FROM t WHERE transaction_date <= filed_date
+  ), f AS (
+    SELECT * FROM trade_filings WHERE filter_chamber IS NULL OR chamber = filter_chamber
+  )
+  SELECT json_build_object(
+    'total', (SELECT count(*) FROM t),
+    'members', (SELECT count(DISTINCT bioguide) FROM t),
+    'filings', (SELECT count(*) FROM f),
+    'paper_count', (SELECT count(*) FROM f WHERE kind = 'paper'),
+    'failed_count', (SELECT count(*) FROM f WHERE parse_status = 'failed'),
+    'last_filed', (SELECT max(filed_date) FROM f),
+    'date_range', json_build_object('min', (SELECT min(transaction_date) FROM dated), 'max', (SELECT max(transaction_date) FROM dated)),
+    'after_filing', (SELECT count(*) FROM t WHERE transaction_date > filed_date),
+    'by_chamber', (SELECT coalesce(json_agg(json_build_object('chamber', chamber, 'count', cnt, 'members', members,
+        'min', mn, 'max', mx) ORDER BY chamber), '[]'::json)
+      FROM (SELECT chamber, count(*) AS cnt, count(DISTINCT bioguide) AS members,
+        min(transaction_date) FILTER (WHERE transaction_date <= filed_date) AS mn,
+        max(transaction_date) FILTER (WHERE transaction_date <= filed_date) AS mx FROM t GROUP BY chamber) c),
+    'by_type', (SELECT coalesce(json_agg(json_build_object('type', type, 'count', cnt) ORDER BY cnt DESC, type), '[]'::json)
+      FROM (SELECT type, count(*) AS cnt FROM t GROUP BY type) x),
+    'by_year', (SELECT coalesce(json_agg(json_build_object('year', yr, 'count', cnt, 'purchases', purchases, 'sales', sales) ORDER BY yr), '[]'::json)
+      FROM (SELECT EXTRACT(YEAR FROM transaction_date)::int AS yr, count(*) AS cnt,
+        count(*) FILTER (WHERE type = 'Purchase') AS purchases,
+        count(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) AS sales
+        FROM dated GROUP BY yr) x),
+    'top_traders', (SELECT coalesce(json_agg(json_build_object('senator', m.member, 'member', m.member, 'bioguide', x.bioguide,
+        'chambers', x.chambers, 'total_trades', cnt, 'purchases', purchases, 'sales', sales) ORDER BY cnt DESC, m.member_sort), '[]'::json)
+      FROM (SELECT bioguide, count(*) AS cnt, array_agg(DISTINCT chamber ORDER BY chamber) AS chambers,
+        count(*) FILTER (WHERE type = 'Purchase') AS purchases,
+        count(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) AS sales
+        FROM t GROUP BY bioguide ORDER BY cnt DESC, bioguide LIMIT 20) x
+      JOIN trade_members m USING (bioguide)),
+    'top_tickers', (SELECT coalesce(json_agg(json_build_object('ticker', ticker, 'count', cnt, 'purchases', purchases, 'sales', sales) ORDER BY cnt DESC, ticker), '[]'::json)
+      FROM (SELECT ticker, count(*) AS cnt,
+        count(*) FILTER (WHERE type = 'Purchase') AS purchases,
+        count(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) AS sales
+        FROM t WHERE ticker IS NOT NULL GROUP BY ticker ORDER BY cnt DESC, ticker LIMIT 20) x),
+    'by_amount', (SELECT coalesce(json_agg(json_build_object('amount', amount, 'count', cnt) ORDER BY trade_amount_rank(amount)), '[]'::json)
+      FROM (SELECT amount, count(*) AS cnt FROM t WHERE trade_amount_rank(amount) > 0 GROUP BY amount) x),
+    'exact_amounts', (SELECT count(*) FROM t WHERE amount IS NOT NULL AND trade_amount_rank(amount) = 0),
+    'by_asset_type', (SELECT coalesce(json_agg(json_build_object('asset_type', asset_type, 'count', cnt) ORDER BY cnt DESC, asset_type), '[]'::json)
+      FROM (SELECT coalesce(nullif(asset_type, ''), 'Unknown') AS asset_type, count(*) AS cnt FROM t GROUP BY 1) x),
+    'member_list', (SELECT coalesce(json_agg(json_build_object('member', m.member, 'bioguide', m.bioguide) ORDER BY m.member_sort), '[]'::json)
+      FROM trade_members m WHERE EXISTS (SELECT 1 FROM t WHERE t.bioguide = m.bioguide))
+  )
+$$;
+
+
+--
+-- Name: trade_amount_low(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trade_amount_low(amount text) RETURNS numeric
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $_$
+  SELECT nullif(replace(substring(amount FROM '\$([0-9,]*\.?[0-9]*)'), ',', ''), '')::numeric
+$_$;
+
+
+--
+-- Name: trade_amount_rank(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trade_amount_rank(amount text) RETURNS integer
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $_$
+  SELECT CASE amount
+    WHEN '$1,001 - $15,000' THEN 1
+    WHEN '$15,001 - $50,000' THEN 2
+    WHEN '$50,001 - $100,000' THEN 3
+    WHEN '$100,001 - $250,000' THEN 4
+    WHEN '$250,001 - $500,000' THEN 5
+    WHEN '$500,001 - $1,000,000' THEN 6
+    WHEN 'Spouse/DC Over $1,000,000' THEN 7
+    WHEN '$1,000,001 - $5,000,000' THEN 8
+    WHEN '$5,000,001 - $25,000,000' THEN 9
+    WHEN '$25,000,001 - $50,000,000' THEN 10
+    WHEN 'Over $50,000,000' THEN 11
+    ELSE 0 END
+$_$;
 
 
 SET default_tablespace = '';
@@ -1308,6 +1463,147 @@ ALTER TABLE ONLY public.sgo_crashes ALTER COLUMN tsv SET (pg_attver=134258360);
 
 
 --
+-- Name: stock_trades; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stock_trades (
+    chamber text NOT NULL,
+    filing_id text NOT NULL,
+    row_num integer NOT NULL,
+    source text NOT NULL,
+    bioguide text NOT NULL,
+    member text NOT NULL,
+    transaction_id text,
+    filing_status text,
+    transaction_date date,
+    notification_date date,
+    owner_code text,
+    owner text,
+    asset_description text,
+    ticker text,
+    asset_type_code text,
+    asset_type text,
+    type_code text NOT NULL,
+    type text NOT NULL,
+    amount text,
+    subholding_of text,
+    description text,
+    location text,
+    comment text,
+    amends_filing_id text,
+    amends_row_num integer,
+    amendment_match text,
+    superseded boolean DEFAULT false NOT NULL,
+    counted boolean GENERATED ALWAYS AS (((NOT superseded) AND (filing_status IS DISTINCT FROM 'Deleted'::text))) STORED,
+    fts tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, ((((member || ' '::text) || COALESCE(ticker, ''::text)) || ' '::text) || COALESCE(asset_description, ''::text)))) STORED,
+    CONSTRAINT stock_trades_amendment_match_check CHECK ((amendment_match = ANY (ARRAY['unique'::text, 'none'::text, 'ambiguous'::text]))),
+    CONSTRAINT stock_trades_check CHECK (((amends_filing_id IS NULL) = (amends_row_num IS NULL))),
+    CONSTRAINT stock_trades_check1 CHECK (((amends_filing_id IS NULL) OR (amendment_match = 'unique'::text))),
+    CONSTRAINT stock_trades_row_num_check CHECK ((row_num > 0)),
+    CONSTRAINT stock_trades_source_check CHECK ((source = ANY (ARRAY['house-clerk'::text, 'efd'::text, 'carambat'::text]))),
+    CONSTRAINT stock_trades_type_check CHECK ((type = ANY (ARRAY['Purchase'::text, 'Sale (Full)'::text, 'Sale (Partial)'::text, 'Exchange'::text])))
+);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN chamber SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN filing_id SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN row_num SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN source SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN bioguide SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN member SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN transaction_id SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN filing_status SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN transaction_date SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN notification_date SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN owner_code SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN owner SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN asset_description SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN ticker SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN asset_type_code SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN asset_type SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN type_code SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN type SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN amount SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN subholding_of SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN description SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN location SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN comment SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN amends_filing_id SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN amends_row_num SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN amendment_match SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN superseded SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN counted SET (pg_attver=1189270608);
+ALTER TABLE ONLY public.stock_trades ALTER COLUMN fts SET (pg_attver=1189270608);
+
+
+--
+-- Name: trade_filings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.trade_filings (
+    chamber text NOT NULL,
+    filing_id text NOT NULL,
+    source text NOT NULL,
+    kind text NOT NULL,
+    bioguide text NOT NULL,
+    filer_prefix text,
+    filer_first text,
+    filer_last text,
+    filer_suffix text,
+    filer_name text,
+    office text,
+    state_district text,
+    report_year integer,
+    filed_date date NOT NULL,
+    url text NOT NULL,
+    amends_filing_id text,
+    parse_status text NOT NULL,
+    parse_error text,
+    row_count integer DEFAULT 0 NOT NULL,
+    fetched_at timestamp with time zone,
+    CONSTRAINT trade_filings_chamber_check CHECK ((chamber = ANY (ARRAY['house'::text, 'senate'::text]))),
+    CONSTRAINT trade_filings_check CHECK (((kind = 'paper'::text) = (parse_status = 'paper'::text))),
+    CONSTRAINT trade_filings_check1 CHECK (((parse_status = 'parsed'::text) OR (row_count = 0))),
+    CONSTRAINT trade_filings_check2 CHECK (((parse_status = 'failed'::text) = (parse_error IS NOT NULL))),
+    CONSTRAINT trade_filings_kind_check CHECK ((kind = ANY (ARRAY['electronic'::text, 'paper'::text]))),
+    CONSTRAINT trade_filings_parse_status_check CHECK ((parse_status = ANY (ARRAY['parsed'::text, 'failed'::text, 'paper'::text]))),
+    CONSTRAINT trade_filings_source_check CHECK ((source = ANY (ARRAY['house-clerk'::text, 'efd'::text, 'carambat'::text])))
+);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN chamber SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN filing_id SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN source SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN kind SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN bioguide SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN filer_prefix SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN filer_first SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN filer_last SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN filer_suffix SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN filer_name SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN office SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN state_district SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN report_year SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN filed_date SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN url SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN amends_filing_id SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN parse_status SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN parse_error SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN row_count SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN fetched_at SET (pg_attver=1189227016);
+
+
+--
+-- Name: trade_members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.trade_members (
+    bioguide text NOT NULL,
+    member text NOT NULL,
+    member_sort text NOT NULL
+);
+ALTER TABLE ONLY public.trade_members ALTER COLUMN bioguide SET (pg_attver=1189213624);
+ALTER TABLE ONLY public.trade_members ALTER COLUMN member SET (pg_attver=1189213624);
+ALTER TABLE ONLY public.trade_members ALTER COLUMN member_sort SET (pg_attver=1189213624);
+
+
+--
 -- Name: fec_candidates id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1430,6 +1726,30 @@ ALTER TABLE ONLY public.senate_trades
 
 ALTER TABLE ONLY public.sgo_crashes
     ADD CONSTRAINT sgo_crashes_pkey PRIMARY KEY (report_id);
+
+
+--
+-- Name: stock_trades stock_trades_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_trades
+    ADD CONSTRAINT stock_trades_pkey PRIMARY KEY (chamber, filing_id, row_num);
+
+
+--
+-- Name: trade_filings trade_filings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trade_filings
+    ADD CONSTRAINT trade_filings_pkey PRIMARY KEY (chamber, filing_id);
+
+
+--
+-- Name: trade_members trade_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trade_members
+    ADD CONSTRAINT trade_members_pkey PRIMARY KEY (bioguide);
 
 
 --
@@ -1801,6 +2121,101 @@ CREATE INDEX idx_shootings_race ON public.police_shootings USING btree (race);
 --
 
 CREATE INDEX idx_shootings_state ON public.police_shootings USING btree (state);
+
+
+--
+-- Name: idx_stock_trades_amends; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_trades_amends ON public.stock_trades USING btree (chamber, amends_filing_id, amends_row_num) WHERE (amends_filing_id IS NOT NULL);
+
+
+--
+-- Name: idx_stock_trades_bioguide; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_trades_bioguide ON public.stock_trades USING btree (bioguide);
+
+
+--
+-- Name: idx_stock_trades_chamber; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_trades_chamber ON public.stock_trades USING btree (chamber) WHERE counted;
+
+
+--
+-- Name: idx_stock_trades_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_trades_date ON public.stock_trades USING btree (transaction_date);
+
+
+--
+-- Name: idx_stock_trades_fts; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_trades_fts ON public.stock_trades USING gin (fts);
+
+
+--
+-- Name: idx_stock_trades_ticker; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_trades_ticker ON public.stock_trades USING btree (ticker);
+
+
+--
+-- Name: idx_stock_trades_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_trades_type ON public.stock_trades USING btree (type);
+
+
+--
+-- Name: idx_trade_filings_bioguide; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trade_filings_bioguide ON public.trade_filings USING btree (bioguide);
+
+
+--
+-- Name: idx_trade_filings_filed; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trade_filings_filed ON public.trade_filings USING btree (filed_date);
+
+
+--
+-- Name: stock_trades stock_trades_bioguide_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_trades
+    ADD CONSTRAINT stock_trades_bioguide_fkey FOREIGN KEY (bioguide) REFERENCES public.trade_members(bioguide);
+
+
+--
+-- Name: stock_trades stock_trades_chamber_amends_filing_id_amends_row_num_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_trades
+    ADD CONSTRAINT stock_trades_chamber_amends_filing_id_amends_row_num_fkey FOREIGN KEY (chamber, amends_filing_id, amends_row_num) REFERENCES public.stock_trades(chamber, filing_id, row_num) ON DELETE SET NULL (amends_filing_id, amends_row_num);
+
+
+--
+-- Name: stock_trades stock_trades_chamber_filing_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_trades
+    ADD CONSTRAINT stock_trades_chamber_filing_id_fkey FOREIGN KEY (chamber, filing_id) REFERENCES public.trade_filings(chamber, filing_id) ON DELETE CASCADE;
+
+
+--
+-- Name: trade_filings trade_filings_bioguide_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trade_filings
+    ADD CONSTRAINT trade_filings_bioguide_fkey FOREIGN KEY (bioguide) REFERENCES public.trade_members(bioguide);
 
 
 --

@@ -3,8 +3,10 @@
 // Senate Stock Watcher. Fetch, parse, load, check.
 //
 //   npm run trades -- index               the House index ZIPs, every year (2 s apart)
-//   npm run trades -- fetch               index, members, Senate file, and every
-//                                         electronic PTR not yet in tmp/trades/ (2 s apart)
+//   npm run trades -- fetch [house|senate]  index, members, Senate file, and every
+//                                         electronic PTR not yet in tmp/trades/ (2 s apart);
+//                                         the Senate part reads eFD's whole list, then
+//                                         the pages not yet cached, nearest purge first
 //   npm run trades -- parse               build every table from the raw copies, print counts
 //   npm run trades -- schema --target E   apply db/trades.sql
 //   npm run trades -- load --target E     replace all three tables in one transaction
@@ -27,8 +29,11 @@ import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { availableParallelism } from 'node:os';
-import { ROOT, RAW, UA, PACE_MS, FIRST_INDEX_YEAR, lastIndexYear, house, senate, legislators } from './sources.mjs';
-import { build, pool, readHouseIndex } from './build.mjs';
+import { ROOT, RAW, UA, PACE_MS, FIRST_INDEX_YEAR, lastIndexYear, house, senate, efd, legislators } from './sources.mjs';
+import { build, pool, readHouseIndex, readPeople, efdMatch } from './build.mjs';
+import { createSession, blockedUntil } from './efd.mjs';
+import { readIndex, savePages, readLedger, mergeLedger, writeLedger, goneFromEfd } from './efd-index.mjs';
+import { senateDeparture } from './members.mjs';
 import { rawRowCount } from './house.mjs';
 import { compare } from './check.mjs';
 import { MEMBER_COLUMNS, FILING_COLUMNS, ROW_COLUMNS, selectList } from './columns.mjs';
@@ -64,13 +69,61 @@ async function indexCmd() {
   }
 }
 
-async function fetchCmd() {
-  await indexCmd();
+async function fetchMembers() {
   for (const l of legislators) {
     const buf = await get(l.url);
     await save(l.path, buf);
     console.log(`${l.path.split('/').pop()}  ${buf.length.toLocaleString()} bytes`);
   }
+}
+
+// eFD: the whole PTR list into the ledger, then every listed electronic
+// page not yet cached. Pages go in order of purge date (six years after the
+// filer's last Senate term ended), serving senators last, so a run stopped
+// partway has already saved the filings on a clock.
+async function fetchSenate() {
+  const blocked = await blockedUntil(efd.blockedUntil);
+  if (blocked) throw new Error(`eFD blocked until ${blocked.until} (${blocked.why}); check eFD by hand first`);
+  const session = createSession({ base: efd.base, ua: UA, paceMs: PACE_MS, logPath: efd.log, blockedPath: efd.blockedUntil });
+  const seenAt = new Date().toISOString();
+  const { total, pages, entries } = await readIndex(session, efd);
+  await savePages(pages, efd);
+  const { ledger, added } = mergeLedger(await readLedger(efd.ledger), entries, seenAt);
+  await writeLedger(efd.ledger, ledger);
+  const gone = goneFromEfd(ledger);
+  console.log(`eFD list: ${total.toLocaleString()} PTRs (${pages.length} pages), ${added} new; ledger ${ledger.length.toLocaleString()}, ${gone.length} no longer listed`);
+
+  const people = await readPeople();
+  const match = efdMatch(people);
+  const departed = senateDeparture(people);
+  const purge = (e) => {
+    const b = match(e).bioguide;
+    const left = b && departed(b);
+    return left ? `${Number(left.slice(0, 4)) + 6}${left.slice(4)}` : '9999';
+  };
+  const todo = entries.filter((e) => e.kind === 'electronic' && !existsSync(efd.ptrPath(e.uuid)))
+    .map((e) => ({ e, purge: purge(e) }))
+    .sort((a, b) => a.purge.localeCompare(b.purge) || a.e.date_received.localeCompare(b.e.date_received));
+  console.log(`${todo.length} eFD pages to fetch, about ${Math.ceil((todo.length * PACE_MS) / 60e3)} min`);
+  let n = 0, missing = 0;
+  for (const { e, purge: p } of todo) {
+    const r = await session.view(new URL(efd.viewUrl(e.kind, e.link_uuid)).pathname);
+    if (r.gone) { missing++; console.log(`GONE ${e.uuid} ${e.last} ${e.date_received} (listed this run)`); continue; }
+    await save(efd.ptrPath(e.uuid), r.html);
+    if (++n % 100 === 0) console.log(`${n}/${todo.length} (purge ${p === '9999' ? 'none' : p})`);
+  }
+  console.log(`eFD: fetched ${n}, gone ${missing}; ${session.stats().requests} requests`);
+}
+
+async function fetchCmd(rest = []) {
+  const only = rest.find((x) => x === 'house' || x === 'senate');
+  await fetchMembers();
+  if (only !== 'senate') await fetchHouse();
+  if (only !== 'house') await fetchSenate();
+}
+
+async function fetchHouse() {
+  await indexCmd();
   if (!existsSync(senate.path)) {
     const buf = await get(senate.url);
     const sha = createHash('sha256').update(buf).digest('hex');
@@ -205,7 +258,7 @@ async function archiveCmd(rest) {
 async function main([cmd, ...rest]) {
   switch (cmd) {
     case 'index': await indexCmd(); break;
-    case 'fetch': await fetchCmd(); break;
+    case 'fetch': await fetchCmd(rest); break;
     case 'parse': await parseCmd(); break;
     case 'schema': await schemaCmd(rest); break;
     case 'load': await loadCmd(rest); break;

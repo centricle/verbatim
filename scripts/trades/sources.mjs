@@ -8,9 +8,16 @@
 // scan, recorded and never fetched. Every file is rebuilt nightly. Use is
 // governed by 5 U.S.C. § 13107(c): nothing commercial.
 //
-// Senate: Senate Stock Watcher's per-filing aggregate (Timothy Carambat, frozen
-// since March 2021), until a loader for eFD itself exists. Pinned by hash,
-// since the repo no longer changes.
+// Senate: eFD, the Senate's own search (efd.mjs has the session rules).
+// Every filing in its Periodic Transaction Report list, and the page of each
+// electronic one; paper filings are scans, recorded from the list and never
+// fetched. The agreement eFD asks for is accepted once per run, and binds the
+// use: nothing commercial, the same as 5 U.S.C. § 13107(c). eFD answers
+// datacenter and CI addresses with a 403, so this runs from a home network.
+//
+// Senate Stock Watcher's per-filing aggregate (Timothy Carambat, frozen since
+// March 2021) fills any filing eFD no longer lists. Pinned by hash, since the
+// repo no longer changes.
 //
 // Members: unitedstates/congress-legislators (CC0), current and historical.
 //
@@ -35,6 +42,27 @@ export const house = {
   pdfUrl: (year, docId) => `${CLERK}/ptr-pdfs/${year}/${docId}.pdf`,
   pdfPath: (year, docId) => resolve(RAW, 'house/pdf', String(year), `${docId}.pdf`),
   isElectronic: (docId) => /^20\d{6}$/.test(docId),
+};
+
+const EFD = 'https://efdsearch.senate.gov';
+const SENATE_RAW = resolve(RAW, 'senate');
+
+export const efd = {
+  base: EFD,
+  // The earliest received date the list is asked for: the STOCK Act's first
+  // PTRs were filed in July 2012.
+  since: '01/01/2012 00:00:00',
+  pageSize: 100,
+  viewUrl: (kind, uuid) => `${EFD}/search/view/${kind === 'paper' ? 'paper' : 'ptr'}/${uuid}/`,
+  dir: SENATE_RAW,
+  indexPage: (n) => resolve(SENATE_RAW, 'index', `p${String(n).padStart(2, '0')}.json`),
+  indexDir: resolve(SENATE_RAW, 'index'),
+  ledger: resolve(SENATE_RAW, 'filings.json'),
+  ptrPath: (uuid) => resolve(SENATE_RAW, 'ptr', `${uuid}.html`),
+  ptrDir: resolve(SENATE_RAW, 'ptr'),
+  log: resolve(SENATE_RAW, 'requests.log'),
+  blockedUntil: resolve(SENATE_RAW, 'blocked-until'),
+  targets: resolve(SENATE_RAW, 'purge-targets.json'),
 };
 
 export const senate = {

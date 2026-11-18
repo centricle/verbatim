@@ -11,7 +11,8 @@
     "og": "node scripts/build-og.mjs",
     "crashes": "node --env-file-if-exists=.env scripts/crashes/cli.mjs",
     "test": "node --test 'scripts/**/*.test.mjs'",
-    "corpus": "node --env-file-if-exists=.env scripts/corpus/cli.mjs"
+    "corpus": "node --env-file-if-exists=.env scripts/corpus/cli.mjs",
+    "executive": "node --env-file-if-exists=.env scripts/executive/cli.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

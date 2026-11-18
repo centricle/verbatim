@@ -1,0 +1,90 @@
+{
+  "executive_order": {
+    "results": [
+      {
+        "document_number": "94-290",
+        "type": "Presidential Document",
+        "subtype": "Executive Order",
+        "president": {
+          "identifier": "william-j-clinton",
+          "name": "William J. Clinton"
+        },
+        "title": "Amendment to Executive Order No. 12864",
+        "executive_order_number": "12890",
+        "proclamation_number": null,
+        "signing_date": "1993-12-30",
+        "publication_date": "1994-01-05",
+        "citation": "59 FR 499",
+        "executive_order_notes": null,
+        "disposition_notes": null,
+        "html_url": "https://www.federalregister.gov/documents/1994/01/05/94-290/amendment-to-executive-order-no-12864",
+        "pdf_url": null,
+        "correction_of": null
+      },
+      {
+        "document_number": "2021-01767",
+        "type": "Presidential Document",
+        "subtype": "Executive Order",
+        "president": {
+          "identifier": "joe-biden",
+          "name": "Joseph R. Biden Jr."
+        },
+        "title": "Revocation of Certain Executive Orders Concerning Federal Regulation",
+        "executive_order_number": "13992",
+        "proclamation_number": null,
+        "signing_date": "2021-01-20",
+        "publication_date": "2021-01-25",
+        "citation": "86 FR 7049",
+        "executive_order_notes": "Revokes: EO 13771, January 30, 2017; EO 13777, February 24, 2017;  EO 13875, June 14, 2019; EO 13891, October 9, 2019; EO 13892, October 9, 2019; EO 13893, October 10, 2019\r\nRevoked by: EO 14148, January 20, 2025; EO 14154, January 20, 2025",
+        "disposition_notes": "Revokes: EO 13771, January 30, 2017; EO 13777, February 24, 2017;  EO 13875, June 14, 2019; EO 13891, October 9, 2019; EO 13892, October 9, 2019; EO 13893, October 10, 2019\r\nRevoked by: EO 14148, January 20, 2025; EO 14154, January 20, 2025",
+        "html_url": "https://www.federalregister.gov/documents/2021/01/25/2021-01767/revocation-of-certain-executive-orders-concerning-federal-regulation",
+        "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2021-01-25/pdf/2021-01767.pdf",
+        "correction_of": null
+      },
+      {
+        "document_number": "C1-2010-27674",
+        "type": "Presidential Document",
+        "subtype": "Executive Order",
+        "president": {
+          "identifier": "barack-obama",
+          "name": "Barack Obama"
+        },
+        "title": "Correction",
+        "executive_order_number": null,
+        "proclamation_number": null,
+        "signing_date": null,
+        "publication_date": "2010-11-08",
+        "citation": "75 FR 68411",
+        "executive_order_notes": null,
+        "disposition_notes": null,
+        "html_url": "https://www.federalregister.gov/documents/2010/11/08/C1-2010-27674/correction",
+        "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2010-11-08/pdf/C1-2010-27674.pdf",
+        "correction_of": "https://www.federalregister.gov/api/v1/documents/2010-27674"
+      }
+    ]
+  },
+  "proclamation": {
+    "results": [
+      {
+        "document_number": "94-26517",
+        "type": "Presidential Document",
+        "subtype": "Proclamation",
+        "president": {
+          "identifier": "william-j-clinton",
+          "name": "William J. Clinton"
+        },
+        "title": "National Mammography Day, 1994",
+        "executive_order_number": null,
+        "proclamation_number": "6746",
+        "signing_date": "1994-10-18",
+        "publication_date": "1994-10-24",
+        "citation": "59 FR 53557",
+        "executive_order_notes": "Revoked by: EO 13204, February 17, 2001;;\n ;  See: Final Rule of May 16, 1997 (62 FR 28176)",
+        "disposition_notes": "Revoked by: EO 13204, February 17, 2001;;\n ;  See: Final Rule of May 16, 1997 (62 FR 28176)",
+        "html_url": "https://www.federalregister.gov/documents/1994/10/24/94-26517/national-mammography-day-1994",
+        "pdf_url": null,
+        "correction_of": null
+      }
+    ]
+  }
+}

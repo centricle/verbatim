@@ -199,6 +199,22 @@ DATE_FIXES = {
          "Tobacco carries from the same note"),
 }
 
+# Control characters a source's text carries where its printed page shows a
+# character, replaced with what the page shows. Keyed by source_url, then by
+# the control character. Each one is settled by the printed edition, not by
+# what the word should be: a control character anywhere else still fails
+# check_release.py, so the next one gets its own look. (U+0001 and U+0002
+# also mark search matches on the site.)
+FR_DOCUMENTS = "https://www.federalregister.gov/documents/"
+CHAR_FIXES = {
+    FR_DOCUMENTS + "1999/07/27/99-19396/further-amendments-to-executive-order-12757-"
+    "implementation-of-the-enterprise-for-the-americas": {
+        "\x02": ("—", "FR's and govinfo's text both read \"the Secretary\\x02s "
+                 "negotiation\"; the printed page, 64 FR 40733, reads \"the Secretary—s "
+                 "negotiation\""),
+    },
+}
+
 # Books that store their publication year as every record's date. A date in a
 # record's heading replaces it even when the year differs.
 BOOK_YEAR_WORKS = {GUTENBERG + "18419"}
@@ -914,6 +930,11 @@ def build(db_path):
             text = html.unescape(HTML_TAG.sub("", text))
             fr_doc, text, found = strip_fr_wrapper(text)
             flags["fr_wrapper_stripped" if found else "fr_heading_not_found"].append(rec["id"])
+        for code, (char, why) in CHAR_FIXES.get(url, {}).items():
+            if code in text:
+                changed.append((rec["id"], "text", f"U+{ord(code):04X} -> {char} "
+                                                   f"x{text.count(code)} ({why})"))
+                text = text.replace(code, char)
         if rec["source_name"] in ENTITY_SOURCES:
             unescaped = html.unescape(text).replace("\xa0", " ")
             if unescaped != text:

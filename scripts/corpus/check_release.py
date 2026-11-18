@@ -37,7 +37,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_release import RELEASE_JSONL, SERIES, SPEAKER_LAST_DATE, series_matches  # noqa: E402
 
 COLLECTIONS = {"core", "executive", "tweets", "voices"}
-SITE_COLLECTIONS = {"core", "voices"}  # what scripts/corpus/cli.mjs loads into Postgres
+# What the site loads into Postgres: core and voices (scripts/corpus/cli.mjs),
+# executive (scripts/executive/cli.mjs).
+SITE_COLLECTIONS = {"core", "executive", "voices"}
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 PRECISIONS = {"day", "month", "year"}
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")

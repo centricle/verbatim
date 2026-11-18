@@ -8,8 +8,9 @@
 // and changes no value. A field the table has and a record lacks loads as
 // NULL.
 
-// Collections loaded into Postgres. Federal Register records (`executive`)
-// stay in the release only for now.
+// Collections this loader puts in corpus_statements. Federal Register records
+// (`executive`) load into their own table, fr_presidential_documents, joined
+// to FR's metadata (scripts/executive/).
 export const COLLECTIONS = ['core', 'voices'];
 
 // Every column the loader writes, with its Postgres type. db/corpus.sql

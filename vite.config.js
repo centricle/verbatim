@@ -24,6 +24,7 @@ export default defineConfig({
         crashes: resolve(__dirname, 'public/crashes/index.html'),
         executive: resolve(__dirname, 'public/executive/index.html'),
         corpus: resolve(__dirname, 'public/corpus/index.html'),
+        corpusContents: resolve(__dirname, 'public/corpus/contents/index.html'),
         amendments: resolve(__dirname, 'public/amendments/index.html'),
         'over-time': resolve(__dirname, 'public/over-time/index.html'),
       },

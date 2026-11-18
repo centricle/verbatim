@@ -2,14 +2,10 @@ import { createExplorer, html, highlight } from '../js/explorer.js';
 import SPEAKERS from '../../scripts/corpus/speakers.json';
 import { formatDate } from '../js/format.js';
 import { paragraphs } from '../js/record-text.js';
+import { GENRES, label } from '../js/corpus-labels.js';
 
 // Labels for the release's values. A value missing here prints as itself,
 // sentence-cased, rather than not at all.
-const GENRES = {
-  speech: 'Speech', writing: 'Writing', letter: 'Letter', document: 'Document',
-  opinion: 'Opinion', statement: 'Statement', executive_action: 'Executive action',
-  press_conference: 'Press conference', debate: 'Debate',
-};
 const TYPES = {
   address: 'Address', speech: 'Speech', remarks: 'Remarks', floor_speech: 'Floor speech',
   press_conference: 'Press conference', statement: 'Statement', letter: 'Letter', essay: 'Essay',
@@ -32,7 +28,6 @@ const RIGHTS = {
   'license:OPL-3.0': 'Open Parliament Licence v3.0',
 };
 
-const label = (map, key) => map[key] || String(key || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
 // A source whose terms ask for access to its full license wherever its notice
 // is shown (Project Gutenberg's section 1.E.1). The notice itself rides on the

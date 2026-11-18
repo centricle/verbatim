@@ -35,6 +35,12 @@
 -- "Spouse/DC Over $1,000,000". A few House filers print an exact figure
 -- instead ("$758.17"); it is kept as printed, sorts by its value, and is left
 -- out of by_amount, which counts ranges only (exact_amounts counts the rest).
+--
+-- Dates: a transaction date is kept as printed, even after the filing that
+-- reports it ("04/30/3031" in one House PTR). The date-keyed stats (by_year,
+-- date_range, by_chamber's min and max) count only rows dated on or before
+-- their filing; after_filing counts the rest. Search finds every row, and
+-- lists newest filing first. Decisions 13 and 14 of the House trades record.
 
 -- Display names: one per person, from unitedstates/congress-legislators by
 -- bioguide ID, for both chambers. member_sort orders the member select.
@@ -173,7 +179,7 @@ CREATE OR REPLACE FUNCTION public.search_stock_trades(
   filter_asset_type text DEFAULT NULL,
   filter_ticker text DEFAULT NULL,
   filter_year integer DEFAULT NULL,
-  sort_col text DEFAULT 'transaction_date',
+  sort_col text DEFAULT 'filed_date',
   sort_dir text DEFAULT 'desc',
   page_size integer DEFAULT 50,
   page_offset integer DEFAULT 0
@@ -205,6 +211,7 @@ BEGIN
         url, filed_date
       FROM filtered
       ORDER BY
+        CASE WHEN sort_col = 'filed_date' AND sort_dir = 'asc' THEN filed_date END ASC,
         CASE WHEN sort_col = 'transaction_date' AND sort_dir = 'desc' THEN transaction_date END DESC NULLS LAST,
         CASE WHEN sort_col = 'transaction_date' AND sort_dir = 'asc' THEN transaction_date END ASC NULLS LAST,
         CASE WHEN sort_col = 'member' AND sort_dir = 'asc' THEN member END ASC,
@@ -225,8 +232,10 @@ CREATE OR REPLACE FUNCTION public.stock_trades_stats(filter_chamber text DEFAULT
   LANGUAGE sql STABLE
   AS $$
   WITH t AS (
-    SELECT * FROM stock_trades
-    WHERE counted AND (filter_chamber IS NULL OR chamber = filter_chamber)
+    SELECT st.*, fl.filed_date FROM stock_trades st JOIN trade_filings fl USING (chamber, filing_id)
+    WHERE st.counted AND (filter_chamber IS NULL OR st.chamber = filter_chamber)
+  ), dated AS (
+    SELECT * FROM t WHERE transaction_date <= filed_date
   ), f AS (
     SELECT * FROM trade_filings WHERE filter_chamber IS NULL OR chamber = filter_chamber
   )
@@ -237,18 +246,20 @@ CREATE OR REPLACE FUNCTION public.stock_trades_stats(filter_chamber text DEFAULT
     'paper_count', (SELECT count(*) FROM f WHERE kind = 'paper'),
     'failed_count', (SELECT count(*) FROM f WHERE parse_status = 'failed'),
     'last_filed', (SELECT max(filed_date) FROM f),
-    'date_range', json_build_object('min', (SELECT min(transaction_date) FROM t), 'max', (SELECT max(transaction_date) FROM t)),
+    'date_range', json_build_object('min', (SELECT min(transaction_date) FROM dated), 'max', (SELECT max(transaction_date) FROM dated)),
+    'after_filing', (SELECT count(*) FROM t WHERE transaction_date > filed_date),
     'by_chamber', (SELECT coalesce(json_agg(json_build_object('chamber', chamber, 'count', cnt, 'members', members,
         'min', mn, 'max', mx) ORDER BY chamber), '[]'::json)
       FROM (SELECT chamber, count(*) AS cnt, count(DISTINCT bioguide) AS members,
-        min(transaction_date) AS mn, max(transaction_date) AS mx FROM t GROUP BY chamber) c),
+        min(transaction_date) FILTER (WHERE transaction_date <= filed_date) AS mn,
+        max(transaction_date) FILTER (WHERE transaction_date <= filed_date) AS mx FROM t GROUP BY chamber) c),
     'by_type', (SELECT coalesce(json_agg(json_build_object('type', type, 'count', cnt) ORDER BY cnt DESC, type), '[]'::json)
       FROM (SELECT type, count(*) AS cnt FROM t GROUP BY type) x),
     'by_year', (SELECT coalesce(json_agg(json_build_object('year', yr, 'count', cnt, 'purchases', purchases, 'sales', sales) ORDER BY yr), '[]'::json)
       FROM (SELECT EXTRACT(YEAR FROM transaction_date)::int AS yr, count(*) AS cnt,
         count(*) FILTER (WHERE type = 'Purchase') AS purchases,
         count(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) AS sales
-        FROM t WHERE transaction_date IS NOT NULL GROUP BY yr) x),
+        FROM dated GROUP BY yr) x),
     'top_traders', (SELECT coalesce(json_agg(json_build_object('senator', m.member, 'member', m.member, 'bioguide', x.bioguide,
         'total_trades', cnt, 'purchases', purchases, 'sales', sales) ORDER BY cnt DESC, m.member_sort), '[]'::json)
       FROM (SELECT bioguide, count(*) AS cnt,

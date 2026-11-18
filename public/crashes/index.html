@@ -36,7 +36,15 @@
       <div class="masthead-bar">
         <a href="/" class="wordmark">Verbatim</a>
         <nav class="masthead-nav hidden md:flex" aria-label="Sections">
-          <a href="/corpus/" class="nav-link">Corpus</a>
+          <details class="nav-menu">
+            <summary class="nav-link">Words<svg class="nav-caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></summary>
+            <div class="nav-menu-panel">
+              <a href="/corpus/" class="nav-link">Corpus</a>
+              <a href="/amendments/" class="nav-link">Amendments</a>
+              <a href="/over-time/" class="nav-link">Words Over Time</a>
+              <a href="/vs/" class="nav-link">Vs.</a>
+            </div>
+          </details>
           <details class="nav-menu">
             <summary class="nav-link">Record<svg class="nav-caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></summary>
             <div class="nav-menu-panel">
@@ -48,7 +56,6 @@
               <a href="/crashes/" class="nav-link" aria-current="page">Crashes</a>
             </div>
           </details>
-          <a href="/vs/" class="nav-link">Vs.</a>
           <a href="/about.html" class="nav-link">About</a>
         </nav>
         <button id="mobile-menu-button" class="menu-button md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
@@ -57,7 +64,13 @@
         </button>
       </div>
       <nav id="mobile-menu" class="mobile-menu hidden md:hidden" aria-label="Sections">
-        <a href="/corpus/" class="nav-link">Corpus</a>
+        <div class="mobile-menu-group" role="group" aria-labelledby="mobile-menu-words">
+          <p id="mobile-menu-words" class="kicker kicker-dim mobile-menu-label">Words</p>
+          <a href="/corpus/" class="nav-link">Corpus</a>
+          <a href="/amendments/" class="nav-link">Amendments</a>
+          <a href="/over-time/" class="nav-link">Words Over Time</a>
+          <a href="/vs/" class="nav-link">Vs.</a>
+        </div>
         <div class="mobile-menu-group" role="group" aria-labelledby="mobile-menu-record">
           <p id="mobile-menu-record" class="kicker kicker-dim mobile-menu-label">Record</p>
           <a href="/trades/" class="nav-link">Senate Stock Trades</a>
@@ -67,7 +80,6 @@
           <a href="/qi/" class="nav-link">Qualified Immunity</a>
           <a href="/crashes/" class="nav-link" aria-current="page">Crashes</a>
         </div>
-        <a href="/vs/" class="nav-link">Vs.</a>
         <a href="/about.html" class="nav-link">About</a>
       </nav>
     </div>

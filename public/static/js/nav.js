@@ -37,8 +37,9 @@
   });
 })();
 
-// Record menu (<details class="nav-menu">). The browser opens and closes it;
-// this only adds the three ways out a menu is expected to have.
+// Nav menus (Words, Record), each a <details class="nav-menu">. The browser
+// opens and closes them; this only adds the three ways out a menu is expected
+// to have. A click on one summary closes the other via the document handler.
 (function () {
   var menus = document.querySelectorAll('.nav-menu');
   if (!menus.length) return;

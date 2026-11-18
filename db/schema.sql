@@ -288,8 +288,9 @@ CREATE FUNCTION public.get_fr_presidential_document(doc_id text) RETURNS jsonb
     'signing_date', d.signing_date, 'publication_date', d.publication_date,
     'citation', d.citation, 'title', d.title, 'html_url', d.html_url, 'pdf_url', d.pdf_url,
     'notes', d.notes, 'notes_parsed', d.notes_parsed, 'text', d.text,
-    'correction_of', (SELECT jsonb_build_object('id', c.id, 'document_number', c.document_number, 'title', c.title)
-                      FROM fr_presidential_documents c WHERE c.document_number = d.correction_of),
+    'correction_of', CASE WHEN d.correction_of IS NOT NULL THEN jsonb_build_object(
+                       'document_number', d.correction_of,
+                       'id', (SELECT c.id FROM fr_presidential_documents c WHERE c.document_number = d.correction_of)) END,
     'corrections', (SELECT coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'document_number', c.document_number)
                                     ORDER BY c.publication_date), '[]'::jsonb)
                     FROM fr_presidential_documents c WHERE c.correction_of = d.document_number),

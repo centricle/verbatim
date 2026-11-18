@@ -1,6 +1,7 @@
 import { createExplorer, html, highlight } from '../js/explorer.js';
 import SPEAKERS from '../../scripts/corpus/speakers.json';
 import { formatDate } from '../js/format.js';
+import { paragraphs } from '../js/record-text.js';
 
 // Labels for the release's values. A value missing here prints as itself,
 // sentence-cased, rather than not at all.
@@ -106,16 +107,10 @@ function startExplorer() {
 
 // ---- Record view (/corpus/?id=…) -------------------------------------------
 
-// Project Gutenberg's plain texts are hard-wrapped at about 70 characters, so
-// a single line break inside one of their paragraphs is the edition's line
-// end, not the author's: those paragraphs are reflowed. Every other source's
-// line breaks are kept (salutations, addresses, verse).
+// Project Gutenberg's line breaks are its edition's, so its paragraphs are
+// reflowed (public/js/record-text.js). Every other source's line breaks are
+// kept (salutations, addresses, verse).
 const REFLOW_SOURCES = new Set(['project_gutenberg']);
-
-function paragraphs(r) {
-  const paras = r.text.split(/\n[ \t]*\n/).map((p) => p.trim()).filter(Boolean);
-  return REFLOW_SOURCES.has(r.source_name) ? paras.map((p) => p.replace(/\s*\n\s*/g, ' ')) : paras;
-}
 
 async function showRecord(id) {
   document.getElementById('corpus-index').classList.add('hidden');
@@ -163,5 +158,6 @@ async function showRecord(id) {
     .map(([term, value]) => html`<div class="record-meta-row"><dt>${term}</dt><dd>${value}</dd></div>`)
     .join('');
 
-  document.getElementById('record-text').innerHTML = paragraphs(r).map((p) => html`<p>${p}</p>`).join('');
+  document.getElementById('record-text').innerHTML = paragraphs(r.text, { reflow: REFLOW_SOURCES.has(r.source_name) })
+    .map((p) => html`<p>${p}</p>`).join('');
 }

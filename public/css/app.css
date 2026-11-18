@@ -1125,6 +1125,37 @@
   .record-text p { white-space: pre-line; }
   .record-text p + p { margin-top: 0.9em; }
 
+  /* ---------- Executive orders and proclamations (/executive/) ----------
+     The appendix shows a search snippet under the title (there is no excerpt
+     column: a document's opening repeats its number, date and title). The
+     record view sets the Federal Register's notes above the text, one
+     relation to a line, the label as FR prints it. */
+  .cell-snippet {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.86rem;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--color-ink-dim);
+    white-space: normal;
+  }
+  @media (min-width: 768px) {
+    .cell-snippet { max-width: 34rem; }
+  }
+  .fr-notes {
+    max-width: 38rem;
+    margin-bottom: 2.2rem;
+    padding: 0.7rem 0 0.9rem;
+    border-top: 1px solid var(--color-rule);
+    border-bottom: 1px solid var(--color-rule);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+  }
+  .fr-notes .kicker { margin-bottom: 0.5rem; }
+  .fr-notes p + p { margin-top: 0.35rem; }
+  .fr-relation { font-weight: 600; }
+
   /* ---------- Amendments (/amendments/) ----------
      One entry per amendment: title, dates and sources in a left column, the
      text in the reading column, stacked below 768. */

@@ -5,7 +5,10 @@ Sources:
 - WikiSource (major speeches, wartime letters)
 - Project Gutenberg (books/essays where individual chapters make sense)
 
-All works are public domain (UK Crown Copyright expired, or PD-US per date).
+Not all of this may be published. Churchill's literary works are in copyright,
+administered by Curtis Brown for his Literary Estate, so build_release.py keeps
+post-1930 Churchill out of the release (NO_BASIS). Books published before 1931
+are public domain in the US and are released.
 """
 
 import re
@@ -136,8 +139,8 @@ def import_wikisource_entries(entries, label="speeches"):
     return records
 
 
-# Speeches that aren't on WikiSource but are public domain and widely available.
-# Text transcribed from public domain sources.
+# Speeches that aren't on WikiSource, transcribed from published texts. Being
+# widely available does not make them public domain; see the module docstring.
 CANONICAL_SPEECHES = [
     {
         "date": "1946-03-05",

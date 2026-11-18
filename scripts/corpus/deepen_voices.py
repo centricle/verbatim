@@ -7,7 +7,9 @@ Adds new sources for speakers who currently have thin representation:
 - Benjamin Franklin: ~18 → 50+ records
 - Winston Churchill: ~31 → 80+ records
 
-All works are public domain. Run after the original import scripts.
+Not everything this adds may be published: build_release.py decides which
+records reach the site (RIGHTS, NO_BASIS), and post-1930 Churchill stays out.
+Run after the original import scripts.
 Deduplication handled by ingest.py's SHA256(speaker:text) scheme.
 """
 

@@ -6,7 +6,9 @@ Sources:
 - American Rhetoric (20th-21st century landmark speeches)
 - Project Gutenberg (collected speeches volumes)
 
-All speeches are public domain as government proceedings or by date.
+Which speeches reach the site is decided in build_release.py, not here:
+government proceedings and pre-1931 texts are released; American Rhetoric's
+transcripts are not, because the host claims them.
 Curated set of the most significant floor speeches and statements
 in American legislative history.
 """
@@ -252,7 +254,8 @@ def import_wikisource_speeches():
 
 
 def import_american_rhetoric_speeches():
-    """Import speeches from American Rhetoric (text is public domain)."""
+    """Import speeches from American Rhetoric. The host claims its transcripts,
+    so build_release.py keeps these out of the release."""
     print("\nImporting speeches from American Rhetoric...")
     records = []
 

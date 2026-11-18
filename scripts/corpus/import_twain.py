@@ -10,7 +10,10 @@ Sources:
 NOT importing: full novels. A novel is not a "statement." Individual essays and
 speeches from essay collections are fair game.
 
-All works are public domain (Twain died 1910).
+Each work listed here was published before 1931, so it is public domain in the
+US. Twain's death date settles nothing: material first published after it (the
+Mark Twain Project's editions, 1962 on) is still in copyright. Which records
+reach the site is decided in build_release.py, not here.
 """
 
 import os

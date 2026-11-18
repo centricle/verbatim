@@ -1,5 +1,5 @@
 // Shared behavior for the dataset explorers (trades, compas, incidents,
-// finance, qi, crashes, corpus). Each page is the same machine: a search box, filter selects,
+// finance, qi, crashes, corpus, executive). Each page is the same machine: a search box, filter selects,
 // a paged table fed by `/api/<x>?action=search`, and chart islands fed by
 // `?action=stats` that set a filter when clicked. The page's app.js supplies
 // only what differs: its endpoint, filter keys, row markup and charts.

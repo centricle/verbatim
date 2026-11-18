@@ -29,6 +29,7 @@ const PAGES = [
   ['finance', '/finance/'],
   ['qi', '/qi/'],
   ['crashes', '/crashes/'],
+  ['executive', '/executive/'],
   ['vs', '/vs/'],
 ];
 

@@ -19,6 +19,7 @@ searchable, filterable and charted, with nothing added.
 | [`/finance/`](https://verbatim.fyi/finance/) | 2024 federal campaign finance, one row per candidate, from the FEC |
 | [`/qi/`](https://verbatim.fyi/qi/) | Qualified immunity cases in the federal courts of appeals, from the Institute for Justice |
 | [`/crashes/`](https://verbatim.fyi/crashes/) | Crash reports filed with NHTSA under Standing General Order 2021-01 for vehicles with automated driving systems or Level 2 driver assistance |
+| [`/executive/`](https://verbatim.fyi/executive/) | Executive orders and proclamations published in the Federal Register since 1994, with the Federal Register’s disposition notes |
 | [`/vs/`](https://verbatim.fyi/vs/) | Vs.: two historical speakers on one topic, quoted side by side |
 
 The data explorers each have full-text search, filters, charts and a
@@ -36,6 +37,7 @@ can be linked.
 | Campaign finance | Federal Election Commission | [All candidates file](https://www.fec.gov/campaign-finance-data/all-candidates-file-description/), `weball24` ([bulk data](https://www.fec.gov/data/browse-data/?tab=bulk-data)) | The 2023 to 2024 election cycle | U.S. government data. The FEC’s [sale-or-use restriction](https://www.fec.gov/updates/sale-or-use-contributor-information/) (52 U.S.C. § 30111(a)(4)) covers individual contributor information; this file holds candidate-level totals only |
 | Qualified immunity | Institute for Justice | [*Unaccountable*](https://ij.org/report/unaccountable/) report, [data downloads](https://ij.org/report/unaccountable/data-downloads/) | Federal appellate opinions, 2010 to 2020 | No license or terms stated by the publisher |
 | SGO crash reports | National Highway Traffic Safety Administration | Standing General Order 2021-01 incident report CSVs (ADS, ADAS and OTHER, current and `Archive-2021-2025/`) at `static.nhtsa.gov/odi/ffdd/sgo-2021-01/`, with the [data dictionary](https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/SGO-2021-01_Data_Element_Definitions.pdf) | Reports filed from July 2021 on; NHTSA republishes the files monthly | U.S. government data. NHTSA’s [terms of use](https://www.nhtsa.gov/about-nhtsa/terms-use): “Information presented on this web site is considered public information and may be distributed or copied.” The files and their data dictionary state no license |
+| Executive orders and proclamations | Office of the Federal Register (National Archives) and the U.S. Government Publishing Office | [FederalRegister.gov API](https://www.federalregister.gov/developers/documentation/api/v1) (`documents.json`, presidential documents: executive orders and proclamations) for numbers, dates, citations and notes; text through the same API by `scripts/corpus/import_federal_register.py` | Signed from December 30, 1993; refreshed by hand | [About this site](https://www.federalregister.gov/reader-aids/government-policy-and-ofr-procedures/about-this-site): “Any person may reproduce or republish any material appearing in any regular or special edition of the Federal Register (1 CFR 2.6).” FederalRegister.gov “is not an official legal edition of the Federal Register” |
 | Series lists (`/over-time/`) | The American Presidency Project; Joint Congressional Committee on Inaugural Ceremonies; U.S. House of Representatives, History, Art & Archives | [Annual messages to Congress](https://www.presidency.ucsb.edu/documents/presidential-documents-archive-guidebook/annual-messages-congress-the-state-the-union), [past inaugural ceremonies](https://www.inaugural.senate.gov/past-inaugural-ceremonies/), and [in-person addresses](https://history.house.gov/Institution/SOTU/List/) for exact dates; transcribed once into [`scripts/corpus/series.json`](scripts/corpus/series.json) | State of the Union 1790 to 2026; inaugural addresses 1789 to 2025 | Facts only: which address belongs to each series, its speaker and its date. No text is taken from the lists |
 | Amendment dates (`/amendments/`) | National Archives; Congressional Research Service; U.S. House of Representatives | NARA transcriptions, *The Constitution of the United States: Analysis and Interpretation* (2022) and the House Manual (118th Congress) on govinfo; each date names its source in [`scripts/corpus/amendments.json`](scripts/corpus/amendments.json) | The 27 amendments | U.S. government works |
 | Vs. quotations | Ten historical speakers | Published speeches, letters and writings | 1765 to 1943 | Short quotations, each with its source title and date |
@@ -50,7 +52,10 @@ kept. All five moved to [Neon](https://neon.tech) Postgres in May 2026.
 Datasets added since have a loader in `scripts/<dataset>/` with tests
 (`npm test`). `npm run crashes -- refresh` downloads NHTSA’s six files,
 replaces the crash table in one transaction, and checks every loaded field
-against the source; `parse.mjs` there lists each change the loader makes. `db/schema.sql` is
+against the source; `parse.mjs` there lists each change the loader makes.
+`npm run executive -- refresh` fetches the Federal Register’s listings, joins
+them to the corpus release, replaces the table in one transaction and checks
+every field and note. `db/schema.sql` is
 the schema they live in now: one table per dataset plus a `search_*` and a
 `*_stats` stored function for each.
 

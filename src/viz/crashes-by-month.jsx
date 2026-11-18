@@ -24,6 +24,47 @@ const AMENDMENTS = [
 // the figure rather than stretching the axis back decades.
 const FIRST_PLOTTED = '2000-01-01';
 
+// Amendment labels: rows are ROW apart; PAD is the least gap between two
+// labels on one row.
+const ROW = 34;
+const PAD = 8;
+
+// Picks a row and a side (right or left of its rule) for each amendment label.
+// Each rule is drawn from its own label's row down, so a label may pass over
+// another rule only above the row where that rule starts. Every assignment is
+// tried (two sides by n rows per label: 16 for two amendments) and the
+// cheapest kept: no collisions first, then fewest rows, then most labels
+// right of their rules. A label collides by leaving the chart, by overlapping
+// a label on its row, or by crossing a rule that has started by its row.
+function placeLabels(rules, minX, maxX) {
+  const n = rules.length;
+  if (!n) return [];
+  let best = null;
+  for (let code = 0; code < (2 * n) ** n; code += 1) {
+    let c = code;
+    const slots = rules.map((r) => {
+      const o = c % (2 * n);
+      c = Math.floor(c / (2 * n));
+      const right = o % 2 === 0;
+      const left = right ? r.px + 4 : r.px - 4 - r.w;
+      return { row: Math.floor(o / 2), right, left, end: left + r.w };
+    });
+    let bad = 0;
+    slots.forEach((s, i) => {
+      if (s.left < minX || s.end > maxX) bad += 1;
+      slots.forEach((t, j) => {
+        if (j === i) return;
+        if (j > i && t.row === s.row && s.left < t.end + PAD && t.left < s.end + PAD) bad += 1;
+        if (s.row >= t.row && rules[j].px > s.left - 4 && rules[j].px < s.end + 4) bad += 1;
+      });
+    });
+    const rows = Math.max(...slots.map((s) => s.row)) + 1;
+    const cost = bad * 1000 + rows * 10 + slots.filter((s) => !s.right).length;
+    if (!best || cost < best.cost) best = { cost, slots };
+  }
+  return best.slots;
+}
+
 const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 // '2025-08-01' -> 'AUG-2025', the form the files use.
 const monLabel = (key) => `${MON[Number(key.slice(5, 7)) - 1]}-${key.slice(0, 4)}`;
@@ -71,20 +112,38 @@ function CrashesByMonth({ stats, onFilter }) {
     });
 
     const narrow = fullWidth < 560;
-    // Narrow screens may need a second row of rule labels (see below).
-    const margin = { top: narrow ? 64 : 34, right: 4, bottom: 26, left: 40 };
+    const margin = { right: 4, bottom: 26, left: 40 };
     const width = fullWidth - margin.left - margin.right;
-    const height = (narrow ? 240 : 300) - margin.top - margin.bottom;
+    const x = d3.scaleBand().domain(months).range([0, width]).paddingInner(narrow ? 0.1 : 0.18);
 
     d3.select(svgRef.current).selectAll('*').remove();
-    const svg = d3.select(svgRef.current)
-      .attr('width', fullWidth)
+    const root = d3.select(svgRef.current).attr('width', fullWidth);
+
+    // Amendment rules sit within their month by day. Their labels are placed
+    // before anything is drawn, because the rows they need set the top margin.
+    const rules = AMENDMENTS.flatMap(([name, iso, said]) => {
+      const key = `${iso.slice(0, 7)}-01`;
+      if (x(key) === undefined) return [];
+      const days = new Date(Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0)).getUTCDate();
+      const px = Math.round(x(key) + x.step() * ((Number(iso.slice(8, 10)) - 1) / days)) + 0.5;
+      return [{ name, said, px }];
+    });
+    const probe = root.append('text').attr('class', 'value-label');
+    for (const r of rules) {
+      r.w = Math.ceil(Math.max(...[r.name, r.said].map((s) => probe.text(s).node().getComputedTextLength())));
+    }
+    probe.remove();
+    const slots = placeLabels(rules, -margin.left, width + margin.right);
+    const rows = slots.length ? Math.max(...slots.map((s) => s.row)) + 1 : 1;
+    margin.top = 34 + (rows - 1) * ROW;
+    const height = (narrow ? 240 : 300) - margin.top - margin.bottom;
+
+    const svg = root
       .attr('height', height + margin.top + margin.bottom)
       .attr('viewBox', `0 0 ${fullWidth} ${height + margin.top + margin.bottom}`)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    const x = d3.scaleBand().domain(months).range([0, width]).paddingInner(narrow ? 0.1 : 0.18);
     const stack = d3.stack().keys(SYSTEMS.map(([k]) => k))(data);
     const y = d3.scaleLinear()
       .domain([0, d3.max(data, (d) => d.ads + d.adas + d.other) * 1.05])
@@ -124,47 +183,30 @@ function CrashesByMonth({ stats, onFilter }) {
         .on('click', (event, d) => { if (onFilter) onFilter({ key: 'year', value: d.data.key.slice(0, 4) }); });
     });
 
-    // Amendment rules: placed within their month by day, labeled above the
-    // plot. A label sits right of its rule, or left of it where it would run
-    // past the plot's edge, and drops a row where it would overlap the label
-    // before it (at 390 the two rules are about 100px apart). Rules are drawn
-    // first and labels carry a halo in the ground color, so a rule passing
-    // behind a label does not strike through it.
-    const ROW = 30;
-    const rules = AMENDMENTS.flatMap(([name, iso, said]) => {
-      const key = `${iso.slice(0, 7)}-01`;
-      if (x(key) === undefined) return [];
-      const days = new Date(Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0)).getUTCDate();
-      const px = Math.round(x(key) + x.step() * ((Number(iso.slice(8, 10)) - 1) / days)) + 0.5;
-      return [{ name, said, px }];
-    });
-    for (const { px } of rules) {
+    // Each rule starts at its label's row (placeLabels above). Rules are drawn
+    // first and labels carry a halo in the ground color, so if no clean
+    // placement exists a rule passing behind a label still does not strike
+    // through it.
+    rules.forEach(({ px }, i) => {
       svg.append('line')
         .attr('class', 'baseline')
         .attr('x1', px).attr('x2', px)
-        .attr('y1', -margin.top + 4).attr('y2', height);
-    }
-    const placed = [];
-    for (const { name, said, px } of rules) {
+        .attr('y1', -margin.top + 4 + slots[i].row * ROW).attr('y2', height);
+    });
+    rules.forEach(({ name, said, px }, i) => {
+      const { row, right } = slots[i];
+      const ax = right ? px + 4 : px - 4;
       const text = svg.append('text')
         .attr('class', 'value-label')
+        .attr('text-anchor', right ? 'start' : 'end')
+        .attr('y', -margin.top + 12 + row * ROW)
         .style('paint-order', 'stroke')
         .style('stroke', 'var(--color-ground)')
         .style('stroke-width', '4px')
         .style('stroke-linejoin', 'round');
-      const a = text.append('tspan').text(name);
-      const b = text.append('tspan').attr('dy', '1.2em').text(said);
-      const w = Math.ceil(Math.max(a.node().getComputedTextLength(), b.node().getComputedTextLength()));
-      const flip = px + 4 + w > width + margin.right;
-      const left = flip ? px - 4 - w : px + 4;
-      let row = 0;
-      while (placed.some((p) => p.row === row && left < p.right + 8 && left + w > p.left - 8)) row += 1;
-      placed.push({ left, right: left + w, row });
-      const ax = flip ? px - 4 : px + 4;
-      text.attr('text-anchor', flip ? 'end' : 'start').attr('y', -margin.top + 12 + row * ROW);
-      a.attr('x', ax);
-      b.attr('x', ax);
-    }
+      text.append('tspan').attr('x', ax).text(name);
+      text.append('tspan').attr('x', ax).attr('dy', '1.2em').text(said);
+    });
 
     svg.append('line')
       .attr('class', 'baseline')

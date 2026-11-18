@@ -1,0 +1,41 @@
+{
+  "convention": "Each pair joins one DOJ entry to the Federal Register document it is, only where a mechanical basis holds: `title` (DOJ's text equals FR's title, ignoring case) or `slug` (DOJ links the White House page whose URL slug is FR's title, lowercased, with runs of anything but letters and digits as hyphens). check.mjs tests the basis, that the entry exists once, and that FR's record is in fr_presidential_documents. Nothing is matched by date or by a name in the text.",
+  "links": [
+    {
+      "entry": {
+        "page": "clemency-grants-president-donald-j-trump-2025-present",
+        "grant_date": "2025-01-20",
+        "name": "Granting Pardons and Commutations of Sentences for Certain Offenses Relating to the Events at or near the United States Capitol on January 6, 2021"
+      },
+      "fr": {
+        "document_number": "2025-01950",
+        "title": "Granting Pardons and Commutation of Sentences for Certain Offenses Relating to the Events at or Near the United States Capitol on January 6, 2021"
+      },
+      "basis": "slug"
+    },
+    {
+      "entry": {
+        "page": "clemency-grants-president-donald-j-trump-2025-present",
+        "grant_date": "2025-11-07",
+        "name": "Granting Pardons for Certain Offenses Related to the 2020 Presidential Election"
+      },
+      "fr": {
+        "document_number": "2025-19928",
+        "title": "Granting Pardons for Certain Offenses Related to the 2020 Presidential Election"
+      },
+      "basis": "title"
+    },
+    {
+      "entry": {
+        "page": "clemency-grants-president-donald-j-trump-2025-present",
+        "grant_date": "2026-06-04",
+        "name": "Stephen E. Buyer"
+      },
+      "fr": {
+        "document_number": "2026-11741",
+        "title": "Granting Pardon to Stephen E. Buyer"
+      },
+      "basis": "slug"
+    }
+  ]
+}

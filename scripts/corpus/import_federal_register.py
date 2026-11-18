@@ -96,12 +96,13 @@ def fetch_documents(doc_type, since=None, dry_run=False):
 
         print(f"  Fetching page {page}{f'/{total_pages}' if total_pages else ''}...")
 
+        # A failed page used to end the loop as if the list were complete,
+        # which silently truncated it. Stop the run instead.
         try:
             resp = requests.get(url, params=params, timeout=30)
             resp.raise_for_status()
         except requests.RequestException as e:
-            print(f"  Error fetching page {page}: {e}")
-            break
+            sys.exit(f"  Error fetching page {page}: {e}. Stopping; nothing inserted.")
 
         data = resp.json()
         results = data.get("results", [])
@@ -152,15 +153,24 @@ def fetch_documents(doc_type, since=None, dry_run=False):
     return records
 
 
+STOP_STATUSES = {403, 429, 503}
+
+
 def fetch_full_text(records, dry_run=False):
-    """Fetch full text for each document from its raw_text_url."""
+    """Fetch full text for each document from its raw_text_url.
+
+    Returns (complete records, failures, stopped). Every document that does
+    not come back is named in `failures` as (source_url, reason); they used to
+    be counted and dropped, which left holes nobody could see. A 403, 429 or
+    503 means the publisher said no: fetching stops there, with no retry.
+    """
     complete = []
-    errors = 0
+    failures = []
 
     for i, rec in enumerate(records):
         raw_url = rec.pop("raw_text_url", "")
         if not raw_url:
-            errors += 1
+            failures.append((rec["source_url"], "no raw_text_url"))
             continue
 
         if dry_run:
@@ -174,14 +184,19 @@ def fetch_full_text(records, dry_run=False):
 
         try:
             resp = requests.get(raw_url, timeout=30)
-            resp.raise_for_status()
-            text = resp.text.strip()
-        except requests.RequestException:
-            errors += 1
+        except requests.RequestException as e:
+            failures.append((rec["source_url"], f"request failed: {e}"))
             continue
+        if resp.status_code in STOP_STATUSES:
+            failures.append((rec["source_url"], f"HTTP {resp.status_code}; stopped here"))
+            return complete, failures, True
+        if resp.status_code != 200:
+            failures.append((rec["source_url"], f"HTTP {resp.status_code}"))
+            continue
+        text = resp.text.strip()
 
         if not text or len(text) < 50:
-            errors += 1
+            failures.append((rec["source_url"], f"text too short ({len(text)} chars)"))
             continue
 
         rec["text"] = text
@@ -190,8 +205,8 @@ def fetch_full_text(records, dry_run=False):
 
         time.sleep(TEXT_DELAY)
 
-    print(f"  Fetched text for {len(complete)} documents ({errors} errors/empty)")
-    return complete
+    print(f"  Fetched text for {len(complete)} documents ({len(failures)} failed)")
+    return complete, failures, False
 
 
 def import_federal_register(doc_type="all", since=None, dry_run=False):
@@ -233,14 +248,20 @@ def import_federal_register(doc_type="all", since=None, dry_run=False):
         return len(all_records)
 
     print(f"\nFetching full text for {len(all_records)} documents...")
-    complete = fetch_full_text(all_records)
+    complete, failures, stopped = fetch_full_text(all_records)
 
-    if not complete:
+    inserted = 0
+    if complete:
+        print(f"\nBulk inserting {len(complete)} records...")
+        inserted = bulk_insert(complete)
+    else:
         print("No documents with valid text.")
-        return 0
 
-    print(f"\nBulk inserting {len(complete)} records...")
-    inserted = bulk_insert(complete)
+    for source_url, reason in failures:
+        print(f"  NOT FETCHED {source_url}: {reason}")
+    if stopped or failures:
+        sys.exit(f"{len(failures)} documents not fetched"
+                 f"{' (stopped early; rerun later)' if stopped else ''}.")
     return inserted
 
 

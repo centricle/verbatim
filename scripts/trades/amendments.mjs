@@ -98,7 +98,10 @@ export function linkAmendments(rows, filedDate) {
 // The amendments of one root form a chain in (N, filed date, filing id)
 // order: each one's amends_filing_id is the version before it. Every row of a
 // filing another filing names is superseded, so a report counts once, in its
-// latest version. Paper amendments ("(Amendment)", no number) carry no rows
+// latest version. Only a parsed amendment joins a chain: one with no rows (its
+// page not fetched, gone, or refused) would otherwise supersede rows it does
+// not replace. It stays unlinked and is reported in `unparsed`, and the next
+// parsed version amends the one before it. Paper amendments ("(Amendment)", no number) carry no rows
 // and name nothing. `out` is [{ filing, rows }] for one chamber; mutates it
 // and returns what it did.
 const AMENDMENT = / \(Amendment (\d+)\)$/;
@@ -110,7 +113,7 @@ function sharedRows(a, b) {
 }
 
 export function supersedeFilings(out) {
-  const done = { amendments: 0, linked: 0, none: [], ambiguous: [], superseded_filings: 0, superseded_rows: 0 };
+  const done = { amendments: 0, linked: 0, none: [], ambiguous: [], unparsed: [], superseded_filings: 0, superseded_rows: 0 };
   const electronic = out.filter((x) => x.filing.source === 'efd' && x.filing.kind === 'electronic' && x.filing.title);
   const originals = new Map();
   for (const x of electronic) {
@@ -124,6 +127,7 @@ export function supersedeFilings(out) {
     const m = AMENDMENT.exec(x.filing.title);
     if (!m) continue;
     done.amendments++;
+    if (x.filing.parse_status !== 'parsed') { done.unparsed.push(x.filing.filing_id); continue; }
     const cands = originals.get(`${x.filing.bioguide}|${x.filing.title.replace(AMENDMENT, '')}`) ?? [];
     let root = cands.length === 1 ? cands[0] : null;
     if (cands.length > 1) {

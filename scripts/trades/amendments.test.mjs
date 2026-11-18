@@ -182,3 +182,19 @@ test('no original, another member\'s original, or a paper one: nothing is linked
     assert.ok(out.every((x) => x.filing.amends_filing_id === null && x.rows.every((r) => !r.superseded)));
   }
 });
+
+test('an amendment with no rows supersedes nothing; the next parsed one skips it', () => {
+  const a2 = 'bbbbbbbb-0000-0000-0000-000000000002';
+  let out = efdOut([entry(ORIG, T, '2017-10-04'), entry(AMEND, `${T} (Amendment 1)`, '2018-03-12')], { [ORIG]: fx(ORIG) });
+  let done = supersedeFilings(out);
+  assert.equal(out[1].filing.parse_status, 'failed');
+  assert.deepEqual([done.linked, done.unparsed, out[1].filing.amends_filing_id], [0, [AMEND], null]);
+  assert.ok(out[0].rows.every((r) => !r.superseded));
+  out = efdOut([entry(ORIG, T, '2017-10-04'), entry(AMEND, `${T} (Amendment 1)`, '2018-03-12'), entry(a2, `${T} (Amendment 2)`, '2018-05-01')],
+    { [ORIG]: fx(ORIG), [a2]: as(fx(AMEND), `${T} (Amendment 2)`, '05/01/2018') });
+  done = supersedeFilings(out);
+  assert.equal(out[2].filing.amends_filing_id, ORIG);
+  assert.equal(out[1].filing.amends_filing_id, null);
+  assert.ok(out[0].rows.every((r) => r.superseded));
+  assert.deepEqual(done.unparsed, [AMEND]);
+});

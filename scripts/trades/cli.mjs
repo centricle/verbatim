@@ -166,8 +166,9 @@ function summarize(b) {
   if (b.efd) console.log('eFD', b.efd);
   console.log('Senate filings by source', by(b.filings.filter((f) => f.chamber === 'senate'), (f) => `${f.source} ${f.kind}`));
   const sa = b.senateAmendments;
-  console.log(`Senate amendments: ${sa.amendments} electronic, ${sa.linked} linked, ${sa.superseded_rows.toLocaleString()} rows superseded; no original ${sa.none.length}, ambiguous ${sa.ambiguous.length}`);
-  for (const id of [...sa.none, ...sa.ambiguous]) console.log(`UNLINKED ${id}`);
+  console.log(`Senate amendments: ${sa.amendments} electronic, ${sa.linked} linked, ${sa.superseded_rows.toLocaleString()} rows superseded; no original ${sa.none.length}, ambiguous ${sa.ambiguous.length}, not parsed ${sa.unparsed.length}`);
+  for (const id of sa.none) console.log(`UNLINKED ${id}: no original`);
+  for (const id of sa.ambiguous) console.log(`UNLINKED ${id}: ambiguous`);
   for (const f of b.filings.filter((x) => x.parse_status === 'failed').slice(0, 20)) console.log(`FAILED ${f.chamber} ${f.report_year ?? f.filed_date} ${f.filing_id}: ${f.parse_error}`);
 }
 

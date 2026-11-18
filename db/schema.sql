@@ -13,7 +13,7 @@
 -- filled when each dataset was loaded; no trigger maintains them. Tables
 -- added since generate theirs (GENERATED ALWAYS AS ... STORED), and their
 -- authored DDL lives beside this file (db/crashes.sql, db/corpus.sql,
--- db/executive.sql).
+-- db/executive.sql, db/clemency.sql).
 --
 -- Netlify functions in netlify/functions/ call the search_* and *_stats
 -- functions; sorting is whitelisted inside each function with CASE.
@@ -37,6 +37,42 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: clemency_grants_stats(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.clemency_grants_stats() RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'total', (SELECT count(*) FROM clemency_grants),
+    'by_type', (SELECT coalesce(jsonb_object_agg(coalesce(type, 'title'), n), '{}'::jsonb) FROM (
+      SELECT type, count(*) AS n FROM clemency_grants GROUP BY type) s),
+    'date_range', (SELECT jsonb_build_object('min', min(grant_date), 'max', max(grant_date)) FROM clemency_grants),
+    'by_term', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.first, s.president), '[]'::jsonb) FROM (
+      SELECT president, president_name, term, min(grant_date) AS first,
+        count(*) FILTER (WHERE type = 'pardon') AS pardon,
+        count(*) FILTER (WHERE type = 'commutation') AS commutation,
+        count(*) FILTER (WHERE kind = 'title') AS title
+      FROM clemency_grants GROUP BY president, president_name, term) s),
+    'by_year', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.year), '[]'::jsonb) FROM (
+      SELECT grant_year AS year,
+        count(*) FILTER (WHERE type = 'pardon') AS pardon,
+        count(*) FILTER (WHERE type = 'commutation') AS commutation,
+        count(*) FILTER (WHERE kind = 'title') AS title
+      FROM clemency_grants GROUP BY grant_year) s),
+    'president_list', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.first), '[]'::jsonb) FROM (
+      SELECT president, president_name, min(grant_date) AS first
+      FROM clemency_grants GROUP BY president, president_name) s),
+    'year_list', (SELECT coalesce(jsonb_agg(grant_year ORDER BY grant_year DESC), '[]'::jsonb) FROM (
+      SELECT DISTINCT grant_year FROM clemency_grants) s)
+  ) INTO result;
+  RETURN result;
+END; $$;
+
 
 --
 -- Name: compas_stats(); Type: FUNCTION; Schema: public; Owner: -
@@ -375,6 +411,50 @@ BEGIN
     'by_ruling', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.count DESC), '[]'::jsonb) FROM (SELECT qi_ruling, count(*) as count FROM qi_cases WHERE qi_ruling IS NOT NULL GROUP BY qi_ruling ORDER BY count DESC) s),
     'by_violation', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.count DESC), '[]'::jsonb) FROM (SELECT violation_type, count(*) as count FROM qi_cases WHERE violation_type IS NOT NULL GROUP BY violation_type ORDER BY count DESC) s)
   ) INTO result;
+  RETURN result;
+END; $$;
+
+
+--
+-- Name: search_clemency_grants(text, text, text, integer, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.search_clemency_grants(search_query text DEFAULT NULL::text, filter_president text DEFAULT NULL::text, filter_type text DEFAULT NULL::text, filter_year integer DEFAULT NULL::integer, sort_by text DEFAULT 'date'::text, sort_dir text DEFAULT 'desc'::text, page_num integer DEFAULT 1, page_size integer DEFAULT 50) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE total_count bigint; result jsonb; q tsquery;
+BEGIN
+  IF search_query IS NOT NULL AND search_query <> '' THEN q := plainto_tsquery('english', search_query); END IF;
+  SELECT count(*) INTO total_count FROM clemency_grants
+  WHERE (q IS NULL OR tsv @@ q)
+    AND (filter_president IS NULL OR president = filter_president)
+    AND (filter_type IS NULL OR type = filter_type)
+    AND (filter_year IS NULL OR grant_year = filter_year);
+  SELECT jsonb_build_object('total', total_count, 'rows', coalesce(jsonb_agg(row_data), '[]'::jsonb))
+  INTO result FROM (
+    SELECT jsonb_build_object('id', c.id, 'president', c.president,
+      'president_name', c.president_name, 'term', c.term, 'type', c.type, 'kind', c.kind,
+      'grant_date', c.grant_date, 'heading', c.heading, 'name', c.name,
+      'district', c.district, 'sentence', c.sentence, 'offense', c.offense,
+      'terms', c.terms, 'sentence_began', c.sentence_began, 'commuted_to', c.commuted_to,
+      'warrant_url', c.warrant_url, 'warrant_label', c.warrant_label,
+      'group_description', c.group_description, 'note', c.note,
+      'source_url', 'https://www.justice.gov/pardon/' || c.page,
+      'executive', CASE WHEN d.id IS NULL THEN NULL ELSE jsonb_build_object(
+        'id', d.id, 'type', d.type, 'number', d.number, 'citation', d.citation) END) AS row_data
+    FROM clemency_grants c
+    LEFT JOIN fr_presidential_documents d ON d.document_number = c.fr_document_number
+    WHERE (q IS NULL OR c.tsv @@ q)
+      AND (filter_president IS NULL OR c.president = filter_president)
+      AND (filter_type IS NULL OR c.type = filter_type)
+      AND (filter_year IS NULL OR c.grant_year = filter_year)
+    ORDER BY
+      CASE WHEN sort_by = 'date' AND sort_dir = 'asc' THEN c.grant_date END ASC,
+      CASE WHEN sort_by = 'date' AND sort_dir = 'asc' THEN c.page END ASC,
+      CASE WHEN sort_by = 'date' AND sort_dir = 'asc' THEN c.position END ASC,
+      c.grant_date DESC, c.page ASC, c.position ASC
+    LIMIT page_size OFFSET (page_num - 1) * page_size
+  ) sub;
   RETURN result;
 END; $$;
 
@@ -787,6 +867,67 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: clemency_grants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.clemency_grants (
+    id text NOT NULL,
+    page text NOT NULL,
+    "position" integer NOT NULL,
+    president text NOT NULL,
+    president_name text NOT NULL,
+    term text NOT NULL,
+    type text,
+    kind text NOT NULL,
+    grant_date date NOT NULL,
+    grant_year integer NOT NULL,
+    heading text,
+    name text NOT NULL,
+    district text,
+    sentence text,
+    offense text,
+    terms text,
+    sentence_began text,
+    commuted_to text,
+    warrant_url text,
+    warrant_label text,
+    group_description text,
+    note text,
+    fr_document_number text,
+    source_ref text NOT NULL,
+    tsv tsvector GENERATED ALWAYS AS (((setweight(to_tsvector('english'::regconfig, COALESCE(name, ''::text)), 'A'::"char") || setweight(to_tsvector('english'::regconfig, ((COALESCE(district, ''::text) || ' '::text) || COALESCE(offense, ''::text))), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, ((((((((COALESCE(sentence, ''::text) || ' '::text) || COALESCE(terms, ''::text)) || ' '::text) || COALESCE(commuted_to, ''::text)) || ' '::text) || COALESCE(group_description, ''::text)) || ' '::text) || COALESCE(note, ''::text))), 'C'::"char"))) STORED,
+    CONSTRAINT clemency_grants_check CHECK (((kind = 'entry'::text) = (type IS NOT NULL))),
+    CONSTRAINT clemency_grants_kind_check CHECK ((kind = ANY (ARRAY['entry'::text, 'title'::text]))),
+    CONSTRAINT clemency_grants_type_check CHECK ((type = ANY (ARRAY['pardon'::text, 'commutation'::text])))
+);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN id SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN page SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN "position" SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN president SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN president_name SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN term SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN type SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN kind SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN grant_date SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN grant_year SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN heading SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN name SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN district SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN sentence SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN offense SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN terms SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN sentence_began SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN commuted_to SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN warrant_url SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN warrant_label SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN group_description SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN note SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN fr_document_number SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN source_ref SET (pg_attver=1152122912);
+ALTER TABLE ONLY public.clemency_grants ALTER COLUMN tsv SET (pg_attver=1152122912);
+
+
+--
 -- Name: compas_defendants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1188,6 +1329,22 @@ ALTER TABLE ONLY public.senate_trades ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
+-- Name: clemency_grants clemency_grants_page_position_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clemency_grants
+    ADD CONSTRAINT clemency_grants_page_position_key UNIQUE (page, "position");
+
+
+--
+-- Name: clemency_grants clemency_grants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clemency_grants
+    ADD CONSTRAINT clemency_grants_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: compas_defendants compas_defendants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1273,6 +1430,41 @@ ALTER TABLE ONLY public.senate_trades
 
 ALTER TABLE ONLY public.sgo_crashes
     ADD CONSTRAINT sgo_crashes_pkey PRIMARY KEY (report_id);
+
+
+--
+-- Name: idx_clemency_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_clemency_date ON public.clemency_grants USING btree (grant_date, page, "position");
+
+
+--
+-- Name: idx_clemency_president; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_clemency_president ON public.clemency_grants USING btree (president);
+
+
+--
+-- Name: idx_clemency_tsv; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_clemency_tsv ON public.clemency_grants USING gin (tsv);
+
+
+--
+-- Name: idx_clemency_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_clemency_type ON public.clemency_grants USING btree (type);
+
+
+--
+-- Name: idx_clemency_year; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_clemency_year ON public.clemency_grants USING btree (grant_year);
 
 
 --

@@ -47,6 +47,11 @@ export async function handler(event) {
     return json(row.data)
   }
 
+  if (params.action === 'contents') {
+    const [row] = await sql`SELECT corpus_contents() as data`
+    return json(row.data)
+  }
+
   if (params.action === 'get') {
     if (!ID.test(params.id || '')) return json({ error: 'not found' }, 404)
     const [row] = await sql`SELECT get_corpus_statement(${params.id}) as data`

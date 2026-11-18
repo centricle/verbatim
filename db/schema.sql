@@ -85,6 +85,27 @@ $_$;
 
 
 --
+-- Name: corpus_contents(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.corpus_contents() RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT jsonb_build_object(
+    'speakers', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.speaker), '[]'::jsonb) FROM (
+      SELECT speaker, count(*) AS count,
+        min(extract(year FROM date))::int AS first, max(extract(year FROM date))::int AS last
+      FROM corpus_statements GROUP BY speaker) s),
+    'series', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.series_member), '[]'::jsonb) FROM (
+      SELECT series_member, id, date, title
+      FROM corpus_statements WHERE series_member IS NOT NULL) s),
+    'by_genre', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.genre), '[]'::jsonb) FROM (
+      SELECT genre, count(*) AS count FROM corpus_statements GROUP BY genre) s)
+  );
+$$;
+
+
+--
 -- Name: corpus_rebuild_terms(); Type: FUNCTION; Schema: public; Owner: -
 --
 

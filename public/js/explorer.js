@@ -18,6 +18,13 @@
 // come from stats cannot hold a deep-linked value until they arrive; reading
 // the control back early dropped the filter, so the table loaded unfiltered
 // while the select later showed the filter.
+//
+// Stats are fetched once, unless the page names `statsKeys`: filters the
+// stats themselves take (trades' chamber). Changing one refetches stats,
+// rebuilds the select options from the answer, redraws the charts and calls
+// `onStats` again. A rebuilt list can be narrower than the last (one
+// chamber's members); a filter it has no option for is then cleared, in the
+// same history entry, rather than left filtering invisibly.
 
 const PAGE_SIZE = 50;
 
@@ -111,6 +118,14 @@ async function getJson(url, signal) {
  * @param {(stats: object, opts: { onFilter: Function }) => unknown} [cfg.charts]
  *                                Mount the charts. Start their imports before calling
  *                                `createExplorer`, so they load while stats is in flight.
+ *                                With `statsKeys`, called again on each refetch, so a
+ *                                mount must reuse its container's root (src/viz/mount.js).
+ * @param {string[]} [cfg.statsKeys] Filter keys also sent with `?action=stats`. Changing
+ *                                one refetches stats (comment at the top of this file).
+ * @param {(stats: object, params: Record<string, string>) => void} [cfg.onStats]
+ *                                Called with each stats answer and the filters it was
+ *                                asked with, before the charts: page copy read off the
+ *                                data, such as a lede's counts.
  */
 export function createExplorer(cfg) {
   const byId = (suffix) => document.getElementById(`${cfg.prefix}-${suffix}`);
@@ -126,10 +141,15 @@ export function createExplorer(cfg) {
     cfg.filters.map((key) => [key, document.getElementById(`filter-${key}`)]),
   );
   const keys = ['q', ...cfg.filters];
+  const statsKeys = cfg.statsKeys ?? [];
   const pageParams = cfg.pageParams ?? ((page, pageSize) => ({ page, pageSize }));
 
   let state = readUrl();
   let inFlight = null;
+  let statsQuery = null;
+  let statsInFlight = null;
+  // Options each select was given from stats, removed before the next list.
+  const listed = new Map();
 
   function readUrl() {
     const params = new URLSearchParams(location.search);
@@ -162,6 +182,7 @@ export function createExplorer(cfg) {
       history.pushState(null, '', url);
     }
     search();
+    loadStats();
   }
 
   async function search() {
@@ -241,19 +262,59 @@ export function createExplorer(cfg) {
     if (Object.keys(changes).length) commit({ ...changes, page: 1 });
   }
 
-  function addOptions(stats) {
+  function addOptions(stats, refetch) {
     const lists = cfg.options?.(stats) ?? {};
+    const cleared = {};
     for (const [key, pairs] of Object.entries(lists)) {
       const select = controls[key];
-      for (const [value, label] of pairs) {
+      for (const option of listed.get(select) ?? []) option.remove();
+      const added = pairs.map(([value, label]) => {
         const option = document.createElement('option');
         option.value = value;
         option.textContent = label;
-        select.appendChild(option);
-      }
+        return option;
+      });
+      select.append(...added);
+      listed.set(select, added);
       // The deep-linked value has an option to land on now.
       select.value = state[key];
+      if (refetch && state[key] && select.value !== state[key]) cleared[key] = '';
     }
+    if (Object.keys(cleared).length) {
+      state = { ...state, ...cleared, page: 1 };
+      history.replaceState(null, '', urlFor(state));
+      syncControls();
+      search();
+    }
+  }
+
+  // Stats feeds the select options, onStats and the charts. The first request
+  // goes out with the first search rather than after the chart modules load,
+  // so the selects never wait on the React + D3 chunk. Asking again for the
+  // stats already asked for does nothing.
+  function loadStats() {
+    const params = { action: 'stats' };
+    for (const key of statsKeys) if (state[key]) params[key] = state[key];
+    const query = new URLSearchParams(params).toString();
+    if (query === statsQuery) return;
+    const refetch = statsQuery !== null;
+    statsQuery = query;
+    statsInFlight?.abort();
+    const controller = new AbortController();
+    statsInFlight = controller;
+    getJson(`${cfg.endpoint}?${query}`, controller.signal)
+      .then((stats) => {
+        if (controller.signal.aborted) return undefined;
+        addOptions(stats, refetch);
+        cfg.onStats?.(stats, params);
+        return cfg.charts?.(stats, { onFilter });
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.error(err);
+        // Stops the loading hairline (app.css) on the plots that never drew.
+        for (const el of document.querySelectorAll('.figure-plot:empty')) el.setAttribute('aria-busy', 'false');
+      });
   }
 
   // Enter in a typed control (a year) submits the form, and need not fire
@@ -278,22 +339,10 @@ export function createExplorer(cfg) {
     state = readUrl();
     syncControls();
     search();
+    loadStats();
   });
 
   syncControls();
   search();
-
-  // Stats feeds the select options and the charts. It used to be requested
-  // only after the chart modules had loaded, so the selects waited on the
-  // React + D3 chunk; now it goes out with the first search.
-  getJson(`${cfg.endpoint}?action=stats`)
-    .then((stats) => {
-      addOptions(stats);
-      return cfg.charts?.(stats, { onFilter });
-    })
-    .catch((err) => {
-      console.error(err);
-      // Stops the loading hairline (app.css) on the plots that never drew.
-      for (const el of document.querySelectorAll('.figure-plot:empty')) el.setAttribute('aria-busy', 'false');
-    });
+  loadStats();
 }

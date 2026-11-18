@@ -16,11 +16,19 @@ import { efd } from './sources.mjs';
 export const TYPES = ['Purchase', 'Sale (Full)', 'Sale (Partial)', 'Exchange'];
 
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
+const codePoint = (e) => String.fromCodePoint(/^#x/i.test(e) ? parseInt(e.slice(2), 16) : Number(e.slice(1)));
 
+// eFD pages write an apostrophe as the hex reference &#x27; (213 of them in
+// 116 pages as of 2026-11-18), so numeric references decode in both bases.
+// Eight pages encode a reference twice ("Merck &amp;amp; Co."), so a browser
+// shows "&amp;", and Senate Stock Watcher copied it. That is eFD's encoding,
+// not the filer's words: an &amp; that wraps another reference is unwrapped
+// first, and the text reads "Merck & Co." (ksmith, 2026-11-18).
 export function htmlText(s) {
   return s
     .replace(/<[^>]*>/g, ' ')
-    .replace(/&(#\d+|[a-z]+);/gi, (m, e) => ENTITIES[e.toLowerCase()] ?? (e.startsWith('#') ? String.fromCodePoint(Number(e.slice(1))) : m))
+    .replace(/&amp;(#x[0-9a-f]+|#\d+|[a-z]+);/gi, '&$1;')
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => ENTITIES[e.toLowerCase()] ?? (e.startsWith('#') ? codePoint(e) : m))
     .replace(/\s+/g, ' ')
     .trim();
 }

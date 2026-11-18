@@ -20,6 +20,8 @@ test('eFD markup reduces to its text', () => {
   assert.equal(htmlText('Wells Fargo &amp; Company'), 'Wells Fargo & Company');
   assert.equal(htmlText('A&nbsp;B <br>C'), 'A B C');
   assert.equal(htmlText('<div class="text-muted"><em>Rate:</em> 1%</div>'), 'Rate: 1%');
+  assert.equal(htmlText('Aaron&#x27;s, Inc. &#35;1 L&#X27;Or&#233;al'), "Aaron's, Inc. #1 L'Oréal");
+  assert.equal(htmlText('Merck &amp;amp; Co. McDonald&amp;apos;s S&amp;P'), "Merck & Co. McDonald's S&P");
 });
 
 test('filing links: ptr and paper, either case', () => {

@@ -11,15 +11,15 @@
 //   npm run trades -- check               raw vs parsed vs loaded, every column
 //   npm run trades -- sample N            N counted House rows spread across years,
 //                                         to tmp/trades/sample.json
-//   npm run trades -- refresh --target E  fetch, load, check
+//   npm run trades -- archive [--dry-run]  copy tmp/trades/house/ to the private R2
+//                                         bucket: upload what it lacks, then verify
+//                                         every file by MD5 (archive.mjs)
+//   npm run trades -- refresh --target E  fetch, load, check, archive
 //
 // Writes name their endpoint: E must be the first label of DATABASE_URL's
 // host (without "-pooler"), so a load meant for a Neon branch cannot reach
 // main through an environment mixup. To write to a branch, set DATABASE_URL
 // in the environment; it wins over .env.
-//
-// Not yet: `archive`, the copy of tmp/trades/house/ to a private R2 bucket
-// (decision 7), which waits on the bucket.
 //
 // Raw downloads are untrusted data. Nothing is ever run from tmp/trades/.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -33,6 +33,7 @@ import { rawRowCount } from './house.mjs';
 import { compare } from './check.mjs';
 import { MEMBER_COLUMNS, FILING_COLUMNS, ROW_COLUMNS, selectList } from './columns.mjs';
 import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
+import { archive } from './archive.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let lastRequest = 0;
@@ -195,6 +196,12 @@ async function sampleCmd(rest) {
   console.log(`${rows.length} rows to ${out}`);
 }
 
+async function archiveCmd(rest) {
+  const failures = await archive({ dryRun: rest.includes('--dry-run') });
+  for (const f of failures) console.log(`FAIL ${f}`);
+  if (failures.length) process.exitCode = 1;
+}
+
 async function main([cmd, ...rest]) {
   switch (cmd) {
     case 'index': await indexCmd(); break;
@@ -204,14 +211,18 @@ async function main([cmd, ...rest]) {
     case 'load': await loadCmd(rest); break;
     case 'check': await checkCmd(); break;
     case 'sample': await sampleCmd(rest); break;
+    case 'archive': await archiveCmd(rest); break;
+    // Archive runs last and even after a failed check: the raw copies are
+    // worth keeping whatever the parse made of them.
     case 'refresh':
       requireTarget(rest);
       await fetchCmd();
       await loadCmd(rest);
       await checkCmd();
+      await archiveCmd([]);
       break;
     default:
-      console.error('usage: cli.mjs index|fetch|parse|schema --target E|load --target E|check|sample N|refresh --target E');
+      console.error('usage: cli.mjs index|fetch|parse|schema --target E|load --target E|check|sample N|archive [--dry-run]|refresh --target E');
       process.exitCode = 2;
   }
 }

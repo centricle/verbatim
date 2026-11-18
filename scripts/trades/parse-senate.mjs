@@ -22,6 +22,14 @@
 //   b9b478b7 (2017) prints #5 first, e30d1fb6 (2018) prints it between #13
 //   and #12. Rows come back in page order, which is also Senate Stock
 //   Watcher's order on both of those.
+// - Five pages from January to July 2015 (Carper 6bd46141, Collins d221805d
+//   and its three amendments) repeat the top row's number on the bottom row,
+//   "7,6,5,4,3,2,7", so no row is #1. When every `#` is a whole number from
+//   1 to N but not each appears once, the page is `renumbered`: each row's
+//   row_num is its position counted up from the bottom, the order eFD prints
+//   in. On those five that is the printed `#` on every row but the bottom
+//   one, which becomes 1 (ksmith, 2026-11-18). Anything else in the column
+//   throws.
 // - h2.filedReport prints the filer's status today ("(Former Senator)" on a
 //   2019 report), not at filing, so it is not read.
 import { parse } from 'node-html-parser';
@@ -62,7 +70,7 @@ export function parsePtr(html) {
   if (tables.length > 1) throw new Error(`${tables.length} tables`);
   if (!tables.length) {
     if (total) throw new Error(`no table for ${total} transactions`);
-    return { title, filed, total, rows: [] };
+    return { title, filed, total, renumbered: false, rows: [] };
   }
 
   const headers = tables[0].querySelectorAll('thead th').map(text);
@@ -80,10 +88,12 @@ export function parsePtr(html) {
   });
 
   if (rows.length !== total) throw new Error(`${rows.length} rows, ${total} transactions total`);
+  const printed = rows.map((r) => r.row_num).join(',');
   const nums = rows.map((r) => (/^[1-9]\d*$/.test(r.row_num ?? '') ? Number(r.row_num) : NaN));
+  if (nums.some((n) => !(n <= rows.length))) throw new Error(`# column ${printed}: not each a whole number from 1 to ${rows.length}`);
   const sorted = [...nums].sort((a, b) => a - b);
-  if (sorted.some((n, i) => n !== i + 1)) throw new Error(`# column ${rows.map((r) => r.row_num).join(',')}, expected each of 1 to ${rows.length} once`);
-  rows.forEach((r, i) => { r.row_num = nums[i]; });
+  const renumbered = sorted.some((n, i) => n !== i + 1);
+  rows.forEach((r, i) => { r.row_num = renumbered ? rows.length - i : nums[i]; });
 
-  return { title, filed, total, rows };
+  return { title, filed, total, renumbered, rows };
 }

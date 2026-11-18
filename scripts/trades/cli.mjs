@@ -163,7 +163,11 @@ function summarize(b) {
   console.log('House member match', b.how, `excluded ${b.excluded.length}`);
   console.log('Senate bioguides corrected', by(b.senateFixed, (x) => `${x.from} -> ${x.to}`));
   console.log('House notices', b.amendments);
-  if (b.efd) console.log('eFD', b.efd);
+  if (b.efd) {
+    const { renumbered, ...counts } = b.efd;
+    console.log('eFD', counts);
+    for (const u of renumbered) console.log(`RENUMBERED ${u}: # column printed a number twice; rows numbered from the bottom`);
+  }
   console.log('Senate filings by source', by(b.filings.filter((f) => f.chamber === 'senate'), (f) => `${f.source} ${f.kind}`));
   const sa = b.senateAmendments;
   console.log(`Senate amendments: ${sa.amendments} electronic, ${sa.linked} linked, ${sa.superseded_rows.toLocaleString()} rows superseded; no original ${sa.none.length}, ambiguous ${sa.ambiguous.length}, not parsed ${sa.unparsed.length}`);
@@ -245,7 +249,7 @@ async function checkCmd(rest = []) {
   if (b.efd) {
     const pageGone = b.ledger.filter((e) => e.page_gone);
     const unlisted = goneFromEfd(b.ledger);
-    console.log(`eFD: ${pageGone.length} listed with the page gone, ${unlisted.length} no longer listed (gone_from_efd; reported, not failed)`);
+    console.log(`eFD: ${pageGone.length} listed with the page gone, ${unlisted.length} no longer listed (gone_from_efd), ${b.efd.renumbered.length} pages renumbered (${b.efd.renumbered.map((u) => u.slice(0, 8)).join(', ')}); reported, not failed`);
     for (const e of unlisted) console.log(`  gone_from_efd ${e.uuid} ${e.last} ${e.date_received} last listed ${e.last_seen.slice(0, 10)}`);
   }
   if (failures.length) {

@@ -213,6 +213,8 @@ export async function build({ onProgress, efd: useEfd = true } = {}) {
     pages: pages.size,
     filings: split.entries.length,
     to_carambat: ledger.length - split.entries.length,
+    // Pages whose printed # column was renumbered from the bottom (parse-senate.mjs).
+    renumbered: [...pages].filter(([, p]) => p.page?.renumbered).map(([u]) => u).sort(),
   };
   return {
     members, filings, rows, index, excluded, how, amendments, records, senateFixed: senateResolved.fixed,

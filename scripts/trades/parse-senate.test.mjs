@@ -68,11 +68,19 @@ test('# out of sequence is kept as printed, in page order', () => {
   assert.deepEqual(parsePtr(html).rows.map((x) => [x.row_num, x.ticker]), [[1, 'CMBS'], [2, 'TLH']]);
 });
 
-test('a # missing, repeated or not a number throws', () => {
-  for (const n of ['3', '1', '--']) {
+test('a # outside 1 to N, or not a number, throws', () => {
+  for (const n of ['3', '0', '--']) {
     const html = fx('21941188').replace('<td>2</td>', `<td>${n}</td>`);
-    assert.throws(() => parsePtr(html), /expected each of 1 to 2 once/, n);
+    assert.throws(() => parsePtr(html), /not each a whole number from 1 to 2/, n);
   }
+});
+
+test('a repeated #, as on five 2015 pages: renumbered from the bottom', () => {
+  const html = fx('deb8df2a').replace(/<td>1<\/td>/, '<td>5</td>');
+  const r = parsePtr(html);
+  assert.equal(r.renumbered, true);
+  assert.deepEqual(r.rows.map((x) => x.row_num), [5, 4, 3, 2, 1]);
+  assert.equal(parsePtr(fx('deb8df2a')).renumbered, false);
 });
 
 test('a page that is not a PTR throws', () => {

@@ -1,7 +1,8 @@
-// Horizontal bars, one per category, most first: the shape of most explorer
-// figures ("reports by make", "top districts"). The data arrives ranked and
-// trimmed by the stats function; this draws it at true size and sets a
-// filter when a bar is selected.
+// Horizontal bars, one per category: the shape of most explorer figures
+// ("reports by make", "top districts"). Bars keep the order the data arrives
+// in, as the stats function sorted and trimmed it: most first, or another
+// order it chose (presidents in term order on /executive/). This draws them
+// at true size and sets a filter when a bar is selected.
 import React, { useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';

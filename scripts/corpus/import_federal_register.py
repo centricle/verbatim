@@ -4,18 +4,19 @@
 import argparse
 import json
 import os
+import sqlite3
 import sys
 import time
 
 import requests
 
-from ingest import bulk_insert, make_id
+from ingest import CORPUS_DB, bulk_insert, make_id
 from scrape import SPEAKERS
 
 API_BASE = "https://www.federalregister.gov/api/v1"
 PER_PAGE = 100
 PAGE_DELAY = 0.5
-TEXT_DELAY = 0.2
+TEXT_DELAY = 1.0  # 0.2 drew an HTTP 429 after ~1,400 requests (2026-11-18)
 
 # Federal Register president identifiers → verbatim speaker slugs
 # FR uses formal names; map to our canonical slugs
@@ -156,6 +157,19 @@ def fetch_documents(doc_type, since=None, dry_run=False):
 STOP_STATUSES = {403, 429, 503}
 
 
+def stored_urls():
+    """Source URLs of the Federal Register documents corpus.db already holds."""
+    if not os.path.exists(CORPUS_DB):
+        return set()
+    conn = sqlite3.connect(f"file:{CORPUS_DB}?mode=ro", uri=True)
+    try:
+        rows = conn.execute(
+            "SELECT source_url FROM statements WHERE source_name = 'federal_register'").fetchall()
+    finally:
+        conn.close()
+    return {url for (url,) in rows}
+
+
 def fetch_full_text(records, dry_run=False):
     """Fetch full text for each document from its raw_text_url.
 
@@ -247,8 +261,14 @@ def import_federal_register(doc_type="all", since=None, dry_run=False):
             print(f"  {t}: {count}")
         return len(all_records)
 
-    print(f"\nFetching full text for {len(all_records)} documents...")
-    complete, failures, stopped = fetch_full_text(all_records)
+    # Text is fetched only for documents corpus.db does not already hold (by
+    # source URL). Fetching all ~6,000 again drew an HTTP 429 from FR on
+    # 2026-11-18, and the insert would have ignored the ones already stored.
+    stored = stored_urls()
+    todo = [r for r in all_records if r["source_url"] not in stored]
+    print(f"\n{len(all_records) - len(todo)} documents already stored; "
+          f"fetching full text for {len(todo)}...")
+    complete, failures, stopped = fetch_full_text(todo)
 
     inserted = 0
     if complete:

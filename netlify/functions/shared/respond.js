@@ -10,8 +10,10 @@
 // is up. Each function tags its responses `api-<name>`, so a load can clear
 // its own:
 //
-//   netlify api purgeCache --data '{"site_slug":"verbatim-fyi","cache_tags":["api-trades"]}'
+//   netlify api purgeCache --data '{"body":{"site_slug":"verbatim-fyi","cache_tags":["api-trades"]}}'
 //
+// The CLI wants the payload under `body`; without it the API answers 400.
+// The next request after a purge reaches the function and gets fresh data.
 // A deploy clears the cache as well. Browsers keep a response for 30
 // seconds, as before, because nothing can purge a browser.
 //

@@ -23,6 +23,7 @@ export default defineConfig({
         qi: resolve(__dirname, 'public/qi/index.html'),
         crashes: resolve(__dirname, 'public/crashes/index.html'),
         executive: resolve(__dirname, 'public/executive/index.html'),
+        clemency: resolve(__dirname, 'public/clemency/index.html'),
         corpus: resolve(__dirname, 'public/corpus/index.html'),
         corpusContents: resolve(__dirname, 'public/corpus/contents/index.html'),
         amendments: resolve(__dirname, 'public/amendments/index.html'),

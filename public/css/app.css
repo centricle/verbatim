@@ -1156,6 +1156,23 @@
   .fr-notes p + p { margin-top: 0.35rem; }
   .fr-relation { font-weight: 600; }
 
+  /* ---------- Clemency recipients (/clemency/) ----------
+     DOJ prints multi-part values one part to a line ("1. ...", "2. ...") and
+     some names on several lines (a family pardoned together); .cell-lines
+     keeps those breaks. The offense opens in place, as a crash narrative
+     does, onto every other field DOJ printed for the entry. */
+  .record-table td.cell-lines { white-space: pre-line; }
+  .record-table td.cell-clip.cell-lines { white-space: nowrap; }
+  .grant-link {
+    display: block;
+    margin-top: 0.2rem;
+    font-family: var(--font-label);
+    font-size: 0.64rem;
+    font-weight: 500;
+  }
+  .grant-record { margin-top: 0.5rem; max-width: 34rem; white-space: normal; }
+  .grant-record dd { white-space: pre-line; }
+
   /* ---------- Amendments (/amendments/) ----------
      One entry per amendment: title, dates and sources in a left column, the
      text in the reading column, stacked below 768. */

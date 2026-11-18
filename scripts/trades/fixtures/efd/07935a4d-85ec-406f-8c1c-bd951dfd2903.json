@@ -1,0 +1,209 @@
+{
+ "uuid": "07935a4d-85ec-406f-8c1c-bd951dfd2903",
+ "why": "Amendment 1 of 691f9cb6: every row again, #9 corrected",
+ "expect": {
+  "title": "Periodic Transaction Report for 10/04/2017 (Amendment 1)",
+  "filed": "03/12/2018",
+  "total": 18,
+  "rows": [
+   {
+    "row_num": 18,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Western Asset/Claymore Inflation",
+    "asset_type": "Stock",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 17,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "SPDR Gold Tr Gold Shs",
+    "asset_type": "Other",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 16,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Ishares Ibonds Dec 20 Trm Corp",
+    "asset_type": "Other",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 15,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Ishares Ibonds Dec 18 Trm Corp",
+    "asset_type": "Other",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 14,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Pacer Trendpilot 750 ETF",
+    "asset_type": "Other",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 13,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Pacer Trendpilot 450 ETF",
+    "asset_type": "Other",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 12,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "FS Investment Corp Rate/Coupon: 4.0% Matures: 07/15/2019",
+    "asset_type": "Corporate Bond",
+    "type": "Sale (Full)",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 11,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Central Fund of Canada",
+    "asset_type": "Other",
+    "type": "Sale (Partial)",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 10,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Compass Minerals",
+    "asset_type": "Stock",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 9,
+    "transaction_date": "09/29/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Acadian Timber",
+    "asset_type": "Stock",
+    "type": "Sale (Full)",
+    "amount": "$1,001 - $15,000",
+    "comment": "Due to clerical error, transaction amount incorrectly reported when PTR filed."
+   },
+   {
+    "row_num": 8,
+    "transaction_date": "09/20/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Government Properties Inc Rate/Coupon: 4.0% Matures: 07/15/2022",
+    "asset_type": "Corporate Bond",
+    "type": "Purchase",
+    "amount": "$15,001 - $50,000",
+    "comment": null
+   },
+   {
+    "row_num": 7,
+    "transaction_date": "09/20/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Compass Bank Rate/Coupon: 3.875% Matures: 04/10/2025",
+    "asset_type": "Corporate Bond",
+    "type": "Sale (Full)",
+    "amount": "$15,001 - $50,000",
+    "comment": null
+   },
+   {
+    "row_num": 6,
+    "transaction_date": "09/18/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Hexcel Corp New",
+    "asset_type": "Stock",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 5,
+    "transaction_date": "09/18/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Mantech Intl Corp Cl A",
+    "asset_type": "Stock",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 4,
+    "transaction_date": "09/18/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Orbital ATK",
+    "asset_type": "Stock",
+    "type": "Sale (Full)",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 3,
+    "transaction_date": "09/07/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "SPDR Gold Tr Gold Shs",
+    "asset_type": "Stock",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 2,
+    "transaction_date": "09/07/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Central Fund of Canada",
+    "asset_type": "Stock",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 1,
+    "transaction_date": "09/05/2017",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "HSBC Contingent Autocall on Anadarko Petroleum Rate/Coupon: 9.0% Matures: 09/05/2017",
+    "asset_type": "Corporate Bond",
+    "type": "Sale (Full)",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   }
+  ]
+ }
+}

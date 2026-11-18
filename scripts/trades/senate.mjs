@@ -20,7 +20,7 @@ export function htmlText(s) {
     .trim();
 }
 
-const cell = (s) => {
+export const cell = (s) => {
   if (s == null) return null;
   const t = htmlText(String(s));
   return t === '' || t === '--' ? null : t;

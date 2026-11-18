@@ -1,0 +1,66 @@
+{
+ "uuid": "deb8df2a-b8ef-4f02-ae44-1f3b7168ccc2",
+ "why": "div.text-muted (coupon, maturity) inside the Asset Name cell",
+ "expect": {
+  "title": "Periodic Transaction Report for 01/03/2019",
+  "filed": "01/03/2019",
+  "total": 5,
+  "rows": [
+   {
+    "row_num": 5,
+    "transaction_date": "12/19/2018",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Bank of America Rate/Coupon: 3.0% Matures: 06/21/2019",
+    "asset_type": "Corporate Bond",
+    "type": "Purchase",
+    "amount": "$15,001 - $50,000",
+    "comment": null
+   },
+   {
+    "row_num": 4,
+    "transaction_date": "12/19/2018",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Bank of America Rate/Coupon: 3.0% Matures: 06/21/2019",
+    "asset_type": "Corporate Bond",
+    "type": "Purchase",
+    "amount": "$15,001 - $50,000",
+    "comment": null
+   },
+   {
+    "row_num": 3,
+    "transaction_date": "12/17/2018",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Invesco Pacific Growth A",
+    "asset_type": "Other",
+    "type": "Purchase",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   },
+   {
+    "row_num": 2,
+    "transaction_date": "12/17/2018",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Goldman Sachs Rate/Coupon: 4.5% Matures: 12/15/2018",
+    "asset_type": "Corporate Bond",
+    "type": "Sale (Full)",
+    "amount": "$15,001 - $50,000",
+    "comment": null
+   },
+   {
+    "row_num": 1,
+    "transaction_date": "12/10/2018",
+    "owner": "Spouse",
+    "ticker": null,
+    "asset_description": "Compass Materials",
+    "asset_type": "Stock",
+    "type": "Sale (Full)",
+    "amount": "$1,001 - $15,000",
+    "comment": null
+   }
+  ]
+ }
+}

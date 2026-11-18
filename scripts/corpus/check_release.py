@@ -19,6 +19,9 @@ Reads data/corpus/release.jsonl (written by build_release.py) and checks:
   - every series value names a series in series.json and sits on a core
     speech that answers to a member of its list, and no member answers to
     more than one record
+  - every series record carries the series_member key of the member it
+    answers to (build_release.member_key), no other record carries one, and
+    no two records share one
 
 Usage (from the repo root):
   python3 scripts/corpus/check_release.py [--release PATH]
@@ -34,7 +37,7 @@ import sys
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_release import RELEASE_JSONL, SERIES, SPEAKER_LAST_DATE, series_matches  # noqa: E402
+from build_release import RELEASE_JSONL, SERIES, SPEAKER_LAST_DATE, member_key, series_matches  # noqa: E402
 
 COLLECTIONS = {"core", "executive", "tweets", "voices"}
 # What the site loads into Postgres: core and voices (scripts/corpus/cli.mjs),
@@ -105,8 +108,13 @@ def check(records):
         if len(ids) > 1:
             fail["core title and date shared"].extend(ids)
 
+    member_ids = defaultdict(list)
     for r in records:
         key = r.get("series")
+        if (key is None) != (r.get("series_member") is None):
+            fail["series and series_member not set together"].append(r.get("id"))
+        if r.get("series_member") is not None:
+            member_ids[r["series_member"]].append(r.get("id"))
         if key is None:
             continue
         if key not in SERIES:
@@ -124,9 +132,14 @@ def check(records):
             for r in hits:
                 answered.add(r["id"])
                 claimed.add(r["id"])
+                if r.get("series_member") != member_key(key, m):
+                    fail[f"series {key}: series_member does not name its member"].append(r["id"])
         for r in marked:
             if r["id"] not in answered:
                 fail[f"series {key}: record answers to no member"].append(r["id"])
+    for ids in member_ids.values():
+        if len(ids) > 1:
+            fail["series_member shared"].extend(ids)
 
     missing = [n for n in ROMAN if n not in amendments]
     if missing:

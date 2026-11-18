@@ -841,6 +841,7 @@ CREATE TABLE public.corpus_statements (
     text text NOT NULL,
     tsv tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('english'::regconfig, title), 'A'::"char") || setweight(to_tsvector('english'::regconfig, text), 'B'::"char"))) STORED,
     series text,
+    series_member text,
     CONSTRAINT corpus_statements_check CHECK (((date IS NULL) = (date_precision = 'unknown'::text))),
     CONSTRAINT corpus_statements_collection_check CHECK ((collection = ANY (ARRAY['core'::text, 'voices'::text]))),
     CONSTRAINT corpus_statements_date_precision_check CHECK ((date_precision = ANY (ARRAY['day'::text, 'month'::text, 'year'::text, 'unknown'::text]))),
@@ -865,6 +866,7 @@ ALTER TABLE ONLY public.corpus_statements ALTER COLUMN certified SET (pg_attver=
 ALTER TABLE ONLY public.corpus_statements ALTER COLUMN text SET (pg_attver=172542016);
 ALTER TABLE ONLY public.corpus_statements ALTER COLUMN tsv SET (pg_attver=172542016);
 ALTER TABLE ONLY public.corpus_statements ALTER COLUMN series SET (pg_attver=248107256);
+ALTER TABLE ONLY public.corpus_statements ALTER COLUMN series_member SET (pg_attver=982123968);
 
 
 --
@@ -1313,6 +1315,13 @@ CREATE INDEX idx_corpus_genre ON public.corpus_statements USING btree (genre);
 --
 
 CREATE INDEX idx_corpus_series ON public.corpus_statements USING btree (series);
+
+
+--
+-- Name: idx_corpus_series_member; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_corpus_series_member ON public.corpus_statements USING btree (series_member);
 
 
 --

@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.corpus_statements (
     setweight(to_tsvector('english'::regconfig, text), 'B')
   ) STORED,
   series text,
+  series_member text,
   CHECK ((date IS NULL) = (date_precision = 'unknown'))
 );
 
@@ -42,6 +43,13 @@ CREATE TABLE IF NOT EXISTS public.corpus_statements (
 -- scripts/corpus/series.json. NULL for every other record. Added after the
 -- table was first created, hence the ALTER.
 ALTER TABLE public.corpus_statements ADD COLUMN IF NOT EXISTS series text;
+
+-- Which member of its series a record is, as build_release.py's member_key
+-- writes it: `inaugural:<ordinal>`, or `sotu:<date or year>:<speaker>`. Lets
+-- /corpus/contents/ set each cited list beside the records without matching
+-- them again. NULL exactly when series is. Added later too.
+ALTER TABLE public.corpus_statements ADD COLUMN IF NOT EXISTS series_member text;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_corpus_series_member ON public.corpus_statements (series_member);
 
 CREATE INDEX IF NOT EXISTS idx_corpus_speaker ON public.corpus_statements (speaker);
 CREATE INDEX IF NOT EXISTS idx_corpus_genre ON public.corpus_statements (genre);

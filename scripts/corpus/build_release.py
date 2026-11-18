@@ -1101,13 +1101,25 @@ def series_matches(member, records, pattern, claimed=()):
     return hits
 
 
+def member_key(series, member):
+    """The key that names one member of a series, built from the list's own
+    fields: its ordinal when the list numbers its members (`inaugural:44`),
+    else its date when the list gives one (`sotu:1790-01-08:george-washington`),
+    else its year (`sotu:1972:richard-nixon`, a written message). Year and
+    speaker alone are not enough: Washington gave two addresses in 1790, and
+    some presidents both spoke and sent a written message in one year."""
+    if member.get("ordinal") is not None:
+        return f"{series}:{member['ordinal']}"
+    return f"{series}:{member.get('date') or member['year']}:{member['speaker']}"
+
+
 def assign_series(release):
-    """Set `series` on the core record each list member names, and return the
-    report's series section. Members with a date go first, so a member the
-    list gives only a year for (a written message) never takes the address a
-    dated member already took in the same year. A member with more than one
-    match marks them all, and check_release.py fails it; a member with none
-    is listed as absent."""
+    """Set `series` and `series_member` (see member_key) on the core record
+    each list member names, and return the report's series section. Members
+    with a date go first, so a member the list gives only a year for (a
+    written message) never takes the address a dated member already took in
+    the same year. A member with more than one match marks them all, and
+    check_release.py fails it; a member with none is listed as absent."""
     core = [r for r in release if r["collection"] == "core" and r["genre"] == "speech" and r["date"]]
     section = {}
     for key, spec in SERIES.items():
@@ -1123,6 +1135,7 @@ def assign_series(release):
                 if r.get("series") and r["series"] != key:
                     ambiguous.append({"member": m, "ids": [r["id"]], "also": r["series"]})
                 r["series"] = key
+                r["series_member"] = member_key(key, m)
                 claimed.add(r["id"])
         section[key] = {"members": len(spec["members"]), "records": len(claimed),
                         "absent": absent, "ambiguous": ambiguous}

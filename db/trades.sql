@@ -227,7 +227,8 @@ END; $$;
 
 -- Every key the four charts read (by_year, top_traders, top_tickers,
 -- by_amount) keeps its shape; top_traders entries keep `senator` for the
--- chart and carry `member` beside it.
+-- chart and carry `member` beside it, plus `chambers`, the chambers their
+-- counted rows here come from (two for a member with rows from both).
 CREATE OR REPLACE FUNCTION public.stock_trades_stats(filter_chamber text DEFAULT NULL) RETURNS json
   LANGUAGE sql STABLE
   AS $$
@@ -261,8 +262,8 @@ CREATE OR REPLACE FUNCTION public.stock_trades_stats(filter_chamber text DEFAULT
         count(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) AS sales
         FROM dated GROUP BY yr) x),
     'top_traders', (SELECT coalesce(json_agg(json_build_object('senator', m.member, 'member', m.member, 'bioguide', x.bioguide,
-        'total_trades', cnt, 'purchases', purchases, 'sales', sales) ORDER BY cnt DESC, m.member_sort), '[]'::json)
-      FROM (SELECT bioguide, count(*) AS cnt,
+        'chambers', x.chambers, 'total_trades', cnt, 'purchases', purchases, 'sales', sales) ORDER BY cnt DESC, m.member_sort), '[]'::json)
+      FROM (SELECT bioguide, count(*) AS cnt, array_agg(DISTINCT chamber ORDER BY chamber) AS chambers,
         count(*) FILTER (WHERE type = 'Purchase') AS purchases,
         count(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) AS sales
         FROM t GROUP BY bioguide ORDER BY cnt DESC, bioguide LIMIT 20) x

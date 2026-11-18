@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import { rootFor } from './mount.js';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
 
@@ -105,6 +105,5 @@ function TopTickers({ stats, onFilter }) {
 
 export function mountTopTickers(container, stats, { onFilter } = {}) {
   if (!container) return;
-  const root = createRoot(container);
-  root.render(<TopTickers stats={stats} onFilter={onFilter} />);
+  rootFor(container).render(<TopTickers stats={stats} onFilter={onFilter} />);
 }

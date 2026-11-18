@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import { rootFor } from './mount.js';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
 
@@ -104,6 +104,5 @@ function TradesByYear({ stats, onFilter }) {
 
 export function mountTradesByYear(container, stats, { onFilter } = {}) {
   if (!container) return;
-  const root = createRoot(container);
-  root.render(<TradesByYear stats={stats} onFilter={onFilter} />);
+  rootFor(container).render(<TradesByYear stats={stats} onFilter={onFilter} />);
 }

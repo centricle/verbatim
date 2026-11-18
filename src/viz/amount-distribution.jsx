@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import { rootFor } from './mount.js';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
 
@@ -116,6 +116,5 @@ function AmountDistribution({ stats, onFilter }) {
 
 export function mountAmountDistribution(container, stats, { onFilter } = {}) {
   if (!container) return;
-  const root = createRoot(container);
-  root.render(<AmountDistribution stats={stats} onFilter={onFilter} />);
+  rootFor(container).render(<AmountDistribution stats={stats} onFilter={onFilter} />);
 }

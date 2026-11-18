@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseEnv, credentials, localFiles, plan, pdfKey, indexKey } from './archive.mjs';
+import { parseEnv, credentials, localFiles, senateFiles, plan, pdfKey, indexKey, senatePageKey, senateIndexKey, isSenateIndexKey } from './archive.mjs';
 
 const md5 = (s) => createHash('md5').update(s).digest('hex');
 const file = (key, body) => ({ key, path: `/cache/${key}`, size: Buffer.byteLength(body), md5: md5(body) });
@@ -82,4 +82,42 @@ test('a multipart ETag compares by size only', () => {
   assert.deepEqual([same.same, same.sizeOnly, same.conflicts.length], [1, 1, 0]);
   const shorter = plan(local, [object(pdfKey(2016, '20005000'), 'bi', '"0123456789abcdef0123456789abcdef-2"')]);
   assert.equal(shorter.conflicts.length, 1);
+});
+
+const U = '32550a8f-923e-416f-84f3-e19ab4f148b1';
+
+test('Senate keys: one page per lowercase UUID, list and ledger under index/', () => {
+  assert.equal(senatePageKey(U), `verbatim/senate-ptr/${U}.html`);
+  assert.equal(senateIndexKey('p03.json'), 'verbatim/senate-ptr/index/p03.json');
+  assert.equal(senateIndexKey('filings.json'), 'verbatim/senate-ptr/index/filings.json');
+});
+
+test('senateFiles takes pages, list pages and the ledger, never the request log', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'archive-test-'));
+  try {
+    await mkdir(join(dir, 'index'), { recursive: true });
+    await mkdir(join(dir, 'ptr'), { recursive: true });
+    await writeFile(join(dir, 'index/p00.json'), '{}');
+    await writeFile(join(dir, 'index/p00.json.tmp'), 'stray');
+    await writeFile(join(dir, 'filings.json'), '[]');
+    await writeFile(join(dir, 'requests.log'), 'log');
+    await writeFile(join(dir, 'blocked-until'), 'x');
+    await writeFile(join(dir, `ptr/${U}.html`), '<h1>PTR</h1>');
+    await writeFile(join(dir, 'ptr/notes.html'), 'stray');
+    const files = await senateFiles(dir);
+    assert.deepEqual(files.map((f) => f.key), [senateIndexKey('p00.json'), senateIndexKey('filings.json'), senatePageKey(U)]);
+    assert.equal(files[2].md5, md5('<h1>PTR</h1>'));
+    assert.deepEqual(await senateFiles(join(dir, 'absent')), []);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('Senate: a changed ledger is replaced; a changed page is a conflict', () => {
+  const local = [file(senateIndexKey('filings.json'), 'new ledger'), file(senatePageKey(U), 'page')];
+  const remote = [object(senateIndexKey('filings.json'), 'old ledger'), object(senatePageKey(U), 'other page')];
+  const p = plan(local, remote, isSenateIndexKey);
+  assert.deepEqual(p.replace.map((f) => f.key), [senateIndexKey('filings.json')]);
+  assert.deepEqual(p.conflicts.map((f) => f.key), [senatePageKey(U)]);
+  assert.deepEqual(plan(local, remote).replace, [], 'the House predicate replaces no Senate key');
 });

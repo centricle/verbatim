@@ -1,0 +1,15 @@
+{
+  "comment": "House index rows the member rule in members.mjs cannot resolve, by DocID. `bioguide` pins a filing to a Member; `exclude` leaves it out of the tables, with the reason. Each was checked by hand against the index and congress-legislators on 2026-11-18.",
+  "house": {
+    "9110523": {
+      "bioguide": "G000556",
+      "why": "Paper PTR filed 2017-03-10 under FL11, two months after the filer's FL09 term ended; the index's district is not the seat held"
+    },
+    "8218652": {
+      "exclude": "The filer was never a Member of Congress (paper PTR, MN01, 2022)"
+    },
+    "8219483": {
+      "exclude": "The filer was never a Member of Congress (paper PTR, PR00, 2023)"
+    }
+  }
+}

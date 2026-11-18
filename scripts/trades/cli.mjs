@@ -1,0 +1,218 @@
+#!/usr/bin/env node
+// Congressional stock trades: House PTRs from the Clerk, Senate rows from
+// Senate Stock Watcher. Fetch, parse, load, check.
+//
+//   npm run trades -- index               the House index ZIPs, every year (2 s apart)
+//   npm run trades -- fetch               index, members, Senate file, and every
+//                                         electronic PTR not yet in tmp/trades/ (2 s apart)
+//   npm run trades -- parse               build every table from the raw copies, print counts
+//   npm run trades -- schema --target E   apply db/trades.sql
+//   npm run trades -- load --target E     replace all three tables in one transaction
+//   npm run trades -- check               raw vs parsed vs loaded, every column
+//   npm run trades -- sample N            N counted House rows spread across years,
+//                                         to tmp/trades/sample.json
+//   npm run trades -- refresh --target E  fetch, load, check
+//
+// Writes name their endpoint: E must be the first label of DATABASE_URL's
+// host (without "-pooler"), so a load meant for a Neon branch cannot reach
+// main through an environment mixup. To write to a branch, set DATABASE_URL
+// in the environment; it wins over .env.
+//
+// Not yet: `archive`, the copy of tmp/trades/house/ to a private R2 bucket
+// (decision 7), which waits on the bucket.
+//
+// Raw downloads are untrusted data. Nothing is ever run from tmp/trades/.
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { dirname, resolve } from 'node:path';
+import { availableParallelism } from 'node:os';
+import { ROOT, RAW, UA, PACE_MS, FIRST_INDEX_YEAR, lastIndexYear, house, senate, legislators } from './sources.mjs';
+import { build, pool, readHouseIndex } from './build.mjs';
+import { rawRowCount } from './house.mjs';
+import { compare } from './check.mjs';
+import { MEMBER_COLUMNS, FILING_COLUMNS, ROW_COLUMNS, selectList } from './columns.mjs';
+import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let lastRequest = 0;
+
+// One request per PACE_MS. 403, 429 and 503 stop the run with no retry;
+// `missing` lists the statuses that are only logged (a PTR the index names
+// before its PDF is posted).
+async function get(url, { missing = [] } = {}) {
+  const wait = lastRequest + PACE_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastRequest = Date.now();
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'manual' });
+  if (res.status === 200) return Buffer.from(await res.arrayBuffer());
+  if (missing.includes(res.status)) return null;
+  throw new Error(`${url}: HTTP ${res.status}. Stopping; no retry.`);
+}
+
+async function save(path, buf) {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, buf);
+}
+
+async function indexCmd() {
+  for (let y = FIRST_INDEX_YEAR; y <= lastIndexYear(); y++) {
+    const buf = await get(house.indexUrl(y));
+    await save(house.indexZip(y), buf);
+    console.log(`${y}FD.zip  ${buf.length.toLocaleString()} bytes`);
+  }
+}
+
+async function fetchCmd() {
+  await indexCmd();
+  for (const l of legislators) {
+    const buf = await get(l.url);
+    await save(l.path, buf);
+    console.log(`${l.path.split('/').pop()}  ${buf.length.toLocaleString()} bytes`);
+  }
+  if (!existsSync(senate.path)) {
+    const buf = await get(senate.url);
+    const sha = createHash('sha256').update(buf).digest('hex');
+    if (sha !== senate.sha256) throw new Error(`${senate.url}: sha256 ${sha}, expected ${senate.sha256}`);
+    await save(senate.path, buf);
+  }
+  const todo = readHouseIndex().filter((ix) => house.isElectronic(ix.DocID) && !existsSync(house.pdfPath(ix.Year, ix.DocID)));
+  console.log(`${todo.length} electronic PTRs to fetch`);
+  let missing = 0;
+  for (const [i, ix] of todo.entries()) {
+    const buf = await get(house.pdfUrl(ix.Year, ix.DocID), { missing: [404] });
+    if (!buf) { missing++; console.log(`MISS ${ix.Year} ${ix.DocID}`); continue; }
+    await save(house.pdfPath(ix.Year, ix.DocID), buf);
+    if ((i + 1) % 100 === 0) console.log(`${i + 1}/${todo.length}`);
+  }
+  console.log(`fetched ${todo.length - missing}, missing ${missing}`);
+}
+
+function summarize(b) {
+  const by = (xs, f) => xs.reduce((m, x) => ((m[f(x)] = (m[f(x)] ?? 0) + 1), m), {});
+  console.log(`${b.members.length} members, ${b.filings.length.toLocaleString()} filings, ${b.rows.length.toLocaleString()} rows`);
+  console.log('filings', by(b.filings, (f) => `${f.chamber} ${f.parse_status}`));
+  console.log('House member match', b.how, `excluded ${b.excluded.length}`);
+  console.log('House notices', b.amendments);
+  for (const f of b.filings.filter((x) => x.parse_status === 'failed').slice(0, 20)) console.log(`FAILED ${f.report_year} ${f.filing_id}: ${f.parse_error}`);
+}
+
+async function parseCmd() {
+  const b = await build({ onProgress: (d, n) => process.stderr.write(`${d}/${n}\r`) });
+  summarize(b);
+  return b;
+}
+
+// The endpoint a write is about to reach, named by the operator.
+function endpoint() {
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+  return new URL(process.env.DATABASE_URL).hostname.split('.')[0].replace(/-pooler$/, '');
+}
+function requireTarget(rest) {
+  const i = rest.indexOf('--target');
+  const named = i >= 0 ? rest[i + 1] : null;
+  const actual = endpoint();
+  if (named !== actual) throw new Error(`refusing to write: DATABASE_URL is endpoint ${actual}; pass --target ${actual} if that is the one meant`);
+  console.log(`writing to ${actual}`);
+}
+
+async function schemaCmd(rest) {
+  requireTarget(rest);
+  const ddl = await readFile(resolve(ROOT, 'db/trades.sql'), 'utf8');
+  await withClient((client) => client.query(ddl));
+  console.log('applied db/trades.sql');
+}
+
+async function loadCmd(rest) {
+  requireTarget(rest);
+  const b = await parseCmd();
+  const keys = new Set(b.rows.map((r) => `${r.chamber}:${r.filing_id}:${r.row_num}`));
+  await withClient((client) => inTransaction(client, async () => {
+    const { rows: before } = await client.query('SELECT chamber, filing_id, row_num FROM stock_trades');
+    const old = new Set(before.map((r) => `${r.chamber}:${r.filing_id}:${r.row_num}`));
+    const added = [...keys].filter((k) => !old.has(k)).length;
+    const removed = [...old].filter((k) => !keys.has(k)).length;
+    await client.query('DELETE FROM stock_trades');
+    await client.query('DELETE FROM trade_filings');
+    await client.query('DELETE FROM trade_members');
+    await insertBatches(client, 'trade_members', MEMBER_COLUMNS, b.members);
+    await insertBatches(client, 'trade_filings', FILING_COLUMNS, b.filings);
+    await insertBatches(client, 'stock_trades', ROW_COLUMNS, b.rows);
+    console.log(`loaded ${b.members.length} members, ${b.filings.length.toLocaleString()} filings, ${b.rows.length.toLocaleString()} rows (${added.toLocaleString()} new, ${removed.toLocaleString()} gone)`);
+  }));
+}
+
+async function checkCmd() {
+  console.log(`reading ${endpoint()}`);
+  const b = await build();
+  const parsed = b.filings.filter((f) => f.chamber === 'house' && f.parse_status === 'parsed');
+  const ix = new Map(b.index.map((x) => [x.DocID, x]));
+  const counts = await pool(parsed, availableParallelism(), async (f) => {
+    const x = ix.get(f.filing_id);
+    return [f.filing_id, await rawRowCount(await readFile(house.pdfPath(x.Year, x.DocID)))];
+  });
+  const loaded = await withClient(async (client) => ({
+    members: (await client.query(`SELECT ${selectList(MEMBER_COLUMNS)} FROM trade_members`)).rows,
+    filings: (await client.query(`SELECT ${selectList(FILING_COLUMNS)} FROM trade_filings`)).rows,
+    rows: (await client.query(`SELECT ${selectList(ROW_COLUMNS)} FROM stock_trades`)).rows,
+    badAmounts: (await client.query(String.raw`SELECT chamber, filing_id, row_num, amount FROM stock_trades
+      WHERE amount IS NOT NULL AND trade_amount_rank(amount) = 0 AND amount !~ '^\$[0-9,]*\.?[0-9]+$'`)).rows,
+  }));
+  const failures = compare({ build: b, loaded, raw: new Map(counts), badAmounts: loaded.badAmounts });
+  console.log(`raw: ${b.index.length.toLocaleString()} House index PTRs, ${b.records.length.toLocaleString()} Senate filings; loaded ${loaded.filings.length.toLocaleString()} filings, ${loaded.rows.length.toLocaleString()} rows`);
+  if (failures.length) {
+    for (const f of failures) console.log(`FAIL ${f}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`PASS: index and Senate coverage, ${parsed.length.toLocaleString()} PDFs against their raw text, every column of every member, filing and row, row counts, names, amendment links, amounts, characters`);
+  }
+}
+
+// Counted House rows spread evenly across filing years, for a reviewer to
+// hold against the PDF (the Phase 3 refute pass).
+async function sampleCmd(rest) {
+  const n = Math.max(1, parseInt(rest[0], 10) || 40);
+  const rows = await withClient(async (client) => {
+    const { rows: years } = await client.query(`SELECT DISTINCT extract(year FROM f.filed_date)::int AS y
+      FROM stock_trades t JOIN trade_filings f USING (chamber, filing_id) WHERE t.chamber = 'house' AND t.counted ORDER BY 1`);
+    const out = [];
+    for (const [i, { y }] of years.entries()) {
+      const take = Math.floor(n / years.length) + (i < n % years.length ? 1 : 0);
+      if (!take) continue;
+      const { rows: picked } = await client.query(`SELECT t.chamber, t.filing_id, t.row_num,
+          to_char(t.transaction_date, 'MM/DD/YYYY') AS transaction_date, t.owner_code, t.ticker,
+          t.asset_description, t.asset_type_code, t.type_code, t.amount, t.filing_status, f.url
+        FROM stock_trades t JOIN trade_filings f USING (chamber, filing_id)
+        WHERE t.chamber = 'house' AND t.counted AND extract(year FROM f.filed_date) = $1
+        ORDER BY random() LIMIT $2`, [y, take]);
+      out.push(...picked);
+    }
+    return out;
+  });
+  const out = resolve(RAW, 'sample.json');
+  await save(out, JSON.stringify(rows, null, 2));
+  console.log(`${rows.length} rows to ${out}`);
+}
+
+async function main([cmd, ...rest]) {
+  switch (cmd) {
+    case 'index': await indexCmd(); break;
+    case 'fetch': await fetchCmd(); break;
+    case 'parse': await parseCmd(); break;
+    case 'schema': await schemaCmd(rest); break;
+    case 'load': await loadCmd(rest); break;
+    case 'check': await checkCmd(); break;
+    case 'sample': await sampleCmd(rest); break;
+    case 'refresh':
+      requireTarget(rest);
+      await fetchCmd();
+      await loadCmd(rest);
+      await checkCmd();
+      break;
+    default:
+      console.error('usage: cli.mjs index|fetch|parse|schema --target E|load --target E|check|sample N|refresh --target E');
+      process.exitCode = 2;
+  }
+}
+
+await main(process.argv.slice(2));

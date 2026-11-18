@@ -1280,6 +1280,7 @@
     white-space: nowrap;
     color: var(--color-ink-dim);
   }
+  .series-date { white-space: nowrap; }
   .series-absent { color: var(--color-ink-dim); font-style: italic; }
   .series-note { display: block; margin-top: 0.15rem; font-size: 0.78rem; color: var(--color-ink-dim); }
 

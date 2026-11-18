@@ -144,7 +144,7 @@ function memberRow(key, spec, m, r, hasOrdinal, hasForm) {
   const note = m.flag && spec.flags?.[m.flag];
   return html`<tr>
     ${hasOrdinal ? html`<td class="cell-num" data-label="No.">${m.ordinal}</td>` : ''}
-    <td class="cell-trail">${m.date ? formatDate(m.date, 'day') : String(m.year)}</td>
+    <td class="cell-trail series-date">${m.date ? formatDate(m.date, 'day') : String(m.year)}</td>
     <td>${SPEAKERS[m.speaker]?.name || m.speaker}</td>
     ${hasForm ? html`<td class="cell-push">${label({}, m.form)}</td>` : ''}
     <td class="cell-lead">${r

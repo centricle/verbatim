@@ -10,10 +10,19 @@
 // breaks a tie; none needed it on 2013 to 2026. Anything left fails the load
 // until overrides.json pins it.
 //
-// Senate rows arrive with a bioguide ID already (Senate Stock Watcher's), and
-// it is not always right: three senators carry the ID of a namesake from the
-// 1790s to the 1950s. senate.mjs holds every one to a Senate term
-// (senateTerm below) and overrides.json corrects the three.
+// Senate, from eFD (senateMatcher below): eFD has no ID either, and its office
+// column is "Senator" more often than a name, so the rule reads the list's
+// first and last name columns. Last name (suffixes dropped: "Perdue , Jr",
+// "Sessions, III"), then a Senate term at the received date with the same
+// GRACE_DAYS, then first name, nickname or middle name to break a tie. On
+// November 2026's list it matched all 83 filers and agreed with Senate Stock
+// Watcher's corrected ID on every one of the 1,441 filings both hold.
+//
+// Senate Stock Watcher's rows arrive with a bioguide ID already, and it is
+// not always right: three senators carry the ID of a namesake from the 1790s
+// to the 1950s. senate.mjs holds every one to a Senate term (senateTerm
+// below) and overrides.json's `carambat` corrects the three. senateMatcher
+// gets all three right with no pin.
 
 export const GRACE_DAYS = 400;
 
@@ -29,6 +38,54 @@ export function senateTerm(people) {
   return (bioguide, date) => {
     const graceFrom = new Date(Date.parse(date) - GRACE_DAYS * 864e5).toISOString().slice(0, 10);
     return (terms.get(bioguide) ?? []).some((t) => t.start <= date && t.end >= graceFrom);
+  };
+}
+
+const fold = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+const SUFFIX = new Set(['jr', 'sr', 'ii', 'iii', 'iv']);
+const words = (s) => fold(s).split(' ').filter((w) => w && !SUFFIX.has(w));
+
+// eFD list names to a bioguide: { bioguide, how }, or { bioguide: null, how:
+// 'none' | 'ambiguous', candidates }.
+export function senateMatcher(people, since = '2011-01-01') {
+  const sens = [];
+  for (const p of people) {
+    const terms = (p.terms || []).filter((t) => t.type === 'sen');
+    if (!terms.length || terms.at(-1).end < since) continue;
+    const lasts = new Set([words(p.name.last).join(' '), ...(p.other_names || []).filter((o) => o.last).map((o) => words(o.last).join(' '))]);
+    const firsts = new Set([p.name.first, p.name.nickname, p.name.middle, ...(p.other_names || []).map((o) => o.first)]
+      .filter(Boolean).map((n) => words(n)[0]).filter(Boolean));
+    sens.push({ p, terms, lasts, firsts });
+  }
+  return ({ first, last, date }) => {
+    const l = words(last).join(' ');
+    const lastOk = (s) => [...s.lasts].some((x) => x === l || x.split(' ').includes(l) || l.split(' ').includes(x));
+    const graceFrom = new Date(Date.parse(date) - GRACE_DAYS * 864e5).toISOString().slice(0, 10);
+    let c = sens.filter((s) => lastOk(s) && s.terms.some((t) => t.start <= date && t.end >= graceFrom));
+    let how = 'term';
+    const tied = c;
+    if (c.length > 1) {
+      const given = new Set(words(first));
+      c = c.filter((s) => [...s.firsts].some((f) => given.has(f)));
+      how = 'term+first';
+    }
+    if (c.length === 1) return { bioguide: c[0].p.id.bioguide, how };
+    // A first name that fits none of a tie still names the tie, for the pin.
+    const left = c.length ? c : tied;
+    return { bioguide: null, how: left.length ? 'ambiguous' : 'none', candidates: left.map((s) => s.p.id.bioguide) };
+  };
+}
+
+// When a senator's last Senate term ended, or null while it runs.
+export function senateDeparture(people, today = new Date().toISOString().slice(0, 10)) {
+  const end = new Map();
+  for (const p of people) {
+    const sen = (p.terms || []).filter((t) => t.type === 'sen');
+    if (sen.length) end.set(p.id.bioguide, sen.at(-1).end);
+  }
+  return (bioguide) => {
+    const e = end.get(bioguide);
+    return e && e <= today ? e : null;
   };
 }
 

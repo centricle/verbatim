@@ -6,11 +6,21 @@ import { createHash } from 'node:crypto';
 import { availableParallelism } from 'node:os';
 import { house, senate, legislators, FIRST_INDEX_YEAR, lastIndexYear } from './sources.mjs';
 import { readIndexZip, extract, houseFiling } from './house.mjs';
-import { houseMatcher, memberRows, senateTerm } from './members.mjs';
+import { houseMatcher, memberRows, senateTerm, senateMatcher } from './members.mjs';
 import { resolveSenate, senateFilings } from './senate.mjs';
 import { linkAmendments } from './amendments.mjs';
 
-const { house: OVERRIDES, senate: SENATE_PINS } = JSON.parse(readFileSync(new URL('./overrides.json', import.meta.url), 'utf8'));
+const { house: OVERRIDES, carambat: SENATE_PINS, efd: EFD_PINS } = JSON.parse(readFileSync(new URL('./overrides.json', import.meta.url), 'utf8'));
+
+// An eFD ledger entry to a bioguide: a pin in overrides.json's `efd` first,
+// then senateMatcher.
+export function efdMatch(people, pins = EFD_PINS) {
+  const match = senateMatcher(people);
+  return (e) => {
+    const pin = pins[`${e.first}|${e.last}`];
+    return pin ? { bioguide: pin.bioguide, how: 'override' } : match({ first: e.first, last: e.last, date: e.date_received });
+  };
+}
 
 export async function pool(items, n, fn) {
   const out = new Array(items.length);

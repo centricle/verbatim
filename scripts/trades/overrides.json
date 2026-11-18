@@ -1,5 +1,5 @@
 {
-  "comment": "Filings the member rules in members.mjs and senate.mjs cannot resolve. `house`, by DocID: `bioguide` pins a filing to a Member; `exclude` leaves it out of the tables, with the reason. `senate`, by the bioguide Senate Stock Watcher's record carries: the right one, applied only to records whose last name is `last`. Each was checked by hand against the index or the filing's office line and congress-legislators on 2026-11-18.",
+  "comment": "Filings the member rules in members.mjs and senate.mjs cannot resolve. `house`, by DocID: `bioguide` pins a filing to a Member; `exclude` leaves it out of the tables, with the reason. `carambat`, by the bioguide Senate Stock Watcher's record carries: the right one, applied only to records whose last name is `last`. Each was checked by hand against the index or the filing's office line and congress-legislators on 2026-11-18. `efd`, by eFD's list names as \"First|Last\" (as listed, spacing collapsed): `bioguide` pins every filing listed under that name; none was needed on the November 2026 list.",
   "house": {
     "8218652": {
       "exclude": "The filer was never a Member of Congress (paper PTR, MN01, 2022)"
@@ -12,7 +12,7 @@
       "why": "Paper PTR filed 2017-03-10 under FL11, two months after the filer's FL09 term ended; the index's district is not the seat held"
     }
   },
-  "senate": {
+  "carambat": {
     "M000357": {
       "bioguide": "M000355",
       "last": "McConnell",
@@ -28,5 +28,6 @@
       "last": "Udall",
       "why": "Office 'Udall, Tom (Senator)', filed 2019; U000002 is Stewart Udall, House 1955 to 1961. The same senator's 2012 paper filing already carries U000039"
     }
-  }
+  },
+  "efd": {}
 }

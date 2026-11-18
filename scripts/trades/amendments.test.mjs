@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { linkAmendments } from './amendments.mjs';
+import { readFileSync } from 'node:fs';
+import { linkAmendments, supersedeFilings } from './amendments.mjs';
+import { efdFilings } from './senate.mjs';
+import { parsePtr } from './parse-senate.mjs';
 
 // Wile E. Coyote's PTRs; Road Runner files too, and is never matched to him.
 const row = (filing_id, row_num, o = {}) => ({
@@ -101,4 +104,81 @@ test('a rerun starts clean', () => {
   run(rows, { 20000001: '2018-01-10' });
   assert.equal(rows[0].superseded, false);
   assert.equal(rows[0].amendment_match, null);
+});
+
+test('a House notice never claims the same member\'s Senate row', () => {
+  const rows = [
+    row('aaaaaaaa-0000-0000-0000-000000000001', 1, { chamber: 'senate', filing_status: null }),
+    row('20000002', 1, { filing_status: 'Amended' }),
+  ];
+  const { at } = run(rows, { 'aaaaaaaa-0000-0000-0000-000000000001': '2018-01-10', 20000002: '2018-02-10' });
+  assert.equal(at('20000002', 1).amendment_match, 'none');
+  assert.equal(at('aaaaaaaa-0000-0000-0000-000000000001', 1).superseded, false);
+});
+
+// eFD: the Carper pair in the fixtures, filed under the Coyote's name.
+const ORIG = '691f9cb6-84a2-41c3-b270-63e606869a0d';
+const AMEND = '07935a4d-85ec-406f-8c1c-bd951dfd2903';
+const MEMBERS = new Map([['C000001', { member: 'Wile E. Coyote' }], ['R000001', { member: 'Road Runner' }]]);
+const fx = (u) => parsePtr(readFileSync(new URL(`./fixtures/efd/${u}.html`, import.meta.url), 'utf8'));
+const entry = (uuid, title, date, o = {}) => ({ uuid, link_uuid: uuid, kind: 'electronic', title, first: 'Wile E', last: 'Coyote', office: 'Senator', date_received: date, ...o });
+const T = 'Periodic Transaction Report for 10/04/2017';
+const efdOut = (entries, pageOf = {}, who = () => 'C000001') => {
+  const pages = new Map(entries.filter((e) => pageOf[e.uuid]).map((e) => [e.uuid, { page: pageOf[e.uuid], fetched_at: null }]));
+  return efdFilings(entries, pages, who, MEMBERS);
+};
+// A page as another filing: same rows, own title and date.
+const as = (p, title, filed, edit = (r) => r) => ({ ...p, title, filed, rows: p.rows.map((r) => edit({ ...r })) });
+
+test('an amendment supersedes every row of its original', () => {
+  const out = efdOut([entry(ORIG, T, '2017-10-04'), entry(AMEND, `${T} (Amendment 1)`, '2018-03-12')], { [ORIG]: fx(ORIG), [AMEND]: fx(AMEND) });
+  const done = supersedeFilings(out);
+  const [orig, amend] = out;
+  assert.equal(amend.filing.amends_filing_id, ORIG);
+  assert.equal(orig.filing.amends_filing_id, null);
+  assert.ok(orig.rows.every((r) => r.superseded === true));
+  assert.ok(amend.rows.every((r) => !r.superseded));
+  assert.deepEqual([done.amendments, done.linked, done.superseded_rows, done.none, done.ambiguous], [1, 1, 18, [], []]);
+});
+
+test('a chain links each amendment to the version before it', () => {
+  const a2 = 'bbbbbbbb-0000-0000-0000-000000000002';
+  const out = efdOut([
+    entry(a2, `${T} (Amendment 2)`, '2018-05-01'), entry(ORIG, T, '2017-10-04'), entry(AMEND, `${T} (Amendment 1)`, '2018-03-12'),
+  ], { [ORIG]: fx(ORIG), [AMEND]: fx(AMEND), [a2]: as(fx(AMEND), `${T} (Amendment 2)`, '05/01/2018') });
+  supersedeFilings(out);
+  const by = new Map(out.map((x) => [x.filing.filing_id, x]));
+  assert.equal(by.get(AMEND).filing.amends_filing_id, ORIG);
+  assert.equal(by.get(a2).filing.amends_filing_id, AMEND);
+  assert.ok(by.get(AMEND).rows.every((r) => r.superseded));
+  assert.ok(by.get(a2).rows.every((r) => !r.superseded));
+});
+
+test('same-day originals: the one sharing the most rows by # wins; a tie links nothing', () => {
+  const other = 'cccccccc-0000-0000-0000-000000000003';
+  const pagesOf = (edit) => ({ [ORIG]: fx(ORIG), [AMEND]: fx(AMEND), [other]: as(fx(ORIG), T, '10/04/2017', edit) });
+  const entries = () => [entry(ORIG, T, '2017-10-04'), entry(other, T, '2017-10-04'), entry(AMEND, `${T} (Amendment 1)`, '2018-03-12')];
+  let out = efdOut(entries(), pagesOf((r) => ({ ...r, amount: '$1,000,001 - $5,000,000' })));
+  supersedeFilings(out);
+  assert.equal(out[2].filing.amends_filing_id, ORIG);
+  assert.ok(out[1].rows.every((r) => !r.superseded));
+  out = efdOut(entries(), pagesOf((r) => r));
+  const done = supersedeFilings(out);
+  assert.equal(out[2].filing.amends_filing_id, null);
+  assert.deepEqual(done.ambiguous, [AMEND]);
+  assert.ok(out.every((x) => x.rows.every((r) => !r.superseded)));
+});
+
+test('no original, another member\'s original, or a paper one: nothing is linked', () => {
+  const paper = entry(ORIG, T, '2017-10-04', { kind: 'paper' });
+  for (const [entries, who] of [
+    [[entry(AMEND, `${T} (Amendment 1)`, '2018-03-12')], () => 'C000001'],
+    [[entry(ORIG, T, '2017-10-04', { last: 'Runner' }), entry(AMEND, `${T} (Amendment 1)`, '2018-03-12')], (e) => (e.last === 'Runner' ? 'R000001' : 'C000001')],
+    [[paper, entry(AMEND, `${T} (Amendment 1)`, '2018-03-12')], () => 'C000001'],
+  ]) {
+    const out = efdOut(entries, { [ORIG]: fx(ORIG), [AMEND]: fx(AMEND) }, who);
+    const done = supersedeFilings(out);
+    assert.deepEqual(done.none, [AMEND]);
+    assert.ok(out.every((x) => x.filing.amends_filing_id === null && x.rows.every((r) => !r.superseded)));
+  }
 });

@@ -105,6 +105,7 @@ export function houseFiling(ix, member, parsed, fetchedAt) {
     report_year: ix.Year,
     filed_date: ix.filed,
     url: house.pdfUrl(ix.Year, ix.DocID),
+    title: null,
     amends_filing_id: null,
     parse_status: electronic ? 'parsed' : 'paper',
     parse_error: null,

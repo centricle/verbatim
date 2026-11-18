@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { htmlText, filingId, senateFilings, resolveSenate } from './senate.mjs';
+import { readFileSync } from 'node:fs';
+import { htmlText, filingId, senateFilings, resolveSenate, efdFilings, sameTitle } from './senate.mjs';
+import { parsePtr } from './parse-senate.mjs';
 
 const MEMBERS = new Map([['C000001', { bioguide: 'C000001', member: 'Wile E. Coyote' }]]);
 const uuid = '32550a8f-923e-416f-84f3-e19ab4f148b1';
@@ -81,4 +83,80 @@ test('a pin never moves another filer carrying the same wrong ID', () => {
 test('a bioguide with no Senate term at the received date fails', () => {
   const { failures } = resolveSenate([rec({ bioguide: 'R000001' })], hasTerm, PINS);
   assert.equal(failures.length, 1);
+});
+
+// eFD: ledger entries as efd-index.mjs writes them, pages from the fixtures.
+const ORIG = '691f9cb6-84a2-41c3-b270-63e606869a0d';
+const page = (u) => parsePtr(readFileSync(new URL(`./fixtures/efd/${u}.html`, import.meta.url), 'utf8'));
+const entry = (o = {}) => ({
+  uuid: ORIG, link_uuid: ORIG.toUpperCase(), kind: 'electronic', title: 'Periodic Transaction Report for 10/04/2017',
+  first: 'Wile E', last: 'Coyote', office: 'Former Senator', date_received: '2017-10-04',
+  first_seen: '2026-11-18T21:54:00.000Z', last_seen: '2026-11-18T21:54:00.000Z', ...o,
+});
+const coyote = () => 'C000001';
+const pages = (u = ORIG) => new Map([[u, { page: page(u), fetched_at: '2026-11-18T22:00:00.000Z' }]]);
+
+test('efdFilings: the page is the rows, the list is the filing', () => {
+  const [{ filing, rows }] = efdFilings([entry()], pages(), coyote, MEMBERS);
+  assert.equal(filing.source, 'efd');
+  assert.equal(filing.filing_id, ORIG);
+  assert.equal(filing.url, `https://efdsearch.senate.gov/search/view/ptr/${ORIG.toUpperCase()}/`);
+  assert.equal(filing.filed_date, '2017-10-04');
+  assert.equal(filing.office, 'Former Senator');
+  assert.equal(filing.filer_name, null);
+  assert.equal(filing.parse_status, 'parsed');
+  assert.equal(filing.row_count, 18);
+  assert.equal(filing.fetched_at, '2026-11-18T22:00:00.000Z');
+  assert.deepEqual(rows.map((r) => r.row_num), Array.from({ length: 18 }, (_, i) => 18 - i));
+  const nine = rows.find((r) => r.row_num === 9);
+  assert.equal(nine.transaction_date, '2017-09-29');
+  assert.equal(nine.type_code, nine.type);
+  assert.ok(rows.every((r) => r.source === 'efd' && r.member === 'Wile E. Coyote' && r.owner_code === null));
+});
+
+test('efdFilings: title is the page h1, even where the list shifted it a day', () => {
+  const listed = entry({ title: 'Periodic Transaction Report for 10/05/2017' });
+  const [{ filing }] = efdFilings([listed], pages(), coyote, MEMBERS);
+  assert.equal(filing.parse_status, 'parsed');
+  assert.equal(filing.title, 'Periodic Transaction Report for 10/04/2017');
+});
+
+test('efdFilings: a page disagreeing with its listing fails, with no rows', () => {
+  let [{ filing, rows }] = efdFilings([entry({ date_received: '2017-10-05' })], pages(), coyote, MEMBERS);
+  assert.equal(filing.parse_status, 'failed');
+  assert.match(filing.parse_error, /page filed 10\/04\/2017, listed 2017-10-05/);
+  assert.equal(rows.length, 0);
+  [{ filing }] = efdFilings([entry({ title: 'Periodic Transaction Report for 10/04/2017 (Amendment 1)' })], pages(), coyote, MEMBERS);
+  assert.match(filing.parse_error, /page title/);
+});
+
+test('efdFilings: paper, a gone page, an unfetched page, an unparsed page', () => {
+  const paper = entry({ uuid: 'p', link_uuid: 'P', kind: 'paper', title: 'Periodic Transaction Report for 05/01/2014' });
+  const gone = entry({ uuid: 'g', link_uuid: 'g', page_gone: '2026-11-18T21:55:00.000Z' });
+  const unfetched = entry({ uuid: 'u', link_uuid: 'u' });
+  const broken = entry({ uuid: 'b', link_uuid: 'b' });
+  const got = new Map([['b', { error: '0 h1 elements', fetched_at: '2026-11-18T22:00:00.000Z' }]]);
+  const [p, g, u, b] = efdFilings([paper, gone, unfetched, broken], got, coyote, MEMBERS).map((x) => x.filing);
+  assert.deepEqual([p.parse_status, p.title, p.url], ['paper', 'Periodic Transaction Report for 05/01/2014', 'https://efdsearch.senate.gov/search/view/paper/P/']);
+  assert.equal(g.parse_status, 'failed');
+  assert.match(g.parse_error, /302 to \/search\/ \(first seen 2026-11-18\); no copy is held/);
+  assert.equal(g.title, 'Periodic Transaction Report for 10/04/2017');
+  assert.equal(u.parse_error, 'page not fetched');
+  assert.equal(b.parse_error, 'parse: 0 h1 elements');
+  assert.equal(b.fetched_at, '2026-11-18T22:00:00.000Z');
+});
+
+test('efdFilings: an unknown member stops the load', () => {
+  assert.throws(() => efdFilings([entry()], pages(), () => 'R000001', MEMBERS), /no member row/);
+});
+
+test('sameTitle: equal, or the list one day after the page, and nothing else', () => {
+  const t = (d, a = '') => `Periodic Transaction Report for ${d}${a}`;
+  assert.ok(sameTitle(t('09/29/2017'), t('09/29/2017')));
+  assert.ok(sameTitle(t('09/30/2017'), t('09/29/2017')));
+  assert.ok(sameTitle(t('01/01/2018'), t('12/31/2017')));
+  assert.ok(sameTitle(t('04/01/2020', ' (Amendment 1)'), t('03/31/2020', ' (Amendment 1)')));
+  assert.ok(!sameTitle(t('09/28/2017'), t('09/29/2017')));
+  assert.ok(!sameTitle(t('10/01/2017'), t('09/29/2017')));
+  assert.ok(!sameTitle(t('09/29/2017', ' (Amendment 1)'), t('09/29/2017')));
 });

@@ -10,7 +10,10 @@
 --   carambat     Senate PTRs as published in timothycarambat/
 --                senate-stock-watcher-data, aggregate/all_daily_summaries.json
 --                (filed 2012 to March 2021), one filing per eFD link.
---   efd          Senate PTRs from eFD directly, when that loader exists.
+--   efd          Senate PTRs from eFD (efdsearch.senate.gov) itself: its PTR
+--                list for every filing, each electronic report's own page for
+--                its rows. carambat supplies only what eFD's copy lacks
+--                (splitSenate in scripts/trades/build.mjs).
 --
 -- A filing is one PTR. A paper filing is recorded with its link and no
 -- transactions: paper PTRs are scans, and nothing here transcribes them.
@@ -30,6 +33,11 @@
 -- Zero or several: no link, the earlier rows stay, and amendment_match says
 -- which. `counted` is what search and stats read: a row neither superseded
 -- nor a Deleted notice. Nothing is removed; every row stays reachable.
+--
+-- A Senate amendment is a whole new report that restates every row, so it
+-- supersedes the whole filing before it: trade_filings.amends_filing_id names
+-- that version, and every row of a filing another filing names is superseded
+-- (supersedeFilings in scripts/trades/amendments.mjs).
 --
 -- Amounts: the House and Senate print the same ranges, plus the House form's
 -- "Spouse/DC Over $1,000,000". A few House filers print an exact figure
@@ -84,6 +92,29 @@ CREATE TABLE IF NOT EXISTS public.trade_filings (
 
 CREATE INDEX IF NOT EXISTS idx_trade_filings_bioguide ON public.trade_filings (bioguide);
 CREATE INDEX IF NOT EXISTS idx_trade_filings_filed ON public.trade_filings (filed_date);
+
+-- Added with the eFD loader (2026-11-18). Kept out of the CREATE so `schema`
+-- also brings a database that already has the table up to date.
+--
+-- title: eFD's report title as printed, "Periodic Transaction Report for
+-- MM/DD/YYYY" plus " (Amendment N)" on an amendment. An electronic report's
+-- comes from its page's h1, which prints the date in Eastern time; the PTR
+-- list prints it in UTC, a day late for a report filed after 19:00 ET. Paper
+-- and unfetched reports have only the list's. NULL for House and carambat.
+ALTER TABLE public.trade_filings ADD COLUMN IF NOT EXISTS title text;
+
+-- An eFD amendment names the version it replaces. Deferred to commit, since
+-- load inserts filings in batches in no particular order.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'trade_filings_amends_fkey') THEN
+    ALTER TABLE public.trade_filings ADD CONSTRAINT trade_filings_amends_fkey
+      FOREIGN KEY (chamber, amends_filing_id) REFERENCES public.trade_filings (chamber, filing_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_trade_filings_amends ON public.trade_filings (chamber, amends_filing_id)
+  WHERE amends_filing_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.stock_trades (
   chamber text NOT NULL,

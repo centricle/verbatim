@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Congressional stock trades: House PTRs from the Clerk, Senate rows from
-// Senate Stock Watcher. Fetch, parse, load, check.
+// Congressional stock trades: House PTRs from the Clerk; Senate PTRs from
+// eFD, plus Senate Stock Watcher for what eFD's copy lacks. Fetch, parse,
+// load, check.
 //
 //   npm run trades -- index               the House index ZIPs, every year (2 s apart)
 //   npm run trades -- fetch [house|senate]  index, members, Senate file, and every
@@ -8,15 +9,23 @@
 //                                         the Senate part reads eFD's whole list, then
 //                                         the pages not yet cached, nearest purge first
 //   npm run trades -- parse               build every table from the raw copies, print counts
+//                                         (parse, load and check take --no-efd: the Senate
+//                                         from Senate Stock Watcher alone, the rollback)
 //   npm run trades -- schema --target E   apply db/trades.sql
 //   npm run trades -- load --target E     replace all three tables in one transaction
 //   npm run trades -- check               raw vs parsed vs loaded, every column
 //   npm run trades -- sample N            N counted House rows spread across years,
 //                                         to tmp/trades/sample.json
-//   npm run trades -- archive [--dry-run]  copy tmp/trades/house/ to the private R2
-//                                         bucket: upload what it lacks, then verify
-//                                         every file by MD5 (archive.mjs)
-//   npm run trades -- refresh --target E  fetch, load, check, archive
+//   npm run trades -- archive [house|senate] [--dry-run]
+//                                         copy tmp/trades/house/ and the eFD pages,
+//                                         list and ledger to the private R2 bucket:
+//                                         upload what it lacks, then verify every
+//                                         file by MD5 (archive.mjs)
+//   npm run trades -- senate-targets [--md P]  every filing eFD may destroy that we hold
+//                                         no page of, by purge date, to
+//                                         tmp/trades/senate/purge-targets.{json,md}
+//                                         (--md writes the Markdown to P instead)
+//   npm run trades -- refresh --target E  fetch, load, check, senate-targets, archive
 //
 // Writes name their endpoint: E must be the first label of DATABASE_URL's
 // host (without "-pooler"), so a load meant for a Neon branch cannot reach
@@ -30,12 +39,12 @@ import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { availableParallelism } from 'node:os';
 import { ROOT, RAW, UA, PACE_MS, FIRST_INDEX_YEAR, lastIndexYear, house, senate, efd, legislators } from './sources.mjs';
-import { build, pool, readHouseIndex, readPeople, efdMatch } from './build.mjs';
+import { build, pool, readHouseIndex, readPeople, readSenate, purgeClock, purgeTargets } from './build.mjs';
 import { createSession, blockedUntil } from './efd.mjs';
 import { readIndex, savePages, readLedger, mergeLedger, writeLedger, goneFromEfd } from './efd-index.mjs';
-import { senateDeparture } from './members.mjs';
 import { rawRowCount } from './house.mjs';
-import { compare } from './check.mjs';
+import { filingId } from './senate.mjs';
+import { compare, efdRawRows } from './check.mjs';
 import { MEMBER_COLUMNS, FILING_COLUMNS, ROW_COLUMNS, selectList } from './columns.mjs';
 import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
 import { archive } from './archive.mjs';
@@ -93,24 +102,29 @@ async function fetchSenate() {
   const gone = goneFromEfd(ledger);
   console.log(`eFD list: ${total.toLocaleString()} PTRs (${pages.length} pages), ${added} new; ledger ${ledger.length.toLocaleString()}, ${gone.length} no longer listed`);
 
-  const people = await readPeople();
-  const match = efdMatch(people);
-  const departed = senateDeparture(people);
-  const purge = (e) => {
-    const b = match(e).bioguide;
-    const left = b && departed(b);
-    return left ? `${Number(left.slice(0, 4)) + 6}${left.slice(4)}` : '9999';
-  };
+  const clock = purgeClock(await readPeople());
+  const purge = (e) => clock(e)?.purge ?? '9999';
   const todo = entries.filter((e) => e.kind === 'electronic' && !existsSync(efd.ptrPath(e.uuid)))
     .map((e) => ({ e, purge: purge(e) }))
     .sort((a, b) => a.purge.localeCompare(b.purge) || a.e.date_received.localeCompare(b.e.date_received));
   console.log(`${todo.length} eFD pages to fetch, about ${Math.ceil((todo.length * PACE_MS) / 60e3)} min`);
   let n = 0, missing = 0;
-  for (const { e, purge: p } of todo) {
-    const r = await session.view(new URL(efd.viewUrl(e.kind, e.link_uuid)).pathname);
-    if (r.gone) { missing++; console.log(`GONE ${e.uuid} ${e.last} ${e.date_received} (listed this run)`); continue; }
-    await save(efd.ptrPath(e.uuid), r.html);
-    if (++n % 100 === 0) console.log(`${n}/${todo.length} (purge ${p === '9999' ? 'none' : p})`);
+  const inLedger = new Map(ledger.map((x) => [x.uuid, x]));
+  try {
+    for (const { e, purge: p } of todo) {
+      const r = await session.view(new URL(efd.viewUrl(e.kind, e.link_uuid)).pathname);
+      if (r.gone) {
+        missing++;
+        inLedger.get(e.uuid).page_gone ??= new Date().toISOString();
+        console.log(`GONE ${e.uuid} ${e.last} ${e.date_received} (listed this run)`);
+        continue;
+      }
+      await save(efd.ptrPath(e.uuid), r.html);
+      if (++n % 100 === 0) console.log(`${n}/${todo.length} (purge ${p === '9999' ? 'none' : p})`);
+    }
+  } finally {
+    // A hard stop mid-run still keeps the gone pages it saw.
+    if (missing) await writeLedger(efd.ledger, ledger);
   }
   console.log(`eFD: fetched ${n}, gone ${missing}; ${session.stats().requests} requests`);
 }
@@ -149,11 +163,18 @@ function summarize(b) {
   console.log('House member match', b.how, `excluded ${b.excluded.length}`);
   console.log('Senate bioguides corrected', by(b.senateFixed, (x) => `${x.from} -> ${x.to}`));
   console.log('House notices', b.amendments);
-  for (const f of b.filings.filter((x) => x.parse_status === 'failed').slice(0, 20)) console.log(`FAILED ${f.report_year} ${f.filing_id}: ${f.parse_error}`);
+  if (b.efd) console.log('eFD', b.efd);
+  console.log('Senate filings by source', by(b.filings.filter((f) => f.chamber === 'senate'), (f) => `${f.source} ${f.kind}`));
+  const sa = b.senateAmendments;
+  console.log(`Senate amendments: ${sa.amendments} electronic, ${sa.linked} linked, ${sa.superseded_rows.toLocaleString()} rows superseded; no original ${sa.none.length}, ambiguous ${sa.ambiguous.length}`);
+  for (const id of [...sa.none, ...sa.ambiguous]) console.log(`UNLINKED ${id}`);
+  for (const f of b.filings.filter((x) => x.parse_status === 'failed').slice(0, 20)) console.log(`FAILED ${f.chamber} ${f.report_year ?? f.filed_date} ${f.filing_id}: ${f.parse_error}`);
 }
 
-async function parseCmd() {
-  const b = await build({ onProgress: (d, n) => process.stderr.write(`${d}/${n}\r`) });
+const buildOpts = (rest) => ({ efd: !rest.includes('--no-efd') });
+
+async function parseCmd(rest = []) {
+  const b = await build({ ...buildOpts(rest), onProgress: (d, n) => process.stderr.write(`${d}/${n}\r`) });
   summarize(b);
   return b;
 }
@@ -180,7 +201,7 @@ async function schemaCmd(rest) {
 
 async function loadCmd(rest) {
   requireTarget(rest);
-  const b = await parseCmd();
+  const b = await parseCmd(rest);
   const keys = new Set(b.rows.map((r) => `${r.chamber}:${r.filing_id}:${r.row_num}`));
   await withClient((client) => inTransaction(client, async () => {
     const { rows: before } = await client.query('SELECT chamber, filing_id, row_num FROM stock_trades');
@@ -197,9 +218,9 @@ async function loadCmd(rest) {
   }));
 }
 
-async function checkCmd() {
+async function checkCmd(rest = []) {
   console.log(`reading ${endpoint()}`);
-  const b = await build();
+  const b = await build(buildOpts(rest));
   const parsed = b.filings.filter((f) => f.chamber === 'house' && f.parse_status === 'parsed');
   const ix = new Map(b.index.map((x) => [x.DocID, x]));
   const counts = await pool(parsed, availableParallelism(), async (f) => {
@@ -213,13 +234,25 @@ async function checkCmd() {
     badAmounts: (await client.query(String.raw`SELECT chamber, filing_id, row_num, amount FROM stock_trades
       WHERE amount IS NOT NULL AND trade_amount_rank(amount) = 0 AND amount !~ '^\$[0-9,]*\.?[0-9]+$'`)).rows,
   }));
-  const failures = compare({ build: b, loaded, raw: new Map(counts), badAmounts: loaded.badAmounts });
-  console.log(`raw: ${b.index.length.toLocaleString()} House index PTRs, ${b.records.length.toLocaleString()} Senate filings; loaded ${loaded.filings.length.toLocaleString()} filings, ${loaded.rows.length.toLocaleString()} rows`);
+  const efdParsed = b.filings.filter((f) => f.source === 'efd' && f.parse_status === 'parsed');
+  const efdCounts = await pool(efdParsed, availableParallelism(), async (f) => [f.filing_id, efdRawRows(await readFile(efd.ptrPath(f.filing_id), 'utf8'))]);
+  const failures = compare({ build: b, loaded, raw: new Map(counts), rawEfd: new Map(efdCounts), badAmounts: loaded.badAmounts });
+  const sources = b.efd
+    ? `${b.ledger.length.toLocaleString()} eFD ledger entries (${efdParsed.length.toLocaleString()} pages parsed) plus ${b.records.length.toLocaleString()} Senate Stock Watcher filings`
+    : `${b.records.length.toLocaleString()} Senate Stock Watcher filings (--no-efd)`;
+  console.log(`raw: ${b.index.length.toLocaleString()} House index PTRs, ${sources}; loaded ${loaded.filings.length.toLocaleString()} filings, ${loaded.rows.length.toLocaleString()} rows`);
+  if (b.efd) {
+    const pageGone = b.ledger.filter((e) => e.page_gone);
+    const unlisted = goneFromEfd(b.ledger);
+    console.log(`eFD: ${pageGone.length} listed with the page gone, ${unlisted.length} no longer listed (gone_from_efd; reported, not failed)`);
+    for (const e of unlisted) console.log(`  gone_from_efd ${e.uuid} ${e.last} ${e.date_received} last listed ${e.last_seen.slice(0, 10)}`);
+  }
   if (failures.length) {
     for (const f of failures) console.log(`FAIL ${f}`);
     process.exitCode = 1;
   } else {
-    console.log(`PASS: index and Senate coverage, ${parsed.length.toLocaleString()} PDFs against their raw text, every column of every member, filing and row, row counts, names, amendment links, amounts, characters`);
+    const senate = b.efd ? `eFD and Senate Stock Watcher coverage, ${efdParsed.length.toLocaleString()} eFD pages against their raw rows` : 'Senate Stock Watcher coverage';
+    console.log(`PASS: index and ${senate}, ${parsed.length.toLocaleString()} PDFs against their raw text, every column of every member, filing and row, row counts, names, amendment links, amounts, characters`);
   }
 }
 
@@ -249,8 +282,33 @@ async function sampleCmd(rest) {
   console.log(`${rows.length} rows to ${out}`);
 }
 
+async function senateTargetsCmd(rest) {
+  const ledger = await readLedger(efd.ledger);
+  const ssw = new Set((await readSenate()).map((r) => filingId(r.ptr_link).id.toLowerCase()));
+  const targets = purgeTargets(ledger, purgeClock(await readPeople()), (u) => existsSync(efd.ptrPath(u)), ssw);
+  await save(efd.targets, JSON.stringify(targets, null, 1) + '\n');
+  const i = rest.indexOf('--md');
+  const mdPath = i >= 0 ? resolve(rest[i + 1]) : efd.targets.replace(/\.json$/, '.md');
+  const by = (f) => targets.reduce((m, t) => ((m[f(t)] = (m[f(t)] ?? 0) + 1), m), {});
+  const lines = [
+    '# Senate PTRs eFD may destroy, with no page held',
+    '',
+    `Generated ${new Date().toISOString().slice(0, 10)} by \`npm run trades -- senate-targets\` from the eFD ledger (${ledger.length.toLocaleString()} entries). Purge date: six years after the filer's last Senate term ended. "SSW" marks a filing Senate Stock Watcher transcribed: its rows survive, the report does not. Paper reports are scans; nothing here fetches them.`,
+    '',
+    `${targets.length.toLocaleString()} filings: ${Object.entries(by((t) => t.kind)).map(([k, n]) => `${n} ${k}`).join(', ')}; ${Object.entries(by((t) => t.state)).map(([k, n]) => `${n} ${k}`).join(', ')}.`,
+    '',
+    '| Purge | Filer | Filed | Kind | State | SSW | Report |',
+    '|---|---|---|---|---|---|---|',
+    ...targets.map((t) => `| ${t.purge} | ${t.filer} | ${t.filed} | ${t.kind} | ${t.state} | ${t.ssw ? 'yes' : ''} | [${t.title}](${t.url}) |`),
+    '',
+  ];
+  await save(mdPath, lines.join('\n'));
+  console.log(`senate-targets: ${targets.length} filings, ${Object.entries(by((t) => t.state)).map(([k, n]) => `${n} ${k}`).join(', ')}; ${efd.targets}, ${mdPath}`);
+}
+
 async function archiveCmd(rest) {
-  const failures = await archive({ dryRun: rest.includes('--dry-run') });
+  const named = rest.filter((a) => a === 'house' || a === 'senate');
+  const failures = await archive({ dryRun: rest.includes('--dry-run'), ...(named.length && { sources: named }) });
   for (const f of failures) console.log(`FAIL ${f}`);
   if (failures.length) process.exitCode = 1;
 }
@@ -259,23 +317,25 @@ async function main([cmd, ...rest]) {
   switch (cmd) {
     case 'index': await indexCmd(); break;
     case 'fetch': await fetchCmd(rest); break;
-    case 'parse': await parseCmd(); break;
+    case 'parse': await parseCmd(rest); break;
     case 'schema': await schemaCmd(rest); break;
     case 'load': await loadCmd(rest); break;
-    case 'check': await checkCmd(); break;
+    case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
     case 'archive': await archiveCmd(rest); break;
+    case 'senate-targets': await senateTargetsCmd(rest); break;
     // Archive runs last and even after a failed check: the raw copies are
     // worth keeping whatever the parse made of them.
     case 'refresh':
       requireTarget(rest);
       await fetchCmd();
       await loadCmd(rest);
-      await checkCmd();
+      await checkCmd(rest);
+      await senateTargetsCmd([]);
       await archiveCmd([]);
       break;
     default:
-      console.error('usage: cli.mjs index|fetch|parse|schema --target E|load --target E|check|sample N|archive [--dry-run]|refresh --target E');
+      console.error('usage: cli.mjs index|fetch|parse [--no-efd]|schema --target E|load --target E [--no-efd]|check [--no-efd]|sample N|archive [house|senate] [--dry-run]|senate-targets [--md P]|refresh --target E');
       process.exitCode = 2;
   }
 }

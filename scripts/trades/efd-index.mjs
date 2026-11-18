@@ -9,6 +9,11 @@
 // filing eFD stops listing keeps its entry and, if its page was fetched, its
 // rows. `goneFromEfd` names them.
 //
+// A filing can also stay listed after its page is gone: eFD answers its link
+// with 302 to /search/ (Jeff Sessions' four 2014-2016 PTRs, past his six
+// years). The fetch stamps such an entry `page_gone` with the first time it
+// saw that, and the stamp survives every later merge.
+//
 // Each list row is [first name, last name, office, link, received date]. The
 // office column is not a name: it is "Senator", "Former Senator", or
 // "Last, First (Senator)", and it changes as a senator leaves office.
@@ -110,7 +115,9 @@ export function mergeLedger(ledger, entries, seenAt) {
   for (const e of entries) {
     const old = by.get(e.uuid);
     if (!old) added++;
-    by.set(e.uuid, { ...e, first_seen: old?.first_seen ?? seenAt, last_seen: seenAt });
+    const next = { ...e, first_seen: old?.first_seen ?? seenAt, last_seen: seenAt };
+    if (old?.page_gone) next.page_gone = old.page_gone;
+    by.set(e.uuid, next);
   }
   const out = [...by.values()].sort((a, b) => a.date_received.localeCompare(b.date_received) || a.uuid.localeCompare(b.uuid));
   return { ledger: out, added };

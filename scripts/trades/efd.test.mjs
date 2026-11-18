@@ -181,3 +181,34 @@ test('mergeLedger keeps every entry; goneFromEfd names the unlisted', () => {
   ]);
   assert.deepEqual(goneFromEfd(ledger).map((x) => x.uuid), [uuid(1)]);
 });
+
+test('mergeLedger keeps page_gone on an entry still listed', () => {
+  const e = parseIndexRow(row(uuid(1), '01/01/2016'));
+  let { ledger } = mergeLedger([], [e], '2026-11-18T00:00:00.000Z');
+  ledger[0].page_gone = '2026-11-18T21:55:00.000Z';
+  ({ ledger } = mergeLedger(ledger, [e], '2026-11-19T00:00:00.000Z'));
+  assert.equal(ledger[0].page_gone, '2026-11-18T21:55:00.000Z');
+  assert.equal(ledger[0].last_seen, '2026-11-19T00:00:00.000Z');
+  ({ ledger } = mergeLedger([], [e], '2026-11-19T00:00:00.000Z'));
+  assert.ok(!('page_gone' in ledger[0]));
+});
+
+test('purgeTargets: departed filers with no page held, nearest purge first', async () => {
+  const { purgeTargets } = await import('./build.mjs');
+  const e = (n, kind, o = {}) => ({ ...parseIndexRow(row(uuid(n), '01/01/2016')), kind, last_seen: '2026-11-18', ...o });
+  const ledger = [
+    e(1, 'electronic'),                                 // page held: skipped
+    e(2, 'electronic', { page_gone: '2026-11-18T21:55:00.000Z' }),
+    e(3, 'paper'),
+    e(4, 'paper', { last: 'Runner' }),                  // still serving: skipped
+    e(5, 'electronic', { last_seen: '2026-11-01' }),    // no longer listed
+  ];
+  const clock = (x) => (x.last === 'Runner' ? null : { left: x.uuid === uuid(3) ? '2017-02-08' : '2021-01-03', purge: x.uuid === uuid(3) ? '2023-02-08' : '2027-01-03' });
+  const t = purgeTargets(ledger, clock, (u) => u === uuid(1), new Set([uuid(5)]), '2026-11-18');
+  assert.deepEqual(t.map((x) => [x.uuid.slice(-1), x.kind, x.purge, x.state, x.ssw]), [
+    ['3', 'paper', '2023-02-08', 'listed, past purge date', false],
+    ['2', 'electronic', '2027-01-03', 'page gone', false],
+    ['5', 'electronic', '2027-01-03', 'unlisted', true],
+  ]);
+  assert.match(t[0].url, /\/search\/view\/paper\//);
+});

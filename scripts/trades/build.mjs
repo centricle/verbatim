@@ -4,11 +4,13 @@ import { readFile, stat } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { availableParallelism } from 'node:os';
-import { house, senate, legislators, FIRST_INDEX_YEAR, lastIndexYear } from './sources.mjs';
+import { house, senate, efd, legislators, FIRST_INDEX_YEAR, lastIndexYear } from './sources.mjs';
 import { readIndexZip, extract, houseFiling } from './house.mjs';
-import { houseMatcher, memberRows, senateTerm, senateMatcher } from './members.mjs';
-import { resolveSenate, senateFilings } from './senate.mjs';
-import { linkAmendments } from './amendments.mjs';
+import { houseMatcher, memberRows, senateTerm, senateMatcher, senateDeparture } from './members.mjs';
+import { resolveSenate, senateFilings, efdFilings, filingId } from './senate.mjs';
+import { parsePtr } from './parse-senate.mjs';
+import { readLedger, goneFromEfd } from './efd-index.mjs';
+import { linkAmendments, supersedeFilings } from './amendments.mjs';
 
 const { house: OVERRIDES, carambat: SENATE_PINS, efd: EFD_PINS } = JSON.parse(readFileSync(new URL('./overrides.json', import.meta.url), 'utf8'));
 
@@ -20,6 +22,38 @@ export function efdMatch(people, pins = EFD_PINS) {
     const pin = pins[`${e.first}|${e.last}`];
     return pin ? { bioguide: pin.bioguide, how: 'override' } : match({ first: e.first, last: e.last, date: e.date_received });
   };
+}
+
+// When eFD may destroy an entry's reports: six years after the filer's last
+// Senate term ended. { left, purge } for a senator out of office, else null.
+export function purgeClock(people, today) {
+  const match = efdMatch(people);
+  const departed = senateDeparture(people, today);
+  return (e) => {
+    const b = match(e).bioguide;
+    const left = b && departed(b);
+    return left ? { left, purge: `${Number(left.slice(0, 4)) + 6}${left.slice(4)}` } : null;
+  };
+}
+
+// Every filing eFD may destroy that we hold no page of: paper always (its
+// scan is never fetched), electronic when its page is not cached. Sorted by
+// purge date. `ssw` marks the ones Senate Stock Watcher transcribed, which
+// keeps the rows but not the report.
+export function purgeTargets(ledger, clock, hasPage, sswIds, today = new Date().toISOString().slice(0, 10)) {
+  const unlisted = new Set(goneFromEfd(ledger).map((e) => e.uuid));
+  const out = [];
+  for (const e of ledger) {
+    if (e.kind === 'electronic' && hasPage(e.uuid)) continue;
+    const c = clock(e);
+    if (!c) continue;
+    const state = e.page_gone ? 'page gone' : unlisted.has(e.uuid) ? 'unlisted' : c.purge <= today ? 'listed, past purge date' : 'listed';
+    out.push({
+      uuid: e.uuid, kind: e.kind, url: efd.viewUrl(e.kind, e.link_uuid), filer: `${e.first} ${e.last}`.trim(),
+      filed: e.date_received, title: e.title, left: c.left, purge: c.purge, state, ssw: sswIds.has(e.uuid),
+    });
+  }
+  return out.sort((a, b) => a.purge.localeCompare(b.purge) || a.filed.localeCompare(b.filed) || a.uuid.localeCompare(b.uuid));
 }
 
 export async function pool(items, n, fn) {
@@ -53,6 +87,34 @@ export async function readSenate() {
   return JSON.parse(buf.toString('utf8'));
 }
 
+// The eFD ledger, and every cached electronic page parsed: uuid -> { page,
+// fetched_at }, or { error, fetched_at } for a page parsePtr refused.
+export async function readEfd() {
+  const ledger = await readLedger(efd.ledger);
+  if (!ledger.length) throw new Error(`no eFD ledger at ${efd.ledger} (run: npm run trades -- fetch senate)`);
+  const pages = new Map();
+  await pool(ledger.filter((e) => e.kind === 'electronic' && existsSync(efd.ptrPath(e.uuid))), availableParallelism(), async (e) => {
+    const path = efd.ptrPath(e.uuid);
+    const [html, st] = await Promise.all([readFile(path, 'utf8'), stat(path)]);
+    const fetched_at = st.mtime.toISOString();
+    try { pages.set(e.uuid, { page: parsePtr(html), fetched_at }); } catch (err) { pages.set(e.uuid, { error: err.message, fetched_at }); }
+  });
+  return { ledger, pages };
+}
+
+// Which copy each Senate filing comes from. eFD for every ledger entry, with
+// one exception: an electronic entry whose page is not held, when Senate
+// Stock Watcher has the filing, comes from SSW, whose copy is then the only
+// one with rows. SSW for every record no eFD entry took, matched on the UUID
+// in lowercase (eFD prints some links uppercase). A filing eFD stopped
+// listing is still in the ledger, so it stays loaded from our copy.
+export function splitSenate(ledger, pages, records) {
+  const held = new Set(records.map((r) => filingId(r.ptr_link).id.toLowerCase()));
+  const entries = ledger.filter((e) => !(e.kind === 'electronic' && !pages.has(e.uuid) && held.has(e.uuid)));
+  const fromEfd = new Set(entries.map((e) => e.uuid));
+  return { entries, records: records.filter((r) => !fromEfd.has(filingId(r.ptr_link).id.toLowerCase())) };
+}
+
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 
 // Each House index row to a bioguide: overrides first, then the rule.
@@ -71,7 +133,9 @@ export function resolveHouse(index, people) {
   return { resolved, excluded, unmatched, how };
 }
 
-export async function build({ onProgress } = {}) {
+// `efd: false` builds the Senate from Senate Stock Watcher alone, as before
+// eFD was read: the rollback (`--no-efd`).
+export async function build({ onProgress, efd: useEfd = true } = {}) {
   const people = await readPeople();
   const index = readHouseIndex();
   const docIds = new Map();
@@ -85,12 +149,29 @@ export async function build({ onProgress } = {}) {
     throw new Error(`${unmatched.length} House filings match no Member; pin or exclude each in overrides.json:\n  ${list.join('\n  ')}`);
   }
 
+  // Every Senate Stock Watcher record is resolved, used or not, so check can
+  // hold a filing both copies hold to one senator.
   const senateResolved = resolveSenate(await readSenate(), senateTerm(people), SENATE_PINS);
   if (senateResolved.failures.length) {
     throw new Error(`${senateResolved.failures.length} Senate records name no senator; pin each in overrides.json:\n  ${senateResolved.failures.join('\n  ')}`);
   }
-  const records = senateResolved.records;
-  const members = memberRows(people, new Set([...resolved.map((r) => r.bioguide), ...records.map((r) => r.bioguide)]));
+  const carambatBioguide = new Map(senateResolved.records.map((r) => [filingId(r.ptr_link).id.toLowerCase(), r.bioguide]));
+  const { ledger, pages } = useEfd ? await readEfd() : { ledger: [], pages: new Map() };
+  const split = splitSenate(ledger, pages, senateResolved.records);
+  const match = efdMatch(people);
+  const efdBioguide = new Map();
+  const efdUnmatched = [];
+  for (const e of split.entries) {
+    const m = match(e);
+    if (m.bioguide) efdBioguide.set(e.uuid, m.bioguide);
+    else efdUnmatched.push(`${e.first} ${e.last} (${e.office}) ${e.date_received} ${e.uuid} ${m.how ?? ''}`);
+  }
+  if (efdUnmatched.length) {
+    throw new Error(`${efdUnmatched.length} eFD filings name no senator; pin each in overrides.json's efd:\n  ${efdUnmatched.join('\n  ')}`);
+  }
+
+  const records = split.records;
+  const members = memberRows(people, new Set([...resolved.map((r) => r.bioguide), ...records.map((r) => r.bioguide), ...efdBioguide.values()]));
   const byBioguide = new Map(members.map((m) => [m.bioguide, m]));
 
   let done = 0;
@@ -106,7 +187,11 @@ export async function build({ onProgress } = {}) {
     if (onProgress && ++done % 500 === 0) onProgress(done, resolved.length);
     return houseFiling(ix, member, parsed, fetchedAt);
   });
-  const senateOut = senateFilings(records, byBioguide);
+  const senateOut = [
+    ...efdFilings(split.entries, pages, (e) => efdBioguide.get(e.uuid), byBioguide),
+    ...senateFilings(records, byBioguide),
+  ];
+  const senateAmendments = supersedeFilings(senateOut);
 
   const filings = [...houseOut, ...senateOut].map((x) => x.filing);
   const houseRows = houseOut.flatMap((x) => x.rows);
@@ -123,5 +208,14 @@ export async function build({ onProgress } = {}) {
     r.amendment_match ??= null;
     r.superseded ??= false;
   }
-  return { members, filings, rows, index, excluded, how, amendments, records, senateFixed: senateResolved.fixed };
+  const efdSummary = {
+    ledger: ledger.length,
+    pages: pages.size,
+    filings: split.entries.length,
+    to_carambat: ledger.length - split.entries.length,
+  };
+  return {
+    members, filings, rows, index, excluded, how, amendments, records, senateFixed: senateResolved.fixed,
+    efd: useEfd ? efdSummary : null, ledger, carambatBioguide, senateAmendments,
+  };
 }

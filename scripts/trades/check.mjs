@@ -1,9 +1,10 @@
 // What check holds the loaded tables to. Pure: compare() takes what build()
 // produced from the raw copies, what the database returned, the
-// parser-independent row count of each PDF, and the amounts the database's
-// own trade_amount_rank() could not place, and returns failures. An empty
-// list is a pass. `legacy` is the old ?senator= map, a parameter so the tests
-// can pass their own.
+// parser-independent row count of each House PDF (`raw`) and eFD page
+// (`rawEfd`, efdRawRows), and the amounts the database's own
+// trade_amount_rank() could not place, and returns failures. An empty list is
+// a pass. `legacy` is the old ?senator= map, a parameter so the tests can
+// pass their own.
 import { MEMBER_COLUMNS, FILING_COLUMNS, ROW_COLUMNS } from './columns.mjs';
 import { AMENDED, DELETED } from './amendments.mjs';
 import { LEGACY_SENATORS } from '../../netlify/functions/shared/legacy-senators.js';
@@ -19,6 +20,12 @@ const rkey = (r) => `${r.chamber}:${r.filing_id}:${r.row_num}`;
 const BAD_CHAR = /[\u0000-\u001f\u007f-\u009f\u00a0\u00ad\ue000]/;
 
 const norm = (v) => (v === undefined ? null : v);
+
+// An eFD page's rows counted without the parser: every <tr> but the header
+// row. On the ten spike pages, <tr> was always rows + 1.
+export function efdRawRows(html) {
+  return (html.match(/<tr[\s>]/g) ?? []).length - (html.match(/<tr class="header"/g) ?? []).length;
+}
 
 function diffRows(label, columns, expected, loaded, key, failures, limit = 20) {
   const got = new Map(loaded.map((r) => [key(r), r]));
@@ -36,23 +43,59 @@ function diffRows(label, columns, expected, loaded, key, failures, limit = 20) {
   if (shown > limit) failures.push(`${label}: ${shown - limit} more differences`);
 }
 
-export function compare({ build, loaded, raw, badAmounts, legacy = LEGACY_SENATORS }) {
+export function compare({ build, loaded, raw, rawEfd = new Map(), badAmounts, legacy = LEGACY_SENATORS }) {
   const failures = [];
   const { members, filings, rows, index, excluded, records } = build;
 
-  // Coverage: every index PTR is a filing unless overrides.json excludes it;
-  // every Senate Stock Watcher filing is one too.
+  // Coverage: every index PTR is a filing unless overrides.json excludes it.
   const houseFilings = filings.filter((f) => f.chamber === 'house');
   if (houseFilings.length + excluded.length !== index.length) {
     failures.push(`House: ${index.length} index PTRs, ${houseFilings.length} filings + ${excluded.length} excluded`);
   }
+
+  // Senate coverage, per source. Every Senate Stock Watcher record the split
+  // left to it is a filing, and its transactions are that filing's rows.
   const senateFilings = filings.filter((f) => f.chamber === 'senate');
-  const senateRows = rows.filter((r) => r.chamber === 'senate');
+  const fromSsw = senateFilings.filter((f) => f.source === 'carambat');
+  const sswRows = rows.filter((r) => r.chamber === 'senate' && r.source === 'carambat');
   const txCount = records.reduce((n, r) => n + (r.transactions?.length ?? 0), 0);
   const paperLinks = records.filter((r) => /\/paper\//i.test(r.ptr_link)).length;
-  if (senateFilings.length !== records.length) failures.push(`Senate: ${records.length} filings in the source, ${senateFilings.length} built`);
-  if (senateRows.length !== txCount) failures.push(`Senate: ${txCount} transactions in the source, ${senateRows.length} rows built`);
-  if (senateFilings.filter((f) => f.kind === 'paper').length !== paperLinks) failures.push(`Senate: ${paperLinks} paper links in the source`);
+  if (fromSsw.length !== records.length) failures.push(`Senate Stock Watcher: ${records.length} filings in the source, ${fromSsw.length} built`);
+  if (sswRows.length !== txCount) failures.push(`Senate Stock Watcher: ${txCount} transactions in the source, ${sswRows.length} rows built`);
+  if (fromSsw.filter((f) => f.kind === 'paper').length !== paperLinks) failures.push(`Senate Stock Watcher: ${paperLinks} paper links in the source`);
+
+  // eFD: every ledger entry is a filing, from eFD or (split) from SSW. Every
+  // electronic one parsed, but for pages eFD no longer serves (`page_gone`),
+  // which load as failed with no rows. Each parsed page's rows equal its raw
+  // <tr> count, and a filing both copies hold is the same senator's.
+  const fromEfd = senateFilings.filter((f) => f.source === 'efd');
+  if (build.efd) {
+    const { ledger, carambatBioguide } = build;
+    if (fromEfd.length + build.efd.to_carambat !== ledger.length) {
+      failures.push(`eFD: ${ledger.length} ledger entries, ${fromEfd.length} eFD filings + ${build.efd.to_carambat} from Senate Stock Watcher`);
+    }
+    const gone = new Set(ledger.filter((e) => e.page_gone).map((e) => e.uuid));
+    for (const f of fromEfd.filter((x) => x.parse_status === 'failed' && !gone.has(x.filing_id))) {
+      failures.push(`eFD ${f.filing_id} (${f.filed_date}): ${f.parse_error}`);
+    }
+    for (const f of fromEfd.filter((x) => x.parse_status === 'parsed')) {
+      const n = rawEfd.get(f.filing_id);
+      if (n !== f.row_count) failures.push(`eFD ${f.filing_id}: parsed ${f.row_count} rows, raw page has ${n ?? 'no count'}`);
+    }
+    for (const f of fromEfd) {
+      const b = carambatBioguide.get(f.filing_id);
+      if (b && b !== f.bioguide) failures.push(`eFD ${f.filing_id}: bioguide ${f.bioguide}, Senate Stock Watcher's ${b}`);
+    }
+  } else if (fromEfd.length) {
+    failures.push(`${fromEfd.length} eFD filings built without eFD`);
+  }
+  // Two Senate filing ids never differ only in case.
+  const lower = new Map();
+  for (const f of senateFilings) {
+    const k = f.filing_id.toLowerCase();
+    if (lower.has(k)) failures.push(`Senate filings ${lower.get(k)} and ${f.filing_id} are one UUID`);
+    lower.set(k, f.filing_id);
+  }
 
   // Every electronic House PTR parsed: a failed one is listed, and fails check.
   for (const f of houseFilings.filter((x) => x.parse_status === 'failed')) {
@@ -100,15 +143,33 @@ export function compare({ build, loaded, raw, badAmounts, legacy = LEGACY_SENATO
     else if (!senateRowsBy.get(bioguide)) failures.push(`legacy senator "${senator}": ${bioguide} has no Senate rows`);
   }
 
-  // A row is superseded exactly when one notice links to it.
+  // A row is superseded exactly when one House notice links to it, or when
+  // its filing is the version an eFD amendment names. A filing is named by at
+  // most one amendment (a chain, never a fork), and only a Senate filing
+  // names one (House PTRs amend rows).
   const linked = new Map();
   for (const r of loaded.rows) {
     if (r.amends_filing_id == null) continue;
     const k = `${r.chamber}:${r.amends_filing_id}:${r.amends_row_num}`;
     linked.set(k, (linked.get(k) ?? 0) + 1);
   }
+  const named = new Map();
+  const loadedFilings = new Set(loaded.filings.map(fkey));
+  for (const f of loaded.filings) {
+    if (f.amends_filing_id == null) continue;
+    if (f.chamber !== 'senate') failures.push(`filing ${fkey(f)}: amends filing ${f.amends_filing_id}`);
+    const k = `${f.chamber}:${f.amends_filing_id}`;
+    if (!loadedFilings.has(k)) failures.push(`filing ${fkey(f)}: amends ${f.amends_filing_id}, which is not loaded`);
+    if (named.has(k)) failures.push(`filing ${k}: amended by both ${named.get(k)} and ${f.filing_id}`);
+    named.set(k, f.filing_id);
+  }
   for (const r of loaded.rows) {
     const n = linked.get(rkey(r)) ?? 0;
+    if (named.has(fkey(r))) {
+      if (!r.superseded) failures.push(`row ${rkey(r)}: its filing is amended by ${named.get(fkey(r))}, row not superseded`);
+      if (n) failures.push(`row ${rkey(r)}: its filing is amended, and ${n} rows link to it`);
+      continue;
+    }
     if (r.superseded && n !== 1) failures.push(`row ${rkey(r)}: superseded, linked from ${n} rows`);
     if (!r.superseded && n) failures.push(`row ${rkey(r)}: linked from ${n} rows, not superseded`);
   }

@@ -10,7 +10,7 @@ export const FILING_COLUMNS = typed(
   { report_year: 'integer', filed_date: 'date', row_count: 'integer', fetched_at: 'timestamptz' },
   ['chamber', 'filing_id', 'source', 'kind', 'bioguide', 'filer_prefix', 'filer_first', 'filer_last',
     'filer_suffix', 'filer_name', 'office', 'state_district', 'report_year', 'filed_date', 'url',
-    'amends_filing_id', 'parse_status', 'parse_error', 'row_count', 'fetched_at'],
+    'title', 'amends_filing_id', 'parse_status', 'parse_error', 'row_count', 'fetched_at'],
 );
 
 export const ROW_COLUMNS = typed(

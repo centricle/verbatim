@@ -21,7 +21,9 @@
 //
 // An Amended row is a trade and is counted; a Deleted row never is
 // (stock_trades.counted). Filings are taken in (filed date, filing id)
-// order. Mutates and returns counts.
+// order, keyed by chamber as well as id, and a member's earlier rows are
+// kept per chamber: Van Hollen filed House PTRs and then Senate ones, and a
+// House notice must never claim a Senate row. Mutates and returns counts.
 
 export const AMENDED = 'Amended';
 export const DELETED = 'Deleted';
@@ -48,16 +50,17 @@ export function linkAmendments(rows, filedDate) {
   }
   const byFiling = new Map();
   for (const r of rows) {
-    if (!byFiling.has(r.filing_id)) byFiling.set(r.filing_id, { filing_id: r.filing_id, filed_date: filedDate.get(r.filing_id), rows: [] });
-    byFiling.get(r.filing_id).rows.push(r);
+    const k = `${r.chamber}:${r.filing_id}`;
+    if (!byFiling.has(k)) byFiling.set(k, { filing_id: r.filing_id, filed_date: filedDate.get(r.filing_id), rows: [] });
+    byFiling.get(k).rows.push(r);
   }
-  const seen = new Map(); // bioguide -> rows of filings already passed
+  const seen = new Map(); // chamber:bioguide -> rows of filings already passed
   for (const f of [...byFiling.values()].sort(order)) {
     const claims = new Map();
     for (const r of f.rows) {
       if (!NOTICE.has(r.filing_status)) continue;
       counts[r.filing_status === AMENDED ? 'amended' : 'deleted']++;
-      const c = candidates(r, seen.get(r.bioguide) ?? []);
+      const c = candidates(r, seen.get(`${r.chamber}:${r.bioguide}`) ?? []);
       r.amendment_match = c.length === 1 ? 'unique' : c.length ? 'ambiguous' : 'none';
       if (c.length === 1) {
         const k = `${c[0].filing_id}:${c[0].row_num}`;
@@ -73,9 +76,74 @@ export function linkAmendments(rows, filedDate) {
     }
     for (const r of f.rows) {
       if (r.amendment_match) counts[r.amendment_match]++;
-      if (!seen.has(r.bioguide)) seen.set(r.bioguide, []);
-      seen.get(r.bioguide).push(r);
+      const who = `${r.chamber}:${r.bioguide}`;
+      if (!seen.has(who)) seen.set(who, []);
+      seen.get(who).push(r);
     }
   }
   return counts;
+}
+
+// Filing-level supersede for eFD (gate option (a), 2026-11-18 spike, section
+// 5). A Senate amendment is a whole new report, "Periodic Transaction Report
+// for MM/DD/YYYY (Amendment N)", that restates every row of the report it
+// corrects, with the same `#` numbering. It names that report only by title,
+// so an amendment is resolved to its root original by bioguide plus title
+// with " (Amendment N)" removed; `title` is the page's h1, whose date is the
+// original's Eastern received date (the list's is UTC and shifts). Several
+// same-day originals: the one sharing the most rows identical by `#` wins,
+// and a tie links nothing. No original: nothing is linked, and the
+// amendment's rows are counted.
+//
+// The amendments of one root form a chain in (N, filed date, filing id)
+// order: each one's amends_filing_id is the version before it. Every row of a
+// filing another filing names is superseded, so a report counts once, in its
+// latest version. Paper amendments ("(Amendment)", no number) carry no rows
+// and name nothing. `out` is [{ filing, rows }] for one chamber; mutates it
+// and returns what it did.
+const AMENDMENT = / \(Amendment (\d+)\)$/;
+const ROW_FIELDS = ['transaction_date', 'owner', 'ticker', 'asset_description', 'asset_type', 'type', 'amount', 'comment'];
+
+function sharedRows(a, b) {
+  const byNum = new Map(b.rows.map((r) => [r.row_num, r]));
+  return a.rows.filter((r) => { const o = byNum.get(r.row_num); return o && ROW_FIELDS.every((f) => o[f] === r[f]); }).length;
+}
+
+export function supersedeFilings(out) {
+  const done = { amendments: 0, linked: 0, none: [], ambiguous: [], superseded_filings: 0, superseded_rows: 0 };
+  const electronic = out.filter((x) => x.filing.source === 'efd' && x.filing.kind === 'electronic' && x.filing.title);
+  const originals = new Map();
+  for (const x of electronic) {
+    if (AMENDMENT.test(x.filing.title)) continue;
+    const k = `${x.filing.bioguide}|${x.filing.title}`;
+    if (!originals.has(k)) originals.set(k, []);
+    originals.get(k).push(x);
+  }
+  const chains = new Map(); // root filing_id -> amendments
+  for (const x of electronic) {
+    const m = AMENDMENT.exec(x.filing.title);
+    if (!m) continue;
+    done.amendments++;
+    const cands = originals.get(`${x.filing.bioguide}|${x.filing.title.replace(AMENDMENT, '')}`) ?? [];
+    let root = cands.length === 1 ? cands[0] : null;
+    if (cands.length > 1) {
+      const scored = cands.map((c) => [sharedRows(x, c), c]).sort((a, b) => b[0] - a[0]);
+      if (scored[0][0] > scored[1][0]) root = scored[0][1];
+    }
+    if (!root) { done[cands.length ? 'ambiguous' : 'none'].push(x.filing.filing_id); continue; }
+    if (!chains.has(root.filing.filing_id)) chains.set(root.filing.filing_id, { root, versions: [] });
+    chains.get(root.filing.filing_id).versions.push({ n: Number(m[1]), x });
+  }
+  for (const { root, versions } of chains.values()) {
+    versions.sort((a, b) => a.n - b.n || a.x.filing.filed_date.localeCompare(b.x.filing.filed_date) || a.x.filing.filing_id.localeCompare(b.x.filing.filing_id));
+    let prev = root;
+    for (const { x } of versions) {
+      x.filing.amends_filing_id = prev.filing.filing_id;
+      done.linked++;
+      done.superseded_filings++;
+      for (const r of prev.rows) { r.superseded = true; done.superseded_rows++; }
+      prev = x;
+    }
+  }
+  return done;
 }

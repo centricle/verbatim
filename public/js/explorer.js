@@ -24,7 +24,8 @@
 // rebuilds the select options from the answer, redraws the charts and calls
 // `onStats` again. A rebuilt list can be narrower than the last (one
 // chamber's members); a filter it has no option for is then cleared, in the
-// same history entry, rather than left filtering invisibly.
+// same history entry, rather than left filtering invisibly. A refetch that
+// fails leaves the last answer drawn and is asked for again on the next change.
 
 const PAGE_SIZE = 50;
 
@@ -146,7 +147,9 @@ export function createExplorer(cfg) {
 
   let state = readUrl();
   let inFlight = null;
+  // The stats query last asked for, and the one whose answer is drawn.
   let statsQuery = null;
+  let statsShown = null;
   let statsInFlight = null;
   // Options each select was given from stats, removed before the next list.
   const listed = new Map();
@@ -305,6 +308,7 @@ export function createExplorer(cfg) {
     getJson(`${cfg.endpoint}?${query}`, controller.signal)
       .then((stats) => {
         if (controller.signal.aborted) return undefined;
+        statsShown = query;
         addOptions(stats, refetch);
         cfg.onStats?.(stats, params);
         return cfg.charts?.(stats, { onFilter });
@@ -312,6 +316,9 @@ export function createExplorer(cfg) {
       .catch((err) => {
         if (controller.signal.aborted) return;
         console.error(err);
+        // The last answer is still what is drawn. Put its query back, so the
+        // next change asks for this one again instead of reading it as done.
+        statsQuery = statsShown;
         // Stops the loading hairline (app.css) on the plots that never drew.
         for (const el of document.querySelectorAll('.figure-plot:empty')) el.setAttribute('aria-busy', 'false');
       });

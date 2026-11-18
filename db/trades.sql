@@ -21,14 +21,20 @@
 -- code; the page and the stats read the label. A code the source does not
 -- define has no label (a blank House owner stays blank).
 --
--- Amendments: a House PTR amends single rows, printed again in a later PTR as
--- "Filing Status: Amended" with a transaction ID the original row lacks. The
--- loader links an amended row to the one earlier row of the same member that
--- matches on owner, type and amount plus the asset or the transaction date.
--- Exactly one match: the link is set and the earlier row is superseded, so a
--- corrected trade is counted once. Zero or several: no link, both rows stay,
--- and amendment_match says which. Superseded rows are kept and never searched
--- or counted.
+-- Amendments: a House PTR corrects single rows in a later PTR, printed as
+-- "Filing Status: Amended", and withdraws them as "Filing Status: Deleted",
+-- each with a transaction ID the original row lacks. The loader links such a
+-- notice to the one earlier row of the same member it matches
+-- (scripts/trades/amendments.mjs has the rule). Exactly one match: the link is
+-- set and the earlier row is superseded, so a corrected trade is counted once.
+-- Zero or several: no link, the earlier rows stay, and amendment_match says
+-- which. `counted` is what search and stats read: a row neither superseded
+-- nor a Deleted notice. Nothing is removed; every row stays reachable.
+--
+-- Amounts: the House and Senate print the same ranges, plus the House form's
+-- "Spouse/DC Over $1,000,000". A few House filers print an exact figure
+-- instead ("$758.17"); it is kept as printed, sorts by its value, and is left
+-- out of by_amount, which counts ranges only (exact_amounts counts the rest).
 
 -- Display names: one per person, from unitedstates/congress-legislators by
 -- bioguide ID, for both chambers. member_sort orders the member select.
@@ -95,13 +101,16 @@ CREATE TABLE IF NOT EXISTS public.stock_trades (
   type_code text NOT NULL,
   type text NOT NULL CHECK (type IN ('Purchase', 'Sale (Full)', 'Sale (Partial)', 'Exchange')),
   amount text,
+  -- The House's labeled sub-lines under a row, as printed.
   subholding_of text,
   description text,
+  location text,
   comment text,
   amends_filing_id text,
   amends_row_num integer,
   amendment_match text CHECK (amendment_match IN ('unique', 'none', 'ambiguous')),
   superseded boolean NOT NULL DEFAULT false,
+  counted boolean GENERATED ALWAYS AS (NOT superseded AND filing_status IS DISTINCT FROM 'Deleted') STORED,
   fts tsvector GENERATED ALWAYS AS (
     to_tsvector('english'::regconfig,
       member || ' ' || coalesce(ticker, '') || ' ' || coalesce(asset_description, ''))
@@ -121,15 +130,15 @@ CREATE INDEX IF NOT EXISTS idx_stock_trades_bioguide ON public.stock_trades (bio
 CREATE INDEX IF NOT EXISTS idx_stock_trades_date ON public.stock_trades (transaction_date);
 CREATE INDEX IF NOT EXISTS idx_stock_trades_ticker ON public.stock_trades (ticker);
 CREATE INDEX IF NOT EXISTS idx_stock_trades_type ON public.stock_trades (type);
-CREATE INDEX IF NOT EXISTS idx_stock_trades_chamber ON public.stock_trades (chamber) WHERE NOT superseded;
+CREATE INDEX IF NOT EXISTS idx_stock_trades_chamber ON public.stock_trades (chamber) WHERE counted;
 CREATE INDEX IF NOT EXISTS idx_stock_trades_amends ON public.stock_trades (chamber, amends_filing_id, amends_row_num)
   WHERE amends_filing_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_stock_trades_fts ON public.stock_trades USING gin (fts);
 
--- The filings' own amount ranges, ranked by lower bound; anything else ranks
--- 0 and is reported by check.mjs. The House form's eleventh option, "Spouse/DC
--- Over $1,000,000", is open-ended above $1,000,000, so it shares rank 7 with
--- "$1,000,001 - $5,000,000" (and sorts after it on the text).
+-- The printed ranges in order of their lower bound ("Spouse/DC Over
+-- $1,000,000" starts above $1,000,000, just below "$1,000,001 - ..."); any
+-- other amount ranks 0. check.mjs fails a rank-0 amount that is not an exact
+-- dollar figure.
 CREATE OR REPLACE FUNCTION public.trade_amount_rank(amount text) RETURNS integer
   LANGUAGE sql IMMUTABLE PARALLEL SAFE
   AS $$
@@ -140,12 +149,20 @@ CREATE OR REPLACE FUNCTION public.trade_amount_rank(amount text) RETURNS integer
     WHEN '$100,001 - $250,000' THEN 4
     WHEN '$250,001 - $500,000' THEN 5
     WHEN '$500,001 - $1,000,000' THEN 6
-    WHEN '$1,000,001 - $5,000,000' THEN 7
     WHEN 'Spouse/DC Over $1,000,000' THEN 7
-    WHEN '$5,000,001 - $25,000,000' THEN 8
-    WHEN '$25,000,001 - $50,000,000' THEN 9
-    WHEN 'Over $50,000,000' THEN 10
+    WHEN '$1,000,001 - $5,000,000' THEN 8
+    WHEN '$5,000,001 - $25,000,000' THEN 9
+    WHEN '$25,000,001 - $50,000,000' THEN 10
+    WHEN 'Over $50,000,000' THEN 11
     ELSE 0 END
+$$;
+
+-- The sort key: the first dollar figure printed, so a range sorts by its
+-- lower bound and an exact amount by itself.
+CREATE OR REPLACE FUNCTION public.trade_amount_low(amount text) RETURNS numeric
+  LANGUAGE sql IMMUTABLE PARALLEL SAFE
+  AS $$
+  SELECT nullif(replace(substring(amount FROM '\$([0-9,]*\.?[0-9]*)'), ',', ''), '')::numeric
 $$;
 
 CREATE OR REPLACE FUNCTION public.search_stock_trades(
@@ -170,7 +187,7 @@ BEGIN
     SELECT t.*, f.state_district, f.url, f.filed_date
     FROM stock_trades t
     JOIN trade_filings f USING (chamber, filing_id)
-    WHERE NOT t.superseded
+    WHERE t.counted
       AND (q IS NULL OR t.fts @@ q)
       AND (filter_chamber IS NULL OR t.chamber = filter_chamber)
       AND (filter_member IS NULL OR t.member = filter_member)
@@ -192,8 +209,8 @@ BEGIN
         CASE WHEN sort_col = 'transaction_date' AND sort_dir = 'asc' THEN transaction_date END ASC NULLS LAST,
         CASE WHEN sort_col = 'member' AND sort_dir = 'asc' THEN member END ASC,
         CASE WHEN sort_col = 'member' AND sort_dir = 'desc' THEN member END DESC,
-        CASE WHEN sort_col = 'amount' AND sort_dir = 'desc' THEN trade_amount_rank(amount) END DESC NULLS LAST,
-        CASE WHEN sort_col = 'amount' AND sort_dir = 'asc' THEN trade_amount_rank(amount) END ASC NULLS LAST,
+        CASE WHEN sort_col = 'amount' AND sort_dir = 'desc' THEN trade_amount_low(amount) END DESC NULLS LAST,
+        CASE WHEN sort_col = 'amount' AND sort_dir = 'asc' THEN trade_amount_low(amount) END ASC NULLS LAST,
         filed_date DESC, chamber, filing_id, row_num
       LIMIT page_size OFFSET page_offset
     ) r), '[]'::json)
@@ -209,7 +226,7 @@ CREATE OR REPLACE FUNCTION public.stock_trades_stats(filter_chamber text DEFAULT
   AS $$
   WITH t AS (
     SELECT * FROM stock_trades
-    WHERE NOT superseded AND (filter_chamber IS NULL OR chamber = filter_chamber)
+    WHERE counted AND (filter_chamber IS NULL OR chamber = filter_chamber)
   ), f AS (
     SELECT * FROM trade_filings WHERE filter_chamber IS NULL OR chamber = filter_chamber
   )
@@ -244,8 +261,9 @@ CREATE OR REPLACE FUNCTION public.stock_trades_stats(filter_chamber text DEFAULT
         count(*) FILTER (WHERE type = 'Purchase') AS purchases,
         count(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) AS sales
         FROM t WHERE ticker IS NOT NULL GROUP BY ticker ORDER BY cnt DESC, ticker LIMIT 20) x),
-    'by_amount', (SELECT coalesce(json_agg(json_build_object('amount', amount, 'count', cnt) ORDER BY trade_amount_rank(amount), amount), '[]'::json)
-      FROM (SELECT amount, count(*) AS cnt FROM t WHERE amount IS NOT NULL GROUP BY amount) x),
+    'by_amount', (SELECT coalesce(json_agg(json_build_object('amount', amount, 'count', cnt) ORDER BY trade_amount_rank(amount)), '[]'::json)
+      FROM (SELECT amount, count(*) AS cnt FROM t WHERE trade_amount_rank(amount) > 0 GROUP BY amount) x),
+    'exact_amounts', (SELECT count(*) FROM t WHERE amount IS NOT NULL AND trade_amount_rank(amount) = 0),
     'by_asset_type', (SELECT coalesce(json_agg(json_build_object('asset_type', asset_type, 'count', cnt) ORDER BY cnt DESC, asset_type), '[]'::json)
       FROM (SELECT coalesce(nullif(asset_type, ''), 'Unknown') AS asset_type, count(*) AS cnt FROM t GROUP BY 1) x),
     'member_list', (SELECT coalesce(json_agg(json_build_object('member', m.member, 'bioguide', m.bioguide) ORDER BY m.member_sort), '[]'::json)

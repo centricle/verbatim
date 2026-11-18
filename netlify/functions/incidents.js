@@ -1,9 +1,8 @@
 import { getSQL } from './shared/db.js'
+import { jsonFor } from './shared/respond.js'
 import { pageNum, pageSize } from './shared/paging.js'
 
-function json(data, status = 200) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30' }, body: JSON.stringify(data) }
-}
+const json = jsonFor('incidents')
 
 export async function handler(event) {
   const params = event.queryStringParameters || {}

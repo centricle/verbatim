@@ -1,9 +1,8 @@
 import { getSQL } from './shared/db.js'
+import { jsonFor } from './shared/respond.js'
 import { pageNum, pageSize } from './shared/paging.js'
 
-function json(data, status = 200) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30' }, body: JSON.stringify(data) }
-}
+const json = jsonFor('executive')
 
 // Years bound the signing date via make_date, which rejects year 0. Anything
 // but one to four digits, or 0, is no bound at all.

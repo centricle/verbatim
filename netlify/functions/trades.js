@@ -1,10 +1,9 @@
 import { getSQL } from './shared/db.js'
+import { jsonFor } from './shared/respond.js'
 import { pageSize, rowOffset } from './shared/paging.js'
 import { legacySenator } from './shared/legacy-senators.js'
 
-function json(data, status = 200) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30' }, body: JSON.stringify(data) }
-}
+const json = jsonFor('trades')
 
 // Both chambers, from stock_trades (db/trades.sql). `chamber` narrows search,
 // stats and the paper list; `member` is trade_members' name.

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { htmlText, filingId, senateFilings } from './senate.mjs';
+import { htmlText, filingId, senateFilings, resolveSenate } from './senate.mjs';
 
 const MEMBERS = new Map([['C000001', { bioguide: 'C000001', member: 'Wile E. Coyote' }]]);
 const uuid = '32550a8f-923e-416f-84f3-e19ab4f148b1';
@@ -54,4 +54,31 @@ test('an unknown type or member stops the load', () => {
   bad.transactions[0].type = 'Gift';
   assert.throws(() => senateFilings([bad], MEMBERS), /type "Gift"/);
   assert.throws(() => senateFilings([rec({ bioguide: 'R000001' })], MEMBERS), /no member row/);
+});
+
+// The Coyote's real ID is C000001; Senate Stock Watcher filed him under
+// C000099, a namesake who never sat in the Senate.
+const SENATORS = new Set(['C000001', 'W000001']);
+const hasTerm = (bioguide) => SENATORS.has(bioguide);
+const PINS = { C000099: { bioguide: 'C000001', last: 'Coyote', why: 'test' } };
+
+test('a pin corrects the wrong bioguide when the last name is the pin\'s', () => {
+  const { records, fixed, failures } = resolveSenate(
+    [rec({ bioguide: 'C000099' }), rec({ bioguide: 'C000099', last_name: 'COYOTE, Jr.' }), rec()], hasTerm, PINS);
+  assert.deepEqual(records.map((r) => r.bioguide), ['C000001', 'C000001', 'C000001']);
+  assert.equal(fixed.length, 2);
+  assert.deepEqual(failures, []);
+});
+
+test('a pin never moves another filer carrying the same wrong ID', () => {
+  const wolf = rec({ bioguide: 'C000099', first_name: 'Ralph', last_name: 'Wolf', office: 'Wolf, Ralph (Senator)' });
+  const { records, fixed, failures } = resolveSenate([wolf], hasTerm, PINS);
+  assert.equal(records[0].bioguide, 'C000099');
+  assert.equal(fixed.length, 0);
+  assert.match(failures[0], /Ralph Wolf .* C000099: no Senate term/);
+});
+
+test('a bioguide with no Senate term at the received date fails', () => {
+  const { failures } = resolveSenate([rec({ bioguide: 'R000001' })], hasTerm, PINS);
+  assert.equal(failures.length, 1);
 });

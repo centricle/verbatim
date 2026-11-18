@@ -1,15 +1,32 @@
 {
-  "comment": "House index rows the member rule in members.mjs cannot resolve, by DocID. `bioguide` pins a filing to a Member; `exclude` leaves it out of the tables, with the reason. Each was checked by hand against the index and congress-legislators on 2026-11-18.",
+  "comment": "Filings the member rules in members.mjs and senate.mjs cannot resolve. `house`, by DocID: `bioguide` pins a filing to a Member; `exclude` leaves it out of the tables, with the reason. `senate`, by the bioguide Senate Stock Watcher's record carries: the right one, applied only to records whose last name is `last`. Each was checked by hand against the index or the filing's office line and congress-legislators on 2026-11-18.",
   "house": {
-    "9110523": {
-      "bioguide": "G000556",
-      "why": "Paper PTR filed 2017-03-10 under FL11, two months after the filer's FL09 term ended; the index's district is not the seat held"
-    },
     "8218652": {
       "exclude": "The filer was never a Member of Congress (paper PTR, MN01, 2022)"
     },
     "8219483": {
       "exclude": "The filer was never a Member of Congress (paper PTR, PR00, 2023)"
+    },
+    "9110523": {
+      "bioguide": "G000556",
+      "why": "Paper PTR filed 2017-03-10 under FL11, two months after the filer's FL09 term ended; the index's district is not the seat held"
+    }
+  },
+  "senate": {
+    "M000357": {
+      "bioguide": "M000355",
+      "last": "McConnell",
+      "why": "Office 'McConnell, A. Mitchell Jr. (Senator)', filed 2017 to 2020; M000357 is William McConnell, Senate 1890 to 1891"
+    },
+    "R000120": {
+      "bioguide": "R000122",
+      "last": "Reed",
+      "why": "Office 'Reed, John F. (Senator)' (and the paper filings' 'JOHN F REED'), filed 2012 to 2019; R000120 is John Reed, House 1795 to 1801. Jack Reed's formal name is John F. Reed"
+    },
+    "U000002": {
+      "bioguide": "U000039",
+      "last": "Udall",
+      "why": "Office 'Udall, Tom (Senator)', filed 2019; U000002 is Stewart Udall, House 1955 to 1961. The same senator's 2012 paper filing already carries U000039"
     }
   }
 }

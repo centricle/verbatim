@@ -93,6 +93,7 @@ function summarize(b) {
   console.log(`${b.members.length} members, ${b.filings.length.toLocaleString()} filings, ${b.rows.length.toLocaleString()} rows`);
   console.log('filings', by(b.filings, (f) => `${f.chamber} ${f.parse_status}`));
   console.log('House member match', b.how, `excluded ${b.excluded.length}`);
+  console.log('Senate bioguides corrected', by(b.senateFixed, (x) => `${x.from} -> ${x.to}`));
   console.log('House notices', b.amendments);
   for (const f of b.filings.filter((x) => x.parse_status === 'failed').slice(0, 20)) console.log(`FAILED ${f.report_year} ${f.filing_id}: ${f.parse_error}`);
 }

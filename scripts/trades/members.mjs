@@ -10,9 +10,27 @@
 // breaks a tie; none needed it on 2013 to 2026. Anything left fails the load
 // until overrides.json pins it.
 //
-// Senate rows arrive with a bioguide ID already (Senate Stock Watcher's).
+// Senate rows arrive with a bioguide ID already (Senate Stock Watcher's), and
+// it is not always right: three senators carry the ID of a namesake from the
+// 1790s to the 1950s. senate.mjs holds every one to a Senate term
+// (senateTerm below) and overrides.json corrects the three.
 
 export const GRACE_DAYS = 400;
+
+// Whether a bioguide held a Senate seat on a date, or left one within
+// GRACE_DAYS before it (the same allowance the House rule gives a report
+// filed after leaving).
+export function senateTerm(people) {
+  const terms = new Map();
+  for (const p of people) {
+    const sen = (p.terms || []).filter((t) => t.type === 'sen');
+    if (sen.length) terms.set(p.id.bioguide, sen);
+  }
+  return (bioguide, date) => {
+    const graceFrom = new Date(Date.parse(date) - GRACE_DAYS * 864e5).toISOString().slice(0, 10);
+    return (terms.get(bioguide) ?? []).some((t) => t.start <= date && t.end >= graceFrom);
+  };
+}
 
 const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
 

@@ -6,11 +6,11 @@ import { createHash } from 'node:crypto';
 import { availableParallelism } from 'node:os';
 import { house, senate, legislators, FIRST_INDEX_YEAR, lastIndexYear } from './sources.mjs';
 import { readIndexZip, extract, houseFiling } from './house.mjs';
-import { houseMatcher, memberRows } from './members.mjs';
-import { senateFilings } from './senate.mjs';
+import { houseMatcher, memberRows, senateTerm } from './members.mjs';
+import { resolveSenate, senateFilings } from './senate.mjs';
 import { linkAmendments } from './amendments.mjs';
 
-const OVERRIDES = JSON.parse(readFileSync(new URL('./overrides.json', import.meta.url), 'utf8')).house;
+const { house: OVERRIDES, senate: SENATE_PINS } = JSON.parse(readFileSync(new URL('./overrides.json', import.meta.url), 'utf8'));
 
 export async function pool(items, n, fn) {
   const out = new Array(items.length);
@@ -75,7 +75,11 @@ export async function build({ onProgress } = {}) {
     throw new Error(`${unmatched.length} House filings match no Member; pin or exclude each in overrides.json:\n  ${list.join('\n  ')}`);
   }
 
-  const records = await readSenate();
+  const senateResolved = resolveSenate(await readSenate(), senateTerm(people), SENATE_PINS);
+  if (senateResolved.failures.length) {
+    throw new Error(`${senateResolved.failures.length} Senate records name no senator; pin each in overrides.json:\n  ${senateResolved.failures.join('\n  ')}`);
+  }
+  const records = senateResolved.records;
   const members = memberRows(people, new Set([...resolved.map((r) => r.bioguide), ...records.map((r) => r.bioguide)]));
   const byBioguide = new Map(members.map((m) => [m.bioguide, m]));
 
@@ -109,5 +113,5 @@ export async function build({ onProgress } = {}) {
     r.amendment_match ??= null;
     r.superseded ??= false;
   }
-  return { members, filings, rows, index, excluded, how, amendments, records };
+  return { members, filings, rows, index, excluded, how, amendments, records, senateFixed: senateResolved.fixed };
 }

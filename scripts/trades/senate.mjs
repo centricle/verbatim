@@ -32,6 +32,28 @@ export function filingId(link) {
   return { kind: m[1] === 'paper' ? 'paper' : 'electronic', id: m[2] };
 }
 
+// Each record's bioguide, held to a Senate term at its received date.
+// `pins` is overrides.json's `senate`: Senate Stock Watcher's bioguide ->
+// the right one, applied only when the record's last name is the pin's, so a
+// pin cannot move some other filer who happens to carry the same wrong ID.
+// Anything still without a term comes back in `failures`, and the load stops.
+export function resolveSenate(records, hasSenateTerm, pins = {}) {
+  const out = [], fixed = [], failures = [];
+  for (const rec of records) {
+    const pin = pins[rec.bioguide];
+    const last = rec.last_name?.trim() ?? '';
+    const applies = pin && pin.last.localeCompare(last.replace(/,.*$/, ''), 'en', { sensitivity: 'base' }) === 0;
+    const bioguide = applies ? pin.bioguide : rec.bioguide;
+    if (applies) fixed.push({ from: rec.bioguide, to: bioguide, link: rec.ptr_link });
+    const filed = usDate(rec.date_recieved);
+    if (!filed || !hasSenateTerm(bioguide, filed)) {
+      failures.push(`${rec.first_name?.trim()} ${last} (${rec.office}) ${rec.date_recieved} ${bioguide}: no Senate term at this date`);
+    }
+    out.push(applies ? { ...rec, bioguide } : rec);
+  }
+  return { records: out, fixed, failures };
+}
+
 export function senateFilings(records, members) {
   const out = [];
   for (const rec of records) {

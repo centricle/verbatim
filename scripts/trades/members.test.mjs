@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { houseMatcher, memberRows, displayName, sortName } from './members.mjs';
+import { houseMatcher, memberRows, displayName, sortName, senateTerm } from './members.mjs';
 
 // congress-legislators-shaped records for the cast. Ralph Wolf shares the
 // Coyote's state and must never be folded into him.
@@ -66,4 +66,14 @@ test('two people with one display name each get their last seat', () => {
 
 test('a bioguide missing from congress-legislators fails', () => {
   assert.throws(() => memberRows(PEOPLE, ['X999999']), /not in congress-legislators/);
+});
+
+test('a Senate term covers the date, or ended within the grace period', () => {
+  const has = senateTerm(PEOPLE);
+  assert.equal(has('S000001', '2015-06-01'), true);
+  assert.equal(has('S000001', '2019-06-01'), true);
+  assert.equal(has('S000001', '2021-01-01'), false);
+  assert.equal(has('S000001', '2012-12-01'), false);
+  assert.equal(has('C000001', '2015-06-01'), false, 'a House term is not a Senate term');
+  assert.equal(has('X000001', '2015-06-01'), false);
 });

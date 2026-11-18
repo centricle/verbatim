@@ -36,9 +36,9 @@ test('no two members of a series share a key', () => {
   }
 });
 
-// The plan's first key, year and speaker, collided on Washington's two 1790
-// addresses. Without this, a regression to it passes the first test as long
-// as both sides regress together.
+// A year-and-speaker key collides on Washington's two 1790 addresses.
+// Without this, a regression to one passes the first test as long as both
+// sides regress together.
 test('a dated member is keyed by its date, not its year', () => {
   const both = series.sotu.members.filter((x) => x.year === 1790 && x.speaker === 'george-washington');
   assert.equal(both.length, 2);

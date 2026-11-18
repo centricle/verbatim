@@ -1,0 +1,295 @@
+{
+  "convention": "A speaker's roles are the entries official rosters print for them, and nothing else. `as` is the roster's own words, verbatim from the page at `url`: the White House list's lead-in, the Supreme Court list's section heading, the Biographical Directory's descriptor, the Senate state list's name. A speaker has one entry per roster section or page that lists them, and an empty list when no roster does. bioguide.congress.gov answers scripts with a bot challenge, so the Biographical Directory is read from the House's History, Art & Archives copy, which lists Representatives and Continental Congress delegates; Senate service comes from the Senate's own state lists. `bodies` are speakers that are not people. Transcribed once, on the accessed dates.",
+  "rosters": {
+    "presidents": {"label":"The White House, Presidential Walk of Fame","source_url":"https://www.whitehouse.gov/walk-of-fame/","accessed":"2026-11-18"},
+    "supreme_court": {"label":"Supreme Court of the United States, Justices 1789 to Present","source_url":"https://www.supremecourt.gov/about/members_text.aspx","accessed":"2026-11-18"},
+    "congress": {"label":"Biographical Directory of the United States Congress, House History, Art & Archives","source_url":"https://history.house.gov/People/Search/","accessed":"2026-11-18"},
+    "senate": {"label":"U.S. Senate, States in the Senate","source_url":"https://www.senate.gov/states/statesmap.htm","accessed":"2026-11-18"}
+  },
+  "bodies": ["constitutional-convention","continental-congress","supreme-court","united-states-congress"],
+  "speakers": {
+    "abe-fortas": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "abraham-lincoln": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Representative from Illinois and 16th President of the United States","url":"https://history.house.gov/People/Detail/16982"}
+    ],
+    "alexander-hamilton": [
+      {"roster":"congress","as":"A Delegate from New York","url":"https://history.house.gov/People/Detail/14411"}
+    ],
+    "andrew-jackson": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative and a Senator from Tennessee and 7th President of the United States","url":"https://history.house.gov/People/Detail/15699"},
+      {"roster":"senate","as":"Tennessee Senators","url":"https://www.senate.gov/states/TN/senators.htm"}
+    ],
+    "andrew-johnson": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Representative and a Senator from Tennessee and a Vice President and 17th President of the United States","url":"https://history.house.gov/People/Detail/15840"},
+      {"roster":"senate","as":"Tennessee Senators","url":"https://www.senate.gov/states/TN/senators.htm"}
+    ],
+    "antonin-scalia": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "barack-obama": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"senate","as":"Illinois Senators","url":"https://www.senate.gov/states/IL/senators.htm"}
+    ],
+    "barbara-jordan": [
+      {"roster":"congress","as":"a Representative from Texas","url":"https://history.house.gov/People/Detail/16031"}
+    ],
+    "benjamin-curtis": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "benjamin-franklin": [
+      {"roster":"congress","as":"a Delegate from Pennsylvania","url":"https://history.house.gov/People/Detail/13404"}
+    ],
+    "benjamin-harrison": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"senate","as":"Indiana Senators","url":"https://www.senate.gov/states/IN/senators.htm"}
+    ],
+    "bill-clinton": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "calvin-coolidge": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "chester-a-arthur": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "constitutional-convention": [],
+    "continental-congress": [],
+    "donald-trump": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "dwight-d-eisenhower": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "earl-warren": [
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "edward-sanford": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "elizabeth-cady-stanton": [],
+    "felix-frankfurter": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "franklin-d-roosevelt": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "franklin-pierce": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Representative and a Senator from New Hampshire and 14th President of the United States","url":"https://history.house.gov/People/Detail/19692"},
+      {"roster":"senate","as":"New Hampshire Senators","url":"https://www.senate.gov/states/NH/senators.htm"}
+    ],
+    "frederick-douglass": [],
+    "george-h-w-bush": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative from Texas and a Vice President of the United States and 41st President of the United States","url":"https://history.house.gov/People/Detail/10276"}
+    ],
+    "george-w-bush": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "george-washington": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Delegate from Virginia and first President of the United States","url":"https://history.house.gov/People/Detail/23425"}
+    ],
+    "gerald-ford": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative from Michigan, Vice President, and thirty-eighth President of the United States","url":"https://history.house.gov/People/Detail/13301"}
+    ],
+    "grover-cleveland": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "harry-blackmun": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "harry-s-truman": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"senate","as":"Missouri Senators","url":"https://www.senate.gov/states/MO/senators.htm"}
+    ],
+    "henry-brown": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "herbert-hoover": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "hugo-black": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"},
+      {"roster":"senate","as":"Alabama Senators","url":"https://www.senate.gov/states/AL/senators.htm"}
+    ],
+    "james-a-garfield": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative from Ohio and 20th President of the United States","url":"https://history.house.gov/People/Detail/13641"}
+    ],
+    "james-buchanan": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative and a Senator from Pennsylvania and 15th President of the United States","url":"https://history.house.gov/People/Detail/10073"},
+      {"roster":"senate","as":"Pennsylvania Senators","url":"https://www.senate.gov/states/PA/senators.htm"}
+    ],
+    "james-k-polk": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative from Tennessee and 11th President of the United States","url":"https://history.house.gov/People/Detail/19788"}
+    ],
+    "james-madison": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Delegate and a Representative from Virginia and fourth President of the United States","url":"https://history.house.gov/People/Detail/17381"}
+    ],
+    "james-monroe": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Delegate and a Senator from Virginia and 5th President of the United States","url":"https://history.house.gov/People/Detail/18410"},
+      {"roster":"senate","as":"Virginia Senators","url":"https://www.senate.gov/states/VA/senators.htm"}
+    ],
+    "jimmy-carter": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "joe-biden": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"senate","as":"Delaware Senators","url":"https://www.senate.gov/states/DE/senators.htm"}
+    ],
+    "john-adams": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Delegate from Massachusetts and a Vice President and 2d President of the United States","url":"https://history.house.gov/People/Detail/8309"}
+    ],
+    "john-f-kennedy": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Representative and a Senator from Massachusetts and 35th President of the United States","url":"https://history.house.gov/People/Detail/7707"},
+      {"roster":"senate","as":"Massachusetts Senators","url":"https://www.senate.gov/states/MA/senators.htm"}
+    ],
+    "john-harlan": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "john-jay": [
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"},
+      {"roster":"congress","as":"a Delegate from New York","url":"https://history.house.gov/People/Detail/15774"}
+    ],
+    "john-marshall": [
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"},
+      {"roster":"congress","as":"a Representative from Virginia","url":"https://history.house.gov/People/Detail/17518"}
+    ],
+    "john-marshall-harlan-ii": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "john-paul-stevens": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "john-quincy-adams": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Senator and a Representative from Massachusetts and 6th President of the United States","url":"https://history.house.gov/People/Detail/8312"},
+      {"roster":"senate","as":"Massachusetts Senators","url":"https://www.senate.gov/states/MA/senators.htm"}
+    ],
+    "john-roberts": [
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "john-tyler": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Representative and a Senator from Virginia, a Vice President and 10th President of the United States","url":"https://history.house.gov/People/Detail/23187"},
+      {"roster":"senate","as":"Virginia Senators","url":"https://www.senate.gov/states/VA/senators.htm"}
+    ],
+    "lyndon-b-johnson": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Representative and a Senator from Texas and a Vice President and 36th President of the United States","url":"https://history.house.gov/People/Listing/J/JOHNSON,-Lyndon-Baines-(J000160)/"},
+      {"roster":"senate","as":"Texas Senators","url":"https://www.senate.gov/states/TX/senators.htm"}
+    ],
+    "mark-twain": [],
+    "martin-van-buren": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"senate","as":"New York Senators","url":"https://www.senate.gov/states/NY/senators.htm"}
+    ],
+    "millard-fillmore": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Representative from New York, Vice President and 13th President of the United States","url":"https://history.house.gov/People/Detail/13119"}
+    ],
+    "oliver-wendell-holmes": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "owen-roberts": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "potter-stewart": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "richard-nixon": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative and a Senator from California and a Vice President and 37th President of the United States","url":"https://history.house.gov/People/Detail/18976"},
+      {"roster":"senate","as":"California Senators","url":"https://www.senate.gov/states/CA/senators.htm"}
+    ],
+    "robert-jackson": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "roger-taney": [
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "ronald-reagan": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "rufus-peckham": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "rutherford-b-hayes": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative from Ohio and 19th President of the United States","url":"https://history.house.gov/People/Detail/14767"}
+    ],
+    "samuel-alito": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "shirley-chisholm": [
+      {"roster":"congress","as":"a Representative from New York","url":"https://history.house.gov/People/Detail/10918"}
+    ],
+    "stephen-douglas": [
+      {"roster":"congress","as":"A Representative and a Senator from Illinois","url":"https://history.house.gov/People/Detail/12404"},
+      {"roster":"senate","as":"Illinois Senators","url":"https://www.senate.gov/states/IL/senators.htm"}
+    ],
+    "supreme-court": [],
+    "susan-b-anthony": [],
+    "theodore-roosevelt": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "thomas-jefferson": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Delegate from Virginia, a Vice President and third President of the United States","url":"https://history.house.gov/People/Detail/15781"}
+    ],
+    "tom-clark": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "ulysses-s-grant": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "united-states-congress": [],
+    "warren-burger": [
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "warren-g-harding": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"senate","as":"Ohio Senators","url":"https://www.senate.gov/states/OH/senators.htm"}
+    ],
+    "william-brennan": [
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "william-henry-harrison": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"A Delegate from the Territory Northwest of the River Ohio, a Representative and a Senator from Ohio, and 9th President of the United States","url":"https://history.house.gov/People/Detail/14628"},
+      {"roster":"senate","as":"Ohio Senators","url":"https://www.senate.gov/states/OH/senators.htm"}
+    ],
+    "william-howard-taft": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "william-mckinley": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"},
+      {"roster":"congress","as":"a Representative from Ohio and 25th President of the United States","url":"https://history.house.gov/People/Detail/17980"}
+    ],
+    "william-rehnquist": [
+      {"roster":"supreme_court","as":"Chief Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"},
+      {"roster":"supreme_court","as":"Associate Justices","url":"https://www.supremecourt.gov/about/members_text.aspx"}
+    ],
+    "winston-churchill": [],
+    "woodrow-wilson": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ],
+    "zachary-taylor": [
+      {"roster":"presidents","as":"Presidents of the United States:","url":"https://www.whitehouse.gov/walk-of-fame/"}
+    ]
+  }
+}

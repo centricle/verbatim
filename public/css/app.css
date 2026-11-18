@@ -283,10 +283,14 @@
   }
 
   /* ---------- Type: reading ---------- */
+  /* The floor scales with the viewport below ~440px: each line of the home
+     statement is about 7.1em at its widest, and a fixed 2.5rem floor wrapped
+     both lines on phones narrower than 414px. Measured whole from 320 up,
+     tightest at 320 (about 1px spare). */
   .statement {
     font-family: var(--font-display);
     font-weight: 500;
-    font-size: clamp(2.5rem, 1rem + 6.4vw, 6.6rem);
+    font-size: clamp(min(2.5rem, 12vw), 1rem + 6.4vw, 6.6rem);
     line-height: 0.96;
     letter-spacing: -0.028em;
     text-wrap: balance;
@@ -444,15 +448,13 @@
   /* The whole entry is the link target; the title carries the name. */
   .toc-title a::after { content: ''; position: absolute; inset: 0; }
   .toc-entry:hover .toc-title a,
-  .bob-entry:hover .toc-title a,
   .toc-title a:focus-visible {
     text-decoration: underline;
     text-decoration-thickness: 2px;
     text-underline-offset: 0.12em;
   }
   .toc-title a:focus-visible { outline: none; }
-  .toc-entry:has(a:focus-visible),
-  .bob-entry:has(a:focus-visible) { outline: 2px solid var(--color-ink); outline-offset: 4px; }
+  .toc-entry:has(a:focus-visible) { outline: 2px solid var(--color-ink); outline-offset: 4px; }
   .toc-dek {
     margin-top: 0.4rem;
     font-size: 0.95rem;
@@ -484,6 +486,9 @@
   .toc-entry--lead .toc-title { font-size: clamp(2.1rem, 1.3rem + 3vw, 3.5rem); }
   .toc-entry--lead .toc-dek { font-size: 1.05rem; font-style: italic; }
   .toc-entry--lead .byline-source { font-size: 1.25rem; }
+  /* A part ends on white space, not a rule: the next part's head rule (or the
+     footer's) does the closing. */
+  .toc-entry:last-child { border-bottom: 0; }
 
   @media (min-width: 768px) {
     .toc-entry {
@@ -495,30 +500,6 @@
     .toc-main { grid-column: 4 / span 6; }
     .toc-entry .byline { grid-column: 10 / span 3; padding-top: 0.35rem; }
     .toc-num { font-size: clamp(2.3rem, 1.4rem + 2vw, 3.3rem); }
-  }
-
-  .back-of-book {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-block: 0.4rem 0;
-  }
-  .bob-label { padding-top: 1.25rem; }
-  .bob-entry {
-    position: relative;
-    padding-block: 1rem 1.1rem;
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .bob-entry .toc-title { font-size: 1.45rem; }
-  .bob-entry .toc-dek { font-size: 0.86rem; margin-top: 0.25rem; }
-  @media (min-width: 768px) {
-    .back-of-book {
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      column-gap: clamp(16px, 2vw, 32px);
-    }
-    .bob-label { grid-column: 1 / span 3; }
-    .bob-entry { grid-column: span 4; border-bottom: 0; }
-    .bob-entry:nth-of-type(1) { grid-column: 4 / span 4; }
   }
 
   /* ---------- Story (explorer) pages ---------- */

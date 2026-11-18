@@ -2,9 +2,11 @@
 // produced from the raw copies, what the database returned, the
 // parser-independent row count of each PDF, and the amounts the database's
 // own trade_amount_rank() could not place, and returns failures. An empty
-// list is a pass.
+// list is a pass. `legacy` is the old ?senator= map, a parameter so the tests
+// can pass their own.
 import { MEMBER_COLUMNS, FILING_COLUMNS, ROW_COLUMNS } from './columns.mjs';
 import { AMENDED, DELETED } from './amendments.mjs';
+import { LEGACY_SENATORS } from '../../netlify/functions/shared/legacy-senators.js';
 
 const fkey = (r) => `${r.chamber}:${r.filing_id}`;
 const rkey = (r) => `${r.chamber}:${r.filing_id}:${r.row_num}`;
@@ -34,7 +36,7 @@ function diffRows(label, columns, expected, loaded, key, failures, limit = 20) {
   if (shown > limit) failures.push(`${label}: ${shown - limit} more differences`);
 }
 
-export function compare({ build, loaded, raw, badAmounts }) {
+export function compare({ build, loaded, raw, badAmounts, legacy = LEGACY_SENATORS }) {
   const failures = [];
   const { members, filings, rows, index, excluded, records } = build;
 
@@ -86,6 +88,17 @@ export function compare({ build, loaded, raw, badAmounts }) {
   let wrongName = 0;
   for (const r of loaded.rows) if (byId.get(r.bioguide) !== r.member) wrongName++;
   if (wrongName) failures.push(`${wrongName} rows carry a member name that is not their bioguide's`);
+
+  // Every old /trades/?senator= link still finds its senator: the map's name
+  // is trade_members', and the person has Senate rows (each of the 53 had
+  // rows in senate_trades, so none filed paper only).
+  const senateRowsBy = new Map();
+  for (const r of loaded.rows) if (r.chamber === 'senate') senateRowsBy.set(r.bioguide, (senateRowsBy.get(r.bioguide) ?? 0) + 1);
+  for (const [senator, bioguide, member] of legacy) {
+    const got = byId.get(bioguide);
+    if (got !== member) failures.push(`legacy senator "${senator}": ${bioguide} is ${got === undefined ? 'not loaded' : JSON.stringify(got)}, legacy-senators.js says ${JSON.stringify(member)}`);
+    else if (!senateRowsBy.get(bioguide)) failures.push(`legacy senator "${senator}": ${bioguide} has no Senate rows`);
+  }
 
   // A row is superseded exactly when one notice links to it.
   const linked = new Map();

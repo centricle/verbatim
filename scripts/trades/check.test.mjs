@@ -20,7 +20,7 @@ function fixture() {
     records: [],
   };
   const loaded = structuredClone({ members: build.members, filings: build.filings, rows: build.rows });
-  return { build, loaded, raw: new Map([['20000001', 1], ['20000002', 1]]), badAmounts: [] };
+  return { build, loaded, raw: new Map([['20000001', 1], ['20000002', 1]]), badAmounts: [], legacy: [] };
 }
 
 test('a faithful load passes', () => {
@@ -102,4 +102,16 @@ test('an index PTR with no filing fails', () => {
   const f = fixture();
   f.build.index.push({ DocID: '20000009' });
   assert.match(compare(f).join('\n'), /3 index PTRs|4 index PTRs/);
+});
+
+test('an old ?senator= value must name a loaded senator with Senate rows', () => {
+  const f = fixture();
+  f.legacy = [['Wile E Coyote', 'C000001', 'Wile E. Coyote']];
+  assert.match(compare(f).join('\n'), /legacy senator "Wile E Coyote": C000001 has no Senate rows/);
+  f.loaded.rows.push(row({ chamber: 'senate', filing_id: 'x', source: 'carambat' }));
+  assert.doesNotMatch(compare(f).join('\n'), /legacy senator/);
+  f.legacy = [['Wile E Coyote', 'C000001', 'Wile Coyote']];
+  assert.match(compare(f).join('\n'), /C000001 is "Wile E. Coyote", legacy-senators.js says "Wile Coyote"/);
+  f.legacy = [['Road Runner', 'R000001', 'Road Runner']];
+  assert.match(compare(f).join('\n'), /R000001 is not loaded/);
 });

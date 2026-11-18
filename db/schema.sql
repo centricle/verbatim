@@ -12,7 +12,8 @@
 -- The fts / tsv columns of the first five tables are plain tsvector columns,
 -- filled when each dataset was loaded; no trigger maintains them. Tables
 -- added since generate theirs (GENERATED ALWAYS AS ... STORED), and their
--- authored DDL lives beside this file (db/crashes.sql, db/corpus.sql).
+-- authored DDL lives beside this file (db/crashes.sql, db/corpus.sql,
+-- db/executive.sql).
 --
 -- Netlify functions in netlify/functions/ call the search_* and *_stats
 -- functions; sorting is whitelisted inside each function with CASE.
@@ -221,6 +222,44 @@ END; $$;
 
 
 --
+-- Name: fr_presidential_documents_stats(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fr_presidential_documents_stats() RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'total', (SELECT count(*) FROM fr_presidential_documents),
+    'unsigned', (SELECT count(*) FROM fr_presidential_documents WHERE signing_date IS NULL),
+    'year_range', (SELECT jsonb_build_object('min', min(extract(year FROM signing_date))::int,
+                                             'max', max(extract(year FROM signing_date))::int)
+                   FROM fr_presidential_documents),
+    'by_type', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.type), '[]'::jsonb) FROM (
+      SELECT type, count(*) AS count FROM fr_presidential_documents GROUP BY type) s),
+    'by_year', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.year), '[]'::jsonb) FROM (
+      SELECT extract(year FROM signing_date)::int AS year,
+        count(*) FILTER (WHERE type = 'executive_order') AS executive_order,
+        count(*) FILTER (WHERE type = 'proclamation') AS proclamation
+      FROM fr_presidential_documents WHERE signing_date IS NOT NULL GROUP BY 1) s),
+    'by_president', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.first, s.president), '[]'::jsonb) FROM (
+      SELECT president, president_name, min(coalesce(signing_date, publication_date)) AS first,
+        count(*) AS count,
+        count(*) FILTER (WHERE type = 'executive_order') AS executive_order,
+        count(*) FILTER (WHERE type = 'proclamation') AS proclamation
+      FROM fr_presidential_documents GROUP BY president, president_name) s),
+    'relation_list', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY lower(s.relation), s.relation), '[]'::jsonb) FROM (
+      SELECT r.relation, count(DISTINCT d.id) AS count
+      FROM fr_presidential_documents d,
+           jsonb_to_recordset(d.notes_parsed) AS r(relation text)
+      WHERE r.relation IS NOT NULL GROUP BY r.relation) s)
+  ) INTO result;
+  RETURN result;
+END; $$;
+
+
+--
 -- Name: get_corpus_statement(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -234,6 +273,38 @@ CREATE FUNCTION public.get_corpus_statement(statement_id text) RETURNS jsonb
     'attribution', attribution, 'proposed', proposed, 'certified', certified,
     'text', text)
   FROM corpus_statements WHERE id = statement_id;
+$$;
+
+
+--
+-- Name: get_fr_presidential_document(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_fr_presidential_document(doc_id text) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT jsonb_build_object('id', d.id, 'document_number', d.document_number, 'type', d.type,
+    'number', d.number, 'president', d.president, 'president_name', d.president_name,
+    'signing_date', d.signing_date, 'publication_date', d.publication_date,
+    'citation', d.citation, 'title', d.title, 'html_url', d.html_url, 'pdf_url', d.pdf_url,
+    'notes', d.notes, 'notes_parsed', d.notes_parsed, 'text', d.text,
+    'correction_of', (SELECT jsonb_build_object('id', c.id, 'document_number', c.document_number, 'title', c.title)
+                      FROM fr_presidential_documents c WHERE c.document_number = d.correction_of),
+    'corrections', (SELECT coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'document_number', c.document_number)
+                                    ORDER BY c.publication_date), '[]'::jsonb)
+                    FROM fr_presidential_documents c WHERE c.correction_of = d.document_number),
+    'refs', (SELECT coalesce(jsonb_agg(jsonb_build_object('type', m.type, 'number', m.number, 'id', r.id)
+                             ORDER BY m.type, m.number), '[]'::jsonb)
+             FROM (SELECT DISTINCT
+                     CASE WHEN x[1] IN ('EO', 'Executive Order') THEN 'executive_order' ELSE 'proclamation' END AS type,
+                     x[2] AS number
+                   FROM regexp_matches(coalesce(d.notes, ''), '\m(EO|Executive Order|Proc\.|Proclamation)\s+(\d+)\M', 'g') AS x) m
+             CROSS JOIN LATERAL (
+               SELECT t.id FROM fr_presidential_documents t
+               WHERE t.type = m.type AND t.number = m.number
+               ORDER BY (t.document_number LIKE 'C1-%'), t.publication_date, t.document_number
+               LIMIT 1) r))
+  FROM fr_presidential_documents d WHERE d.id = doc_id;
 $$;
 
 
@@ -401,6 +472,63 @@ BEGIN
   ) INTO result;
   RETURN result;
 END; $$;
+
+
+--
+-- Name: search_fr_presidential_documents(text, text, text, text, integer, integer, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.search_fr_presidential_documents(search_query text DEFAULT NULL::text, filter_president text DEFAULT NULL::text, filter_type text DEFAULT NULL::text, filter_relation text DEFAULT NULL::text, year_from integer DEFAULT NULL::integer, year_to integer DEFAULT NULL::integer, sort_by text DEFAULT 'signed'::text, sort_dir text DEFAULT 'desc'::text, page_num integer DEFAULT 1, page_size integer DEFAULT 50) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $_$
+DECLARE total_count bigint; result jsonb; q tsquery; date_from date; date_to date; opts text; rel jsonb;
+BEGIN
+  IF search_query IS NOT NULL AND btrim(search_query) <> '' THEN
+    q := websearch_to_tsquery('english', search_query);
+  END IF;
+  IF year_from IS NOT NULL THEN date_from := make_date(year_from, 1, 1); END IF;
+  IF year_to IS NOT NULL THEN date_to := make_date(year_to + 1, 1, 1); END IF;
+  IF filter_relation IS NOT NULL THEN rel := jsonb_build_array(jsonb_build_object('relation', filter_relation)); END IF;
+  opts := 'StartSel=' || chr(1) || ', StopSel=' || chr(2) ||
+          ', MaxFragments=2, MinWords=12, MaxWords=28, FragmentDelimiter=" … "';
+
+  SELECT count(*) INTO total_count FROM fr_presidential_documents
+  WHERE (q IS NULL OR tsv @@ q)
+    AND (filter_president IS NULL OR president = filter_president)
+    AND (filter_type IS NULL OR type = filter_type)
+    AND (rel IS NULL OR notes_parsed @> rel)
+    AND (date_from IS NULL OR signing_date >= date_from)
+    AND (date_to IS NULL OR signing_date < date_to);
+
+  SELECT jsonb_build_object('total', total_count, 'rows', coalesce(jsonb_agg(row_data), '[]'::jsonb))
+  INTO result FROM (
+    SELECT jsonb_build_object('id', p.id, 'document_number', p.document_number, 'type', p.type,
+      'number', p.number, 'president', p.president, 'president_name', p.president_name,
+      'signing_date', p.signing_date, 'publication_date', p.publication_date,
+      'citation', p.citation, 'title', p.title, 'chars', length(p.text),
+      'snippet', CASE WHEN q IS NULL THEN NULL
+                      ELSE ts_headline('english'::regconfig, p.text, q, opts) END) AS row_data
+    FROM (
+      SELECT * FROM fr_presidential_documents
+      WHERE (q IS NULL OR tsv @@ q)
+        AND (filter_president IS NULL OR president = filter_president)
+        AND (filter_type IS NULL OR type = filter_type)
+        AND (rel IS NULL OR notes_parsed @> rel)
+        AND (date_from IS NULL OR signing_date >= date_from)
+        AND (date_to IS NULL OR signing_date < date_to)
+      ORDER BY
+        CASE WHEN sort_by = 'signed' AND sort_dir = 'asc' THEN signing_date END ASC NULLS LAST,
+        CASE WHEN sort_by = 'signed' AND sort_dir = 'desc' THEN signing_date END DESC NULLS LAST,
+        CASE WHEN sort_by = 'number' AND sort_dir = 'asc' THEN CASE WHEN number ~ '^\d{1,9}$' THEN number::int END END ASC NULLS LAST,
+        CASE WHEN sort_by = 'number' AND sort_dir = 'desc' THEN CASE WHEN number ~ '^\d{1,9}$' THEN number::int END END DESC NULLS LAST,
+        CASE WHEN sort_by = 'title' AND sort_dir = 'asc' THEN title END ASC,
+        CASE WHEN sort_by = 'title' AND sort_dir = 'desc' THEN title END DESC,
+        publication_date DESC, document_number
+      LIMIT page_size OFFSET (page_num - 1) * page_size
+    ) p
+  ) sub;
+  RETURN result;
+END; $_$;
 
 
 --
@@ -804,6 +932,51 @@ ALTER SEQUENCE public.fec_candidates_id_seq OWNED BY public.fec_candidates.id;
 
 
 --
+-- Name: fr_presidential_documents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fr_presidential_documents (
+    id text NOT NULL,
+    document_number text NOT NULL,
+    type text NOT NULL,
+    number text,
+    president text NOT NULL,
+    president_name text NOT NULL,
+    signing_date date,
+    publication_date date NOT NULL,
+    citation text,
+    title text NOT NULL,
+    html_url text NOT NULL,
+    pdf_url text,
+    correction_of text,
+    notes text,
+    notes_parsed jsonb,
+    text text NOT NULL,
+    tsv tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('english'::regconfig, title), 'A'::"char") || setweight(to_tsvector('english'::regconfig, text), 'B'::"char"))) STORED,
+    CONSTRAINT fr_presidential_documents_check CHECK (((notes IS NULL) = (notes_parsed IS NULL))),
+    CONSTRAINT fr_presidential_documents_id_check CHECK ((id ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT fr_presidential_documents_type_check CHECK ((type = ANY (ARRAY['executive_order'::text, 'proclamation'::text])))
+);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN id SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN document_number SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN type SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN number SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN president SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN president_name SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN signing_date SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN publication_date SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN citation SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN title SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN html_url SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN pdf_url SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN correction_of SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN notes SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN notes_parsed SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN text SET (pg_attver=401988688);
+ALTER TABLE ONLY public.fr_presidential_documents ALTER COLUMN tsv SET (pg_attver=401988688);
+
+
+--
 -- Name: police_shootings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1031,6 +1204,22 @@ ALTER TABLE ONLY public.fec_candidates
 
 
 --
+-- Name: fr_presidential_documents fr_presidential_documents_document_number_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fr_presidential_documents
+    ADD CONSTRAINT fr_presidential_documents_document_number_key UNIQUE (document_number);
+
+
+--
+-- Name: fr_presidential_documents fr_presidential_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fr_presidential_documents
+    ADD CONSTRAINT fr_presidential_documents_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: police_shootings police_shootings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1172,6 +1361,48 @@ CREATE INDEX idx_fec_receipts ON public.fec_candidates USING btree (total_receip
 --
 
 CREATE INDEX idx_fec_state ON public.fec_candidates USING btree (cand_state);
+
+
+--
+-- Name: idx_frpd_notes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_frpd_notes ON public.fr_presidential_documents USING gin (notes_parsed jsonb_path_ops);
+
+
+--
+-- Name: idx_frpd_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_frpd_number ON public.fr_presidential_documents USING btree (type, number);
+
+
+--
+-- Name: idx_frpd_president; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_frpd_president ON public.fr_presidential_documents USING btree (president);
+
+
+--
+-- Name: idx_frpd_signing; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_frpd_signing ON public.fr_presidential_documents USING btree (signing_date);
+
+
+--
+-- Name: idx_frpd_tsv; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_frpd_tsv ON public.fr_presidential_documents USING gin (tsv);
+
+
+--
+-- Name: idx_frpd_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_frpd_type ON public.fr_presidential_documents USING btree (type);
 
 
 --

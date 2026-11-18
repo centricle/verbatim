@@ -1163,6 +1163,16 @@
      does, onto every other field DOJ printed for the entry. */
   .record-table td.cell-lines { white-space: pre-line; }
   .record-table td.cell-clip.cell-lines { white-space: nowrap; }
+  /* A touch screen never shows the title attribute that holds a clipped
+     value, so below 768px the district reads in full, a part to a line. */
+  @media (max-width: 767px) {
+    .record-table td.cell-clip.cell-lines {
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: pre-line;
+    }
+  }
   .grant-link {
     display: block;
     margin-top: 0.2rem;

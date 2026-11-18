@@ -540,6 +540,8 @@
   .note-body strong { font-weight: 600; color: var(--color-ink); }
   .note-list { padding-left: 1.1em; list-style: disc; }
   .note-list > li + li { margin-top: 0.35em; }
+  /* A long list (trades' paper filings) scrolls inside its note. */
+  .note-list--scroll { max-height: 12rem; overflow-y: auto; padding-right: 0.5rem; }
   /* A summary set in its own case, for copy that must render exactly as written. */
   .note--as-written summary {
     text-transform: none;
@@ -817,7 +819,7 @@
   }
   .record-table tbody tr { transition: background 0.12s; }
   .record-table tbody tr:hover { background: var(--color-ground-2); }
-  .cell-date { white-space: nowrap; color: var(--color-ink-dim); }
+  .cell-date, .cell-filed { white-space: nowrap; color: var(--color-ink-dim); }
   .cell-name { font-weight: 500; white-space: nowrap; }
   .cell-ticker {
     font-family: var(--font-label);
@@ -916,9 +918,9 @@
   }
 
   /*
-   * Below 768px each row is set as an appendix entry instead of a seven-column
-   * line: senator and amount as the entry head; date, ticker, type and owner
-   * beneath (date and ticker on minimum widths, so tickers align down the
+   * Below 768px each row is set as an appendix entry instead of an eight-column
+   * line: member and amount as the entry head; date, filed date, ticker, type
+   * and owner beneath (date and ticker on minimum widths, so tickers align down the
    * list); then the asset description, clamped to two lines (the full text
    * stays in the title attribute, as on desktop).
    *
@@ -976,6 +978,7 @@
       font-size: 0.78rem;
     }
     .record-table td.cell-date { order: 3; min-width: 5.9em; }
+    .record-table td.cell-filed { order: 3; }
     .record-table td.cell-ticker { order: 4; min-width: 3.8em; }
     .record-table td.cell-type { order: 5; }
     .record-table td.cell-owner { order: 6; margin-left: auto; text-align: right; }

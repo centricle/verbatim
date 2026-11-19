@@ -44,8 +44,8 @@ const TITLE = { house: 'Rep.', senate: 'Sen.' };
 const NOUN = { house: 'representatives', senate: 'senators' };
 const SOURCES = {
   house: 'From the House Clerk’s electronic filings since 2014.',
-  senate: 'From the Senate’s electronic filings through March 2021.',
-  both: 'From the House Clerk’s electronic filings since 2014 and the Senate’s through March 2021.',
+  senate: 'From the Senate’s electronic filings since 2014.',
+  both: 'From the House Clerk’s and the Senate’s electronic filings since 2014.',
 };
 const fills = {
   sources: (s, p) => SOURCES[p.chamber] ?? SOURCES.both,

@@ -44,11 +44,13 @@ const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&
 
 let decoder = null;
 
-// Some sources bake HTML entities into their text (`&amp;`, `&nbsp;` in the
-// Senate filings' asset descriptions). innerHTML used to decode them as a side
-// effect of parsing each row as markup, which is the same property that made
-// it unsafe. Decode them explicitly instead: a textarea's content is raw text,
-// so nothing inside it is ever parsed as an element or run.
+// Some sources bake HTML entities into their text (`&amp;`, `&nbsp;` in Senate
+// Stock Watcher's asset descriptions; the trades loader now decodes eFD's
+// itself, `htmlText` in scripts/trades/senate.mjs). innerHTML used to decode
+// them as a side effect of parsing each row as markup, which is the same
+// property that made it unsafe. Decode them explicitly instead: a textarea's
+// content is raw text, so nothing inside it is ever parsed as an element or
+// run.
 function decodeEntities(text) {
   if (!text.includes('&')) return text;
   decoder ??= document.createElement('textarea');

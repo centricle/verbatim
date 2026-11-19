@@ -72,7 +72,7 @@ const charts = Promise.all([
 createExplorer({
   prefix: 'disbursements',
   endpoint: '/api/disbursements',
-  filters: ['quarter', 'category', 'sortBy'],
+  filters: ['quarter', 'category', 'office', 'sortBy'],
   noun: 'rows',
   emptyText: 'No rows match your filters.',
   errorText: 'Could not load rows. Try again.',
@@ -94,6 +94,8 @@ createExplorer({
       .sort().reverse().map((iso) => [quarterKey(iso), quarterLabel(iso)]),
     category: (stats.by_category || []).map((c) => c.category).filter(Boolean)
       .sort().map((c) => [c, c]),
+    // 1,221 names, too many for a select: suggestions for the office field.
+    office: (stats.office_list || []).map((o) => [o, o]),
   }),
   onStats: (stats) => {
     // The dek's reach, read off the data so it never goes stale in the HTML.

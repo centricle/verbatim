@@ -121,8 +121,10 @@ async function getJson(url, signal) {
  * @param {(page: number, pageSize: number) => object} [cfg.pageParams]
  *                                How the endpoint takes paging. Default `{ page, pageSize }`.
  * @param {(stats: object) => Record<string, [string, string][]>} [cfg.options]
- *                                Select options read from stats, as `[value, label]`
- *                                pairs per filter key, appended after the markup's own.
+ *                                Options read from stats, as `[value, label]` pairs per
+ *                                filter key, appended after the markup's own: to a
+ *                                select, or to the <datalist> a text input names with
+ *                                `list` (a type-ahead over a list too long for a select).
  * @param {(stats: object, opts: { onFilter: Function }) => unknown} [cfg.charts]
  *                                Mount the charts. Start their imports before calling
  *                                `createExplorer`, so they load while stats is in flight.
@@ -277,19 +279,23 @@ export function createExplorer(cfg) {
     const lists = cfg.options?.(stats) ?? {};
     const cleared = {};
     for (const [key, pairs] of Object.entries(lists)) {
-      const select = controls[key];
-      for (const option of listed.get(select) ?? []) option.remove();
+      const control = controls[key];
+      // A type-ahead input keeps its typed value; only its suggestions change.
+      const typeAhead = control.tagName !== 'SELECT';
+      const target = typeAhead ? control.list : control;
+      for (const option of listed.get(target) ?? []) option.remove();
       const added = pairs.map(([value, label]) => {
         const option = document.createElement('option');
         option.value = value;
-        option.textContent = label;
+        if (!typeAhead || label !== value) option.textContent = label;
         return option;
       });
-      select.append(...added);
-      listed.set(select, added);
+      target.append(...added);
+      listed.set(target, added);
+      if (typeAhead) continue;
       // The deep-linked value has an option to land on now.
-      select.value = state[key];
-      if (refetch && state[key] && select.value !== state[key]) cleared[key] = '';
+      control.value = state[key];
+      if (refetch && state[key] && control.value !== state[key]) cleared[key] = '';
     }
     if (Object.keys(cleared).length) {
       state = { ...state, ...cleared, page: 1 };
@@ -344,7 +350,24 @@ export function createExplorer(cfg) {
     commit({ ...typed(), page: 1 });
   });
   for (const key of cfg.filters) {
-    controls[key].addEventListener('change', () => commit({ [key]: controls[key].value.trim(), page: 1 }));
+    const control = controls[key];
+    // A typed control fires change on blur too, after Enter has already
+    // submitted its value; asking again for the same state would only repeat
+    // the search.
+    control.addEventListener('change', () => {
+      const value = control.value.trim();
+      if (value !== state[key]) commit({ [key]: value, page: 1 });
+    });
+    // Picking a type-ahead suggestion is a choice made, like picking from a
+    // select, so it searches at once. Typing does not.
+    if (control.list) {
+      control.addEventListener('input', (e) => {
+        if (e.inputType === 'insertReplacementText' || e.inputType === undefined) {
+          const value = control.value.trim();
+          if (value !== state[key]) commit({ [key]: value, page: 1 });
+        }
+      });
+    }
   }
   prevBtn.addEventListener('click', () => {
     if (state.page > 1) commit({ page: state.page - 1 });

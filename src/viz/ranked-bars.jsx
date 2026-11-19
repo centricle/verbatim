@@ -12,18 +12,20 @@ import { useContainerWidth, measureText, fitText } from './chart-size.js';
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ESC[c]);
 
-function RankedBars({ data, label, value, noun, filterKey, onFilter, display }) {
+function RankedBars({ data, label, value, noun, filterKey, onFilter, display, format, exact }) {
   const svgRef = useRef();
   const fullWidth = useContainerWidth(svgRef);
 
   useEffect(() => {
     if (!data?.length || !fullWidth) return;
     const rows = data.map((d) => ({ key: String(d[label]), text: display ? display(d) : String(d[label]), n: Number(d[value]) }));
+    const fmt = format ?? ((n) => n.toLocaleString());
+    const tip = exact ?? fmt;
 
     d3.select(svgRef.current).selectAll('*').remove();
 
     const labelWidth = measureText(svgRef.current, rows.map((d) => d.text), 'cat-label');
-    const valueWidth = measureText(svgRef.current, rows.map((d) => d.n.toLocaleString()), 'value-label');
+    const valueWidth = measureText(svgRef.current, rows.map((d) => fmt(d.n)), 'value-label');
     const margin = { top: 4, right: valueWidth + 10, bottom: 4, left: Math.min(labelWidth, Math.round(fullWidth * 0.45)) + 12 };
     const rowHeight = 24;
     const height = rows.length * rowHeight;
@@ -52,7 +54,7 @@ function RankedBars({ data, label, value, noun, filterKey, onFilter, display }) 
       .on('mouseenter', function () { d3.select(this).style('opacity', 0.8); })
       .on('mouseleave', function () { d3.select(this).style('opacity', 1); hideTooltip(); })
       .on('mousemove', (event, d) => {
-        showTooltip(event, `<strong>${esc(d.text)}</strong><br>${d.n.toLocaleString()} ${esc(noun)}`);
+        showTooltip(event, `<strong>${esc(d.text)}</strong><br>${esc(tip(d.n))}${noun ? ` ${esc(noun)}` : ''}`);
       })
       .on('click', (event, d) => { if (onFilter) onFilter({ key: filterKey, value: d.key }); });
 
@@ -74,7 +76,7 @@ function RankedBars({ data, label, value, noun, filterKey, onFilter, display }) 
       .attr('x', (d) => Math.max(1, x(d.n)) + 6)
       .attr('y', (d) => y(d.key) + y.bandwidth() / 2)
       .attr('dy', '0.35em')
-      .text((d) => d.n.toLocaleString());
+      .text((d) => fmt(d.n));
 
     svg.append('line')
       .attr('class', 'baseline')
@@ -91,9 +93,12 @@ function RankedBars({ data, label, value, noun, filterKey, onFilter, display }) 
  * @param {object} opts
  * @param {string} opts.label      Field holding the category name.
  * @param {string} opts.value      Field holding the count.
- * @param {string} opts.noun       Plural noun for the tooltip ("reports").
+ * @param {string} opts.noun       Plural noun for the tooltip ("reports"); empty for none.
  * @param {string} opts.filterKey  Explorer filter a bar sets.
- * @param {Function} [opts.onFilter]
+ * @param {Function} [opts.onFilter]  Unset leaves the bars unselectable.
+ * @param {(n: number) => string} [opts.format]  Value label text. Default `toLocaleString`.
+ * @param {(n: number) => string} [opts.exact]   Tooltip value text, when the label rounds
+ *                                (a dollar amount). Default `format`.
  * @param {(row: object) => string} [opts.display]  Text for a bar's label and tooltip
  *                                when it differs from the value the filter takes
  *                                (a speaker's name for a slug).

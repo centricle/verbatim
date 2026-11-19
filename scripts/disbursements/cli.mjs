@@ -246,13 +246,20 @@ async function checkStats(client) {
 // against the source by source_ref.
 async function sampleCmd(rest) {
   const n = Math.max(1, parseInt(rest[0], 10) || 20);
+  // Spread over quarters, and every eighth quarter's rows are subtotal rows:
+  // they are about 1% of the table, so a plain draw of 40 seldom holds one,
+  // and the pay collapse is the change a refute pass most needs to see.
   const rows = await withClient(async (client) => {
-    const { rows: units } = await client.query(`SELECT DISTINCT unit FROM ${TABLE} ORDER BY random() LIMIT $1`, [n]);
+    const { rows: units } = await client.query(
+      `SELECT unit FROM (SELECT DISTINCT unit FROM ${TABLE}) u ORDER BY random() LIMIT $1`, [n],
+    );
     const per = Math.ceil(n / units.length);
     const out = [];
-    for (const { unit } of units) {
+    for (const [i, { unit }] of units.entries()) {
+      const kind = i % 8 === 7 ? 'subtotal' : 'detail';
       const { rows: picked } = await client.query(
-        `SELECT ${COLUMNS.join(', ')} FROM ${TABLE} WHERE unit = $1 ORDER BY random() LIMIT $2`, [unit, per],
+        `SELECT ${COLUMNS.join(', ')} FROM ${TABLE} WHERE unit = $1 AND row_kind = $2 ORDER BY random() LIMIT $3`,
+        [unit, kind, per],
       );
       out.push(...picked);
     }

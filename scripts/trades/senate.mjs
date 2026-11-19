@@ -46,7 +46,7 @@ export function filingId(link) {
 }
 
 // Each record's bioguide, held to a Senate term at its received date.
-// `pins` is overrides.json's `senate`: Senate Stock Watcher's bioguide ->
+// `pins` is overrides.json's `carambat`: Senate Stock Watcher's bioguide ->
 // the right one, applied only when the record's last name is the pin's, so a
 // pin cannot move some other filer who happens to carry the same wrong ID.
 // Anything still without a term comes back in `failures`, and the load stops.

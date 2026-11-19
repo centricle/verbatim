@@ -16,8 +16,9 @@
 // datacenter and CI addresses with a 403, so this runs from a home network.
 //
 // Senate Stock Watcher's per-filing aggregate (Timothy Carambat, frozen since
-// March 2021) fills any filing eFD no longer lists. Pinned by hash, since the
-// repo no longer changes.
+// March 2021) fills any filing eFD no longer serves: one eFD no longer lists,
+// or an electronic one whose page is not held (`splitSenate` in build.mjs).
+// Pinned by hash, since the repo no longer changes.
 //
 // Members: unitedstates/congress-legislators (CC0), current and historical.
 //

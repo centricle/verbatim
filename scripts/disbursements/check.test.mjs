@@ -24,7 +24,7 @@ test('clean fixtures pass', () => {
 
 test('a dropped loaded row fails', () => {
   const f = run(text18, { loaded: (r) => r.slice(1) });
-  fails(f, /loaded 5 rows, expected 6/);
+  fails(f, /loaded 6 rows, expected 7/);
   fails(f, /row 1 expected but not loaded/);
 });
 
@@ -54,7 +54,7 @@ test('a subtotal that disagrees with its detail rows fails', () => {
 
 test('a row the parser drops but the raw scan sees fails', () => {
   const f = run(text18, { classified: (c) => c.filter((x) => x.row !== 5) });
-  fails(f, /detail rows: raw 7, parsed 6/);
+  fails(f, /detail rows: raw 8, parsed 7/);
 });
 
 test('a field spanning a line break, which the CSV parser accepts, fails the raw scan', () => {

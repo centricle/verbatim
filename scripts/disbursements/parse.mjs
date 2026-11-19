@@ -29,9 +29,18 @@
 //   beneficiary. The office totals still reconcile, because each subtotal is
 //   the sum of the lines it replaces.
 // - Blank fields (the CAO pads them with three spaces) become null.
-// - Dates in the CAO's D-Mon-YY form become ISO dates. Any other form (two
-//   rows in Q2 2026 read 14-MAR-0026) loads as null in the date column with
-//   the filed text kept under `dates_as_filed` in extras.
+// - Dates in the CAO's D-Mon-YY or D-MON-YYYY forms become ISO dates. Any
+//   other form (two rows in Q2 2026 read 14-MAR-0026) loads as null in the
+//   date column with the filed text kept under `dates_as_filed` in extras.
+// - A row with an unquoted comma inside one free-text field (Q3 2020:
+//   `CITI PCARD-CNDTL CR,AMZN MKTP US M79`) has one field too many, and every
+//   field after the comma would shift one column right; in the 19-column
+//   files that puts BUDGET OBJECT CODE, a number, into AMOUNT. The parser
+//   rejoins the split field only when exactly one of VENDOR NAME or
+//   DESCRIPTION, rejoined, leaves every date, id and amount readable, and
+//   records which under `unquoted_comma` in extras. No fit, or two, stops
+//   the run. Bare quotes inside a field (Q1 2019 files an organization as
+//   2019 HON. EARL L. "BUDDY" CARTER) are read as text.
 // - Two fields derived from ORGANIZATION, which files name with their
 //   funding year ("2025 OFFICE OF THE SPEAKER", "FISCAL YEAR 2026
 //   SERGEANT AT ARMS"): `office`, the name without that prefix, and
@@ -74,16 +83,16 @@ const clean = (v) => {
   return t === '' ? null : t;
 };
 
-// '18-Mar-16' -> '2016-03-18'. Null for blank; undefined for a form the CAO
-// does not normally use, which the caller keeps as filed.
+// '18-Mar-16' or '31-JAN-2019' -> ISO. Null for blank; undefined for a form
+// the CAO does not normally use, which the caller keeps as filed.
 export function isoDate(text) {
   const t = clean(text);
   if (t == null) return null;
-  const m = /^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/.exec(t);
+  const m = /^(\d{1,2})-([A-Za-z]{3})-(\d{2}|20\d{2})$/.exec(t);
   const mi = m ? MONTHS.indexOf(m[2].toUpperCase()) : -1;
   if (mi < 0) return undefined;
   const d = Number(m[1]);
-  const y = 2000 + Number(m[3]);
+  const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
   const last = new Date(Date.UTC(y, mi + 1, 0)).getUTCDate();
   if (d < 1 || d > last) return undefined;
   return `${y}-${String(mi + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -102,21 +111,58 @@ export const centsText = (c) => `${c < 0 ? '-' : ''}${Math.floor(Math.abs(c) / 1
 
 const PREFIX = /^(?:FISCAL YEAR )?(\d{4}) (.+)$/;
 
+// Does a subtotal's description close this category or program? Compared
+// without case and with runs of spaces collapsed: Q1 2018 files a program as
+// "Enterprise Licenses" and its total as "ENTERPRISE LICENSES TOTALS:".
+const fold = (s) => (s ?? '').toUpperCase().replace(/\s+/g, ' ');
+const totalOf = (desc, name) => name != null && fold(desc) === `${fold(name)} TOTALS:`;
+
+const DATE_COLS = ['TRANSACTION DATE', 'PERFORM START DT', 'PERFORM END DT'];
+const readable = (rec) => {
+  const blankOr = (v, re) => clean(v) == null || re.test(clean(v));
+  return DATE_COLS.every((c) => blankOr(rec[c], /^\d{1,2}-[A-Za-z]{3}-\d{2,4}$/))
+    && /^-?\d*\.?\d+$/.test(clean(rec.AMOUNT) ?? '')
+    && (!('VENDOR ID' in rec) || blankOr(rec['VENDOR ID'], /^\d+$/))
+    && (!('BUDGET OBJECT CODE' in rec) || blankOr(rec['BUDGET OBJECT CODE'], /^\d+$/))
+    && (!('BUDGET OBJECT CLASS' in rec) || blankOr(rec['BUDGET OBJECT CLASS'], /^\d+$/));
+};
+const REJOIN = { 'VENDOR NAME': 'payee', DESCRIPTION: 'description' };
+
+// One CSV row's fields -> { column: value }, rejoining a field an unquoted
+// comma split (see the header comment). `unquoted_comma` names the field.
+export function toRecord(fields, names, where) {
+  const f = [...fields];
+  while (f.length > names.length && f.at(-1) === '') f.pop();
+  const zip = (arr) => Object.fromEntries(names.map((n, i) => [n, arr[i]]));
+  if (f.length === names.length) return zip(f);
+  if (f.length < names.length) throw new Error(`${where}: ${f.length} fields, header has ${names.length}`);
+  const extra = f.length - names.length;
+  const fits = [];
+  for (const col of Object.keys(REJOIN)) {
+    const i = names.indexOf(col);
+    const joined = [...f.slice(0, i), f.slice(i, i + extra + 1).join(','), ...f.slice(i + extra + 1)];
+    const rec = zip(joined);
+    if (readable(rec)) fits.push({ ...rec, unquoted_comma: REJOIN[col] });
+  }
+  if (fits.length !== 1) throw new Error(`${where}: ${extra} field(s) too many, and ${fits.length} ways to rejoin them`);
+  return fits[0];
+}
+
 // Classify every record in one file. `row` is the record's 1-based position
 // after the header, which is what source_ref points at.
 export function classify(text, file = 'input') {
-  const records = parse(text, {
-    columns: (h) => h.map((c) => c.trim()),
-    relax_column_count: true,
-    skip_empty_lines: true,
-  });
-  if (!records.length) throw new Error(`${file} has no rows`);
-  const missing = REQUIRED.filter((k) => !(k in records[0]));
+  const arrays = parse(text, { relax_column_count: true, relax_quotes: true, skip_empty_lines: true });
+  if (arrays.length < 2) throw new Error(`${file} has no rows`);
+  // Some files end the header and every row with a comma: an empty column.
+  const names = arrays[0].map((c) => c.trim());
+  while (names.length && names.at(-1) === '') names.pop();
+  const missing = REQUIRED.filter((k) => !names.includes(k));
   if (missing.length) throw new Error(`${file} lacks columns: ${missing.join(', ')}`);
-  const added = Object.keys(ADDED).filter((k) => k in records[0]);
+  const added = Object.keys(ADDED).filter((k) => names.includes(k));
   if (added.length && added.length !== Object.keys(ADDED).length) {
     throw new Error(`${file} has some of the Q4 2022 columns but not all: ${added.join(', ')}`);
   }
+  const records = arrays.slice(1).map((fields, i) => toRecord(fields, names, `${file} row ${i + 1}`));
 
   let prev = null;
   return records.map((rec, i) => {
@@ -127,8 +173,8 @@ export function classify(text, file = 'input') {
     let kind;
     if (seq === 'DETAIL') kind = 'detail';
     else if (seq === 'SUBTOTAL') {
-      const isCat = desc === `${category} TOTALS:`;
-      const isProg = desc === `${program} TOTALS:`;
+      const isCat = totalOf(desc, category);
+      const isProg = totalOf(desc, program);
       if (isCat && isProg) kind = prev === 'detail' ? 'category' : 'program';
       else if (isCat) kind = 'category';
       else if (isProg) kind = 'program';
@@ -150,6 +196,7 @@ export function toRow(c, source) {
     if (key !== 'funding_year' && col in r) extras[key] = clean(r[col]);
   }
   extras.data_source = clean(r['DATA SOURCE']);
+  if (r.unquoted_comma) extras.unquoted_comma = r.unquoted_comma;
   const dates = {};
   for (const [col, key] of [['TRANSACTION DATE', 'transaction_date'], ['PERFORM START DT', 'start_date'], ['PERFORM END DT', 'end_date']]) {
     const iso = isoDate(r[col]);

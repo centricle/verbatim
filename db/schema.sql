@@ -13,17 +13,19 @@
 -- filled when each dataset was loaded; no trigger maintains them. Tables
 -- added since generate theirs (GENERATED ALWAYS AS ... STORED), and their
 -- authored DDL lives beside this file (db/crashes.sql, db/corpus.sql,
--- db/executive.sql, db/clemency.sql, db/trades.sql).
+-- db/executive.sql, db/clemency.sql, db/trades.sql, db/disbursements.sql).
 --
 -- Netlify functions in netlify/functions/ call the search_* and *_stats
 -- functions; sorting is whitelisted inside each function with CASE.
+-- disbursements_stats() reads a materialized view that its loader refreshes,
+-- because the queries behind it are too slow to run per request.
 
 --
 -- PostgreSQL database dump
 --
 
 
--- Dumped from database version 17.12 (14c6cec)
+-- Dumped from database version 17.12 (4d8000a)
 -- Dumped by pg_dump version 18.4
 
 SET statement_timeout = 0;
@@ -253,6 +255,15 @@ CREATE FUNCTION public.corpus_term_series(p_series text, p_terms text[]) RETURNS
       FROM input i)
   );
 $$;
+
+
+--
+-- Name: disbursements_stats(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.disbursements_stats() RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$ SELECT data FROM disbursements_stats_mv $$;
 
 
 --
@@ -538,6 +549,73 @@ BEGIN
       LIMIT page_size OFFSET (page_num - 1) * page_size
     ) p
   ) sub;
+  RETURN result;
+END; $$;
+
+
+--
+-- Name: search_disbursements(text, text, date, text, text, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.search_disbursements(search_query text DEFAULT NULL::text, filter_chamber text DEFAULT NULL::text, filter_period date DEFAULT NULL::date, filter_category text DEFAULT NULL::text, filter_office text DEFAULT NULL::text, sort_by text DEFAULT 'date'::text, sort_dir text DEFAULT 'desc'::text, page_num integer DEFAULT 1, page_size integer DEFAULT 50) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    SET plan_cache_mode TO 'force_custom_plan'
+    AS $$
+DECLARE
+  cap constant integer := 10000;
+  total_count bigint; capped boolean; result jsonb; q tsquery;
+  by_amount boolean := sort_by = 'amount';
+  ascending boolean := sort_dir = 'asc';
+BEGIN
+  IF search_query IS NOT NULL AND btrim(search_query) <> '' THEN
+    q := websearch_to_tsquery('english', search_query);
+  END IF;
+  page_num := least(page_num, ceil(cap::numeric / greatest(page_size, 1))::integer);
+  SELECT count(*) INTO total_count FROM (
+    SELECT 1 FROM disbursements
+    WHERE (q IS NULL OR tsv @@ q)
+      AND (filter_chamber IS NULL OR chamber = filter_chamber)
+      AND (filter_period IS NULL OR period_start = filter_period)
+      AND (filter_category IS NULL OR category = filter_category)
+      AND (filter_office IS NULL OR office = filter_office)
+    LIMIT cap + 1
+  ) s;
+  capped := total_count > cap;
+  -- The page is chosen on bare columns and only its rows become JSON. Built
+  -- inside the sorted query, the object was made for every row the sort
+  -- read: a whole quarter for "newest", 0.90 s against 0.09 s (2026-11-19).
+  SELECT jsonb_build_object('total', least(total_count, cap), 'total_capped', capped,
+    'rows', coalesce(jsonb_agg(jsonb_build_object('chamber', p.chamber, 'unit', p.unit,
+      'row_number', p.row_number, 'period_start', p.period_start, 'period_end', p.period_end,
+      'organization', p.organization, 'office', p.office, 'org_year', p.org_year,
+      'funding_year', p.funding_year, 'program', p.program, 'category', p.category,
+      'row_kind', p.row_kind, 'transaction_date', p.transaction_date,
+      'start_date', p.start_date, 'end_date', p.end_date, 'document', p.document,
+      'payee', p.payee, 'description', p.description, 'amount', p.amount,
+      'extras', p.extras, 'source_ref', p.source_ref) ORDER BY p.ord), '[]'::jsonb))
+  INTO result FROM (
+    SELECT d.*, row_number() OVER () AS ord FROM (
+      SELECT d.chamber, d.unit, d.row_number, d.period_start, d.period_end, d.organization,
+        d.office, d.org_year, d.funding_year, d.program, d.category, d.row_kind,
+        d.transaction_date, d.start_date, d.end_date, d.document, d.payee, d.description,
+        d.amount, d.extras, d.source_ref
+      FROM disbursements d
+      WHERE (q IS NULL OR d.tsv @@ q)
+        AND (filter_chamber IS NULL OR d.chamber = filter_chamber)
+        AND (filter_period IS NULL OR d.period_start = filter_period)
+        AND (filter_category IS NULL OR d.category = filter_category)
+        AND (filter_office IS NULL OR d.office = filter_office)
+      ORDER BY
+        CASE WHEN by_amount AND NOT ascending THEN d.amount END DESC,
+        CASE WHEN by_amount AND ascending THEN d.amount END ASC,
+        CASE WHEN NOT by_amount AND ascending THEN d.period_start END ASC,
+        CASE WHEN NOT by_amount AND ascending THEN d.transaction_date END ASC NULLS LAST,
+        CASE WHEN NOT by_amount AND NOT ascending THEN d.period_start END DESC,
+        CASE WHEN NOT by_amount AND NOT ascending THEN d.transaction_date END DESC NULLS LAST,
+        d.unit, d.row_number
+      LIMIT page_size OFFSET (page_num - 1) * page_size
+    ) d
+  ) p;
   RETURN result;
 END; $$;
 
@@ -1203,6 +1281,107 @@ ALTER TABLE ONLY public.corpus_term_year ALTER COLUMN n SET (pg_attver=248143776
 
 
 --
+-- Name: disbursements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.disbursements (
+    chamber text NOT NULL,
+    unit text NOT NULL,
+    row_number integer NOT NULL,
+    period_start date NOT NULL,
+    period_end date NOT NULL,
+    organization text NOT NULL,
+    office text NOT NULL,
+    org_year integer,
+    funding_year text,
+    program text,
+    category text,
+    row_kind text NOT NULL,
+    transaction_date date,
+    start_date date,
+    end_date date,
+    document text,
+    payee text,
+    description text,
+    amount numeric(14,2) NOT NULL,
+    extras jsonb DEFAULT '{}'::jsonb NOT NULL,
+    source_ref text NOT NULL,
+    tsv tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('english'::regconfig, COALESCE(payee, ''::text)), 'A'::"char") || setweight(to_tsvector('english'::regconfig, ((((COALESCE(description, ''::text) || ' '::text) || COALESCE(office, ''::text)) || ' '::text) || COALESCE(program, ''::text))), 'B'::"char"))) STORED,
+    CONSTRAINT disbursements_chamber_check CHECK ((chamber = ANY (ARRAY['house'::text, 'senate'::text]))),
+    CONSTRAINT disbursements_row_kind_check CHECK ((row_kind = ANY (ARRAY['detail'::text, 'subtotal'::text])))
+);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN chamber SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN unit SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN row_number SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN period_start SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN period_end SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN organization SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN office SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN org_year SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN funding_year SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN program SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN category SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN row_kind SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN transaction_date SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN start_date SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN end_date SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN document SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN payee SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN description SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN amount SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN extras SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN source_ref SET (pg_attver=1404510616);
+ALTER TABLE ONLY public.disbursements ALTER COLUMN tsv SET (pg_attver=1404510616);
+
+
+--
+-- Name: disbursements_stats_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
+--
+
+CREATE MATERIALIZED VIEW public.disbursements_stats_mv AS
+ WITH g AS (
+         SELECT disbursements.chamber,
+            disbursements.period_start,
+            disbursements.period_end,
+            disbursements.category,
+            count(*) AS count,
+            sum(disbursements.amount) AS amount
+           FROM public.disbursements
+          GROUP BY disbursements.chamber, disbursements.period_start, disbursements.period_end, disbursements.category
+        )
+ SELECT 1 AS id,
+    jsonb_build_object('total', ( SELECT sum(g.count) AS sum
+           FROM g), 'amount', ( SELECT sum(g.amount) AS sum
+           FROM g), 'period_range', ( SELECT jsonb_build_object('min', min(g.period_start), 'max', max(g.period_end)) AS jsonb_build_object
+           FROM g), 'by_period', ( SELECT COALESCE(jsonb_agg(row_to_json(s.*) ORDER BY s.period_start, s.chamber), '[]'::jsonb) AS "coalesce"
+           FROM ( SELECT g.chamber,
+                    g.period_start,
+                    g.period_end,
+                    sum(g.count) AS count,
+                    sum(g.amount) AS amount
+                   FROM g
+                  GROUP BY g.chamber, g.period_start, g.period_end) s), 'by_category', ( SELECT COALESCE(jsonb_agg(row_to_json(s.*) ORDER BY s.amount DESC), '[]'::jsonb) AS "coalesce"
+           FROM ( SELECT g.category,
+                    sum(g.count) AS count,
+                    sum(g.amount) AS amount
+                   FROM g
+                  GROUP BY g.category) s), 'top_payees', ( SELECT COALESCE(jsonb_agg(row_to_json(s.*) ORDER BY s.amount DESC), '[]'::jsonb) AS "coalesce"
+           FROM ( SELECT disbursements.payee,
+                    count(*) AS count,
+                    sum(disbursements.amount) AS amount
+                   FROM public.disbursements
+                  WHERE (disbursements.payee IS NOT NULL)
+                  GROUP BY disbursements.payee
+                  ORDER BY (sum(disbursements.amount)) DESC
+                 LIMIT 25) s), 'office_list', ( SELECT COALESCE(jsonb_agg(s.office ORDER BY s.office), '[]'::jsonb) AS "coalesce"
+           FROM ( SELECT DISTINCT disbursements.office
+                   FROM public.disbursements) s)) AS data
+  WITH NO DATA;
+ALTER TABLE ONLY public.disbursements_stats_mv ALTER COLUMN id SET (pg_attver=1404552888);
+ALTER TABLE ONLY public.disbursements_stats_mv ALTER COLUMN data SET (pg_attver=1404552888);
+
+
+--
 -- Name: fec_candidates; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1559,6 +1738,7 @@ CREATE TABLE public.trade_filings (
     parse_error text,
     row_count integer DEFAULT 0 NOT NULL,
     fetched_at timestamp with time zone,
+    title text,
     CONSTRAINT trade_filings_chamber_check CHECK ((chamber = ANY (ARRAY['house'::text, 'senate'::text]))),
     CONSTRAINT trade_filings_check CHECK (((kind = 'paper'::text) = (parse_status = 'paper'::text))),
     CONSTRAINT trade_filings_check1 CHECK (((parse_status = 'parsed'::text) OR (row_count = 0))),
@@ -1587,6 +1767,7 @@ ALTER TABLE ONLY public.trade_filings ALTER COLUMN parse_status SET (pg_attver=1
 ALTER TABLE ONLY public.trade_filings ALTER COLUMN parse_error SET (pg_attver=1189227016);
 ALTER TABLE ONLY public.trade_filings ALTER COLUMN row_count SET (pg_attver=1189227016);
 ALTER TABLE ONLY public.trade_filings ALTER COLUMN fetched_at SET (pg_attver=1189227016);
+ALTER TABLE ONLY public.trade_filings ALTER COLUMN title SET (pg_attver=1300530760);
 
 
 --
@@ -1673,6 +1854,14 @@ ALTER TABLE ONLY public.corpus_term_year
 
 
 --
+-- Name: disbursements disbursements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.disbursements
+    ADD CONSTRAINT disbursements_pkey PRIMARY KEY (unit, row_number);
+
+
+--
 -- Name: fec_candidates fec_candidates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1750,6 +1939,13 @@ ALTER TABLE ONLY public.trade_filings
 
 ALTER TABLE ONLY public.trade_members
     ADD CONSTRAINT trade_members_pkey PRIMARY KEY (bioguide);
+
+
+--
+-- Name: disbursements_stats_mv_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX disbursements_stats_mv_id ON public.disbursements_stats_mv USING btree (id);
 
 
 --
@@ -1869,6 +2065,48 @@ CREATE INDEX idx_corpus_speaker ON public.corpus_statements USING btree (speaker
 --
 
 CREATE INDEX idx_corpus_tsv ON public.corpus_statements USING gin (tsv);
+
+
+--
+-- Name: idx_disb_amount; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_disb_amount ON public.disbursements USING btree (amount);
+
+
+--
+-- Name: idx_disb_category; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_disb_category ON public.disbursements USING btree (category);
+
+
+--
+-- Name: idx_disb_chamber_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_disb_chamber_period ON public.disbursements USING btree (chamber, period_start);
+
+
+--
+-- Name: idx_disb_office; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_disb_office ON public.disbursements USING btree (office);
+
+
+--
+-- Name: idx_disb_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_disb_period ON public.disbursements USING btree (period_start);
+
+
+--
+-- Name: idx_disb_tsv; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_disb_tsv ON public.disbursements USING gin (tsv);
 
 
 --
@@ -2173,6 +2411,13 @@ CREATE INDEX idx_stock_trades_type ON public.stock_trades USING btree (type);
 
 
 --
+-- Name: idx_trade_filings_amends; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trade_filings_amends ON public.trade_filings USING btree (chamber, amends_filing_id) WHERE (amends_filing_id IS NOT NULL);
+
+
+--
 -- Name: idx_trade_filings_bioguide; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2208,6 +2453,14 @@ ALTER TABLE ONLY public.stock_trades
 
 ALTER TABLE ONLY public.stock_trades
     ADD CONSTRAINT stock_trades_chamber_filing_id_fkey FOREIGN KEY (chamber, filing_id) REFERENCES public.trade_filings(chamber, filing_id) ON DELETE CASCADE;
+
+
+--
+-- Name: trade_filings trade_filings_amends_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trade_filings
+    ADD CONSTRAINT trade_filings_amends_fkey FOREIGN KEY (chamber, amends_filing_id) REFERENCES public.trade_filings(chamber, filing_id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

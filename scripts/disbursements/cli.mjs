@@ -6,7 +6,8 @@
 //   npm run disbursements -- fetch --again Q...    download those quarters again (re-issued in place)
 //   npm run disbursements -- parse [Q...]          parse, reconcile, print counts
 //   npm run disbursements -- schema --target E     apply db/disbursements.sql
-//   npm run disbursements -- load --target E [Q...]  replace each quarter's rows, one transaction per quarter
+//   npm run disbursements -- load --target E [Q...]  replace each quarter's rows, one transaction per quarter, then refresh stats
+//   npm run disbursements -- stats --target E      refresh the stats view alone
 //   npm run disbursements -- check [Q...] [--table t]  raw vs parsed vs loaded, every column
 //   npm run disbursements -- sample N              N random rows, spread over quarters, to tmp/disbursements/sample.json
 //
@@ -157,8 +158,22 @@ async function schemaCmd(rest) {
   console.log('applied db/disbursements.sql');
 }
 
+// The stats view (db/disbursements.sql) holds what /disbursements/ charts;
+// CONCURRENTLY keeps it readable while it rebuilds (33 s to 3 minutes at 0.25 CU).
+async function refreshStats(client) {
+  const t0 = Date.now();
+  await client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY disbursements_stats_mv');
+  console.log(`stats refreshed  ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+}
+
+async function statsCmd(rest) {
+  requireTarget(rest);
+  await withClient(refreshStats);
+}
+
 // One transaction per quarter: delete the unit, insert its rows. A quarter
-// that fails to reconcile is never loaded.
+// that fails to reconcile is never loaded. The stats view is refreshed last,
+// so it is stale only while a load runs.
 async function loadCmd(rest) {
   requireTarget(rest);
   const qs = await local(rest);
@@ -174,6 +189,7 @@ async function loadCmd(rest) {
       });
       console.log(`${q.quarter}  ${rows.length.toLocaleString()} rows  ${((Date.now() - t0) / 1000).toFixed(1)} s`);
     }
+    await refreshStats(client);
   });
 }
 
@@ -203,9 +219,27 @@ async function checkCmd(rest) {
         if (!units.has(unit)) { failed++; console.log(`FAIL ${unit} is in ${table} but not downloaded`); }
       }
     }
+    if (table === TABLE) failed += await checkStats(client);
   });
   if (failed) process.exitCode = 1;
   else console.log(`PASS: ${total.toLocaleString()} rows in ${qs.length} quarters match their sources, all ${COLUMNS.length} columns`);
+}
+
+// The stats view against the table, by row count per chamber and quarter (an
+// index-only scan, about a second). A quarter reissued in place with the same
+// count would pass; `load` always refreshes, so this catches a load that died
+// before its refresh, or a hand edit.
+async function checkStats(client) {
+  const { rows: [{ data }] } = await client.query('SELECT data FROM disbursements_stats_mv');
+  const { rows } = await client.query(`SELECT chamber, period_start::text AS p, count(*)::int AS n FROM ${TABLE} GROUP BY 1, 2`);
+  const want = new Map(rows.map((r) => [`${r.chamber} ${r.p}`, r.n]));
+  const have = new Map((data.by_period ?? []).map((r) => [`${r.chamber} ${r.period_start}`, Number(r.count)]));
+  const bad = [...new Set([...want.keys(), ...have.keys()])].filter((k) => want.get(k) !== have.get(k));
+  const total = rows.reduce((a, r) => a + r.n, 0);
+  if (Number(data.total) !== total) bad.unshift(`total ${data.total} vs ${total}`);
+  if (bad.length) console.log(`FAIL stats view is stale (${bad.slice(0, 3).join('; ')}); run stats --target E`);
+  else console.log('stats view matches the table');
+  return bad.length ? 1 : 0;
 }
 
 // Random rows, an even share from each quarter, for a reviewer to hold
@@ -238,10 +272,11 @@ async function main(argv) {
     case 'parse': await parseCmd(rest); break;
     case 'schema': await schemaCmd(rest); break;
     case 'load': await loadCmd(rest); break;
+    case 'stats': await statsCmd(rest); break;
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
     default:
-      console.error('usage: cli.mjs links|fetch [--again] [Q...]|parse [Q...]|schema --target E|load --target E [Q...]|check [Q...] [--table t]|sample N');
+      console.error('usage: cli.mjs links|fetch [--again] [Q...]|parse [Q...]|schema --target E|load --target E [Q...]|stats --target E|check [Q...] [--table t]|sample N');
       process.exitCode = 2;
   }
 }

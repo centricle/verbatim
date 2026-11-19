@@ -14,6 +14,7 @@
     "corpus": "node --env-file-if-exists=.env scripts/corpus/cli.mjs",
     "executive": "node --env-file-if-exists=.env scripts/executive/cli.mjs",
     "clemency": "node --env-file-if-exists=.env scripts/clemency/cli.mjs",
+    "disbursements": "node --env-file-if-exists=.env scripts/disbursements/cli.mjs",
     "trades": "node --env-file-if-exists=.env scripts/trades/cli.mjs"
   },
   "dependencies": {

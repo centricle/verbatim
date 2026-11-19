@@ -1,5 +1,5 @@
 // Shared behavior for the dataset explorers (trades, compas, incidents,
-// finance, qi, crashes, corpus, executive, clemency). Each page is the same machine: a search box, filter selects,
+// finance, qi, crashes, corpus, executive, clemency, disbursements). Each page is the same machine: a search box, filter selects,
 // a paged table fed by `/api/<x>?action=search`, and chart islands fed by
 // `?action=stats` that set a filter when clicked. The page's app.js supplies
 // only what differs: its endpoint, filter keys, row markup and charts.
@@ -26,6 +26,11 @@
 // chamber's members); a filter it has no option for is then cleared, in the
 // same history entry, rather than left filtering invisibly. A refetch that
 // fails leaves the last answer drawn and is asked for again on the next change.
+//
+// A search can answer with `total_capped` (disbursements: 3.9 M rows, where an
+// exact count of a broad filter outlasts a function's 10 s). `total` is then
+// the cap, the count reads "10,000+", and paging stops at the cap's last page,
+// where the stored function stops too.
 
 const PAGE_SIZE = 50;
 
@@ -218,6 +223,7 @@ export function createExplorer(cfg) {
 
   function render(data) {
     const total = Number(data.total) || 0;
+    const more = data.total_capped ? '+' : '';
     const rows = data.rows || [];
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -236,7 +242,7 @@ export function createExplorer(cfg) {
     } else {
       const start = (state.page - 1) * PAGE_SIZE + 1;
       const end = Math.min(state.page * PAGE_SIZE, total);
-      resultsInfo.textContent = `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()} ${cfg.noun}`;
+      resultsInfo.textContent = `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()}${more} ${cfg.noun}`;
     }
 
     resultsBody.innerHTML = rows.map(cfg.row).join('');

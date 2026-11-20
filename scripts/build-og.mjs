@@ -65,7 +65,11 @@ const previewAt = args.indexOf('--preview');
 const previewDir = previewAt === -1 ? null : args[previewAt + 1];
 const onlyAt = args.indexOf('--only');
 const only = onlyAt === -1 ? null : new Set(args[onlyAt + 1].split(','));
-const base = (args.find((a, i) => !a.startsWith('--') && i !== previewAt + 1 && i !== onlyAt + 1) ?? 'https://verbatim.test').replace(/\/$/, '');
+// The base is the one argument that is neither a flag nor a flag's value. An
+// absent flag's index is -1, so only present flags claim the slot after them:
+// counting -1 + 1 claimed args[0], and a base given first was ignored.
+const flagValues = new Set([previewAt, onlyAt].filter((i) => i !== -1).map((i) => i + 1));
+const base = (args.find((a, i) => !a.startsWith('--') && !flagValues.has(i)) ?? 'https://verbatim.test').replace(/\/$/, '');
 const unknown = only ? [...only].filter((slug) => !PAGES.some(([s]) => s === slug)) : [];
 if (unknown.length) throw new Error(`--only: no page ${unknown.join(', ')}`);
 const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'static', 'og');

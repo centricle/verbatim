@@ -1,6 +1,6 @@
 // Formats shared by the /disbursements/ table and figures.
 //
-// Amounts: the exact form, to the cent as filed, goes in every table cell and
+// Amounts: the exact form, to the cent as published, goes in every table cell and
 // tooltip; the short form ("$8.96B") only labels bars and axes.
 //
 // Periods: the URL and API take `2026q2`, which the function turns into the

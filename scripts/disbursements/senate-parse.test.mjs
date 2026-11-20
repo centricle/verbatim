@@ -159,13 +159,13 @@ test('a class total that differs from the summary is a discrepancy, not a failur
   assert.equal(r.discrepancies[0].lines - r.discrepancies[0].summary, 100000);
 });
 
-test('a line that breaks its printed subtotal fails, unless the summary agrees with the subtotal', () => {
-  // The summary agrees with the printed class total: the gap is the report's
-  // own, and loads as printed.
+test('a line that breaks its stated subtotal fails, unless the summary agrees with the subtotal', () => {
+  // The summary agrees with the stated class total: the gap is the report's
+  // own, and loads as published.
   const ok = parsePages(volume26({ ocsSecond: '$3,000.01' }), source);
   assert.deepEqual(ok.problems, []);
   assert.deepEqual(ok.discrepancies.filter((d) => d.kind === 'lines').map((d) => [d.label, d.lines, d.printed]), [['OTHER CONTRACTUAL SERVICES', 2310001, 2310000]]);
-  // Nothing printed backs the class total: a misread, never allowed.
+  // Nothing in the report backs the class total: a misread, never allowed.
   const r = parsePages(volume26({ ocsSecond: '$3,000.01', ocsSummary: '-23,100.01', org: '-$174,455.51' }), source);
   assert.ok(r.problems.some((p) => /class "OTHER CONTRACTUAL SERVICES" is 23100.00, what it covers sums to 23100.01/.test(p)), r.problems.join('\n'));
 });
@@ -187,7 +187,7 @@ test('the committees: B-2-n labels, no funding year, rules drawn as text', () =>
   assert.deepEqual([...new Set(r.rows.map((x) => JSON.parse(x.extras).page_label))], ['B-2-1', 'B-2-2']);
 });
 
-test('a page printed as an image: its transcription is parsed, and without one it fails', () => {
+test('a page published as an image: its transcription is parsed, and without one it fails', () => {
   const plain = parsePages(volume26(), source);
   const pages = volume26();
   const label = pages[1].lines.find((l) => l.text === 'B-2');
@@ -208,7 +208,7 @@ test('a page printed as an image: its transcription is parsed, and without one i
 
 test('a memo subtotal of the staff pay lines never loads, and is listed', () => {
   // PERSONNEL COMPENSATION over the person lines, outside the figures: the
-  // pay sub-class below it then covers nothing printed (unitemized).
+  // pay sub-class below it then covers no listed line (unitemized).
   const r = parsePages(volume26({ memo: true }), source);
   assert.deepEqual(r.problems, []);
   assert.deepEqual(r.discrepancies.map((d) => [d.kind, d.label, d.lines]), [['memo', 'PERSONNEL COMPENSATION', 12000000]]);
@@ -307,7 +307,7 @@ test('2012 layout: pay lines that fit no subtotal are a pay discrepancy', () => 
   assert.equal(r.discrepancies[0].kind, 'pay');
 });
 
-test('money and dates as the report prints them', () => {
+test('money and dates as the report gives them', () => {
   assert.equal(moneyCents('-$8,484.00'), -848400);
   assert.equal(moneyCents('$.00'), 0);
   assert.equal(moneyCents('$0.00'), 0);

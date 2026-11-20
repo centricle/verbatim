@@ -7,13 +7,13 @@
 -- scripts/disbursements/parse.mjs documents every change the loader makes:
 -- staff pay and benefits to former personnel arrive as the source's own
 -- subtotal rows (row_kind 'subtotal'), office and org_year are derived from
--- the filed organization name, and fields only one chamber files live in
+-- the published organization name, and fields only one chamber publishes live in
 -- extras. Everything else is as published.
 --
 -- Senate rows come from the Report of the Secretary of the Senate, one unit
 -- per semiannual volume (`senate-fy2026h1`, October 2025 to March 2026), and
 -- scripts/disbursements/senate-parse.mjs documents what its loader keeps:
--- every printed line except the per-person pay lines, which arrive as the
+-- every listed line except the per-person pay lines, which arrive as the
 -- report's own subtotals, as the House's do.
 CREATE TABLE IF NOT EXISTS public.disbursements (
   chamber text NOT NULL CHECK (chamber IN ('house', 'senate')),

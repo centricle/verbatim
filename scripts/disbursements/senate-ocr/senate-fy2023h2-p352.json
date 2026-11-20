@@ -2,7 +2,7 @@
  "unit": "senate-fy2023h2",
  "page": 352,
  "label": "B-336",
- "how": "Printed as an image with no text layer. Read with tesseract (engine, dpi and psm below), every row checked by eye against a 200 dpi render. Header lines keep their OCR positions, with the edits listed; entries sit on their OCR'd amounts' baselines at the columns' OCR'd left edges, a two-line payee given on one line. Checks, all exact: the 16 amounts sum to $61,855.38, the OTHER CONTRACTUAL SERVICES total on page 354 ($533,525.60) less its lines on pages 353 and 354; the summary's period and YTD columns each sum to ORGANIZATION TOTALS.",
+ "how": "Published as an image with no text layer. Read with tesseract (engine, dpi and psm below), every row checked by eye against a 200 dpi render. Header lines keep their OCR positions, with the edits listed; entries sit on their OCR'd amounts' baselines at the columns' OCR'd left edges, a two-line payee given on one line. Checks, all exact: the 16 amounts sum to $61,855.38, the OTHER CONTRACTUAL SERVICES total on page 354 ($533,525.60) less its lines on pages 353 and 354; the summary's period and YTD columns each sum to ORGANIZATION TOTALS.",
  "engine": "tesseract 5.5.3",
  "dpi": 400,
  "psm": 6,

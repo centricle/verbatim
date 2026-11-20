@@ -20,8 +20,8 @@ import { COLUMNS, norm } from './check.mjs';
 import { moneyCents } from './senate-parse.mjs';
 
 // A page label ends a line: "B-334", "B-2-3" (the committees), or "B - 10"
-// where a volume prints it small inside the page as well. The contents pages end lines with B labels
-// too, but print no money, so pages are compared by whether they carry any.
+// where a volume shows it small inside the page as well. The contents pages end lines with B labels
+// too, but carry no money, so pages are compared by whether they carry any.
 const LABEL = /(?:^|\s{2,})([A-D])(?:-\d+)? ?- ?\d{1,3}(?:,?\d{3})*\s*$/m;
 
 export function rawScan(layoutText) {

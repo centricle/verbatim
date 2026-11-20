@@ -5,7 +5,7 @@
 // here; the fixtures hand in a few hand-written pages instead.
 //
 // Why coordinates and not `pdftotext -layout`: the report's tables center a
-// wrapped cell on its row, so a two-line payee prints one line above the
+// wrapped cell on its row, so a two-line payee sits one line above the
 // row and one below it, and the layout text sometimes moves an amount onto
 // a line of its own (Oct 2025 to Mar 2026, page B-27). With coordinates,
 // each fragment can be placed by its distance from the row, and the amount

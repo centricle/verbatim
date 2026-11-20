@@ -15,14 +15,14 @@
 //   (SUPPLIES AND MATERIALS). Where the description fits both, position
 //   decides: a subtotal right after detail rows closes a category, one right
 //   after another subtotal closes the program. A block can be split, with
-//   its subtotals filed together later; the sums still hold in aggregate,
+//   its subtotals published together later; the sums still hold in aggregate,
 //   and check.mjs proves they do for every key.
 // - GRAND TOTAL FOR ORGANIZATION ("OFFICE TOTALS:"), one or more per
 //   organization.
 //
 // What reaches the table, and nothing else:
 //
-// - Every DETAIL row, as filed, except in the categories in COLLAPSED.
+// - Every DETAIL row, as published, except in the categories in COLLAPSED.
 // - For COLLAPSED categories, the source's own category subtotal rows instead
 //   of the per-person lines (ksmith, 2026-11-18 and 2026-11-19): the site
 //   is never a name-to-salary lookup, and a gratuity names a bereaved
@@ -31,7 +31,7 @@
 // - Blank fields (the CAO pads them with three spaces) become null.
 // - Dates in the CAO's D-Mon-YY or D-MON-YYYY forms become ISO dates. Any
 //   other form (two rows in Q2 2026 read 14-MAR-0026) loads as null in the
-//   date column with the filed text kept under `dates_as_filed` in extras.
+//   date column with the published text kept under `dates_as_filed` in extras.
 // - A row with an unquoted comma inside one free-text field (Q3 2020:
 //   `CITI PCARD-CNDTL CR,AMZN MKTP US M79`) has one field too many, and every
 //   field after the comma would shift one column right; in the 19-column
@@ -44,7 +44,7 @@
 // - Two fields derived from ORGANIZATION, which files name with their
 //   funding year ("2025 OFFICE OF THE SPEAKER", "FISCAL YEAR 2026
 //   SERGEANT AT ARMS"): `office`, the name without that prefix, and
-//   `org_year`, the prefix's year. The filed name is kept as `organization`.
+//   `org_year`, the prefix's year. The published name is kept as `organization`.
 import { parse } from 'csv-parse/sync';
 
 export const COLLAPSED = new Set(['PERSONNEL COMPENSATION', 'BENEFITS TO FORMER PERSONNEL']);
@@ -84,7 +84,7 @@ const clean = (v) => {
 };
 
 // '18-Mar-16' or '31-JAN-2019' -> ISO. Null for blank; undefined for a form
-// the CAO does not normally use, which the caller keeps as filed.
+// the CAO does not normally use, which the caller keeps as published.
 export function isoDate(text) {
   const t = clean(text);
   if (t == null) return null;

@@ -21,13 +21,13 @@
 // - person: a name in the payee column, a position title in the
 //   description column, an amount, no document and no dates: one staff
 //   member's pay for the period.
-// - subtotal: a label and an amount, printed after the lines it covers.
+// - subtotal: a label and an amount, listed after the lines it covers.
 //   There are two levels. A class total's label is one of the block
 //   summary's object classes (NET PAYROLL EXPENSES, TRAVEL AND
 //   TRANSPORTATION OF PERSONS, ...). Anything else is a sub-class
 //   (PERSONNEL COMP. FULL-TIME PERMANENT, PERSONNEL BENEFITS, ...), and a
-//   class total covers the sub-classes before it. Volumes from 2026 print
-//   both levels left of the description column; the 2012 volume prints
+//   class total covers the sub-classes before it. Volumes from 2026 put
+//   both levels left of the description column; the 2012 volume puts
 //   sub-classes in the description column, where they look like
 //   continuations: there a description-only line is a sub-class when its
 //   amount equals the lines since the last subtotal, or when no line came
@@ -39,47 +39,47 @@
 //
 // What reaches the table, and nothing else:
 //
-// - Every entry and continuation line, as printed. A cell's printed line
+// - Every entry and continuation line, as published. A cell's line
 //   breaks become single spaces.
 // - Never a person line (ksmith, 2026-11-18: the site is never a
 //   name-to-salary lookup). In its place, the subtotal that covers it,
 //   which must cover nothing but person lines. The block still reconciles,
 //   because the subtotal is the sum of the lines it replaces.
-// - Every subtotal that covers no line at all (the Senate prints some
+// - Every subtotal that covers no line at all (the Senate reports some
 //   amounts only as a subtotal, BENEFITS FOR FORMER PERSONNEL among them),
 //   with extras.unitemized. Without them the block would not reconcile.
 // - row_kind 'subtotal' for both of those; description is the label.
-// - category is the class total's label, upper case (2026 prints "Net
+// - category is the class total's label, upper case (2026 gives "Net
 //   Payroll Expenses" in title case); a sub-class label rides in
 //   extras.subclass.
-// - organization and office are the block's office name as printed;
-//   program is its appropriation title; funding_year as printed ("2024",
+// - organization and office are the block's office name as published;
+//   program is its appropriation title; funding_year as published ("2024",
 //   "2021-2026"). transaction_date is DATE POSTED, start_date and end_date
 //   the OBLIGATION/SERVICE DATES, as ISO dates; a date in any other form
 //   loads as null with the text under extras.dates_as_filed.
 // - extras.page (1-based page of the PDF, which source_ref links with
-//   #page=) and extras.page_label (the printed B-n).
+//   #page=) and extras.page_label (the page's own B-n).
 // - A document's later lines whose first line is missing from the PDF's
 //   text load with no document, payee or dates, and
 //   extras.no_document_line.
 // - A class the summary charges with no class total in the lines loads as
 //   one row (extras.from_summary), unitemized unless it takes person lines
-//   printed with no subtotal of their own.
+//   listed with no subtotal of their own.
 // - The committees' inquiries and investigations statements (section B-2,
-//   labeled B-2-1 on) print no funding year: funding_year is null, the
+//   labeled B-2-1 on) give no funding year: funding_year is null, the
 //   first header line is the office, the rest the program.
 // - Lines that net to nothing under no class total of their own take the
 //   one class the summary lists at zero with no total, or none (null).
-// - Rows from a page the report prints as an image carry extras.ocr; the
+// - Rows from a page the report publishes as an image carry extras.ocr; the
 //   page's text is a committed transcription (senate-ocr.mjs).
 //
-// Summary figures print with the opposite sign to the lines (a period's
+// Summary figures carry the opposite sign to the lines (a period's
 // spending shows as -88,227.94 above lines that sum to 88,227.94), so the
 // checks compare lines with the negated summary.
 //
 // Every block must reconcile: its rows sum to ORGANIZATION TOTALS, its
 // lines to their subtotals, its class totals to the summary. Where the
-// report disagrees with itself, the rows load as printed and the gap is
+// report disagrees with itself, the rows load as published and the gap is
 // listed as a discrepancy (senate-discrepancies.json), never smoothed over.
 // Any other mismatch fails the volume. The kinds:
 //
@@ -88,11 +88,11 @@
 //   (summaryLabel; paired by an equal figure) and a class the summary
 //   leaves out, compared with zero.
 // - pay: person lines that do not add up to their pay sub-class, or that no
-//   subtotal or summary figure takes at all (label null, printed 0).
-// - lines: a class's lines differ from its printed total while that total
+//   subtotal or summary figure takes at all (label null, `printed: 0`).
+// - lines: a class's lines differ from its stated total while that total
 //   equals the summary's figure: the report's two figures agree, the lines
 //   do not. At most one per block.
-// - memo: a subtotal of person lines printed outside the statement's
+// - memo: a subtotal of person lines shown outside the statement's
 //   figures (the committees' PERSONNEL COMPENSATION, Oct 2016 to Mar 2017).
 //   It does not load.
 
@@ -112,34 +112,34 @@ const NOT_CLASSES = new Set(['AUTHORIZATION', 'SUPPLEMENTALS', 'TRANSFERS', 'RES
 // "X (REVOLVING)" (2026).
 const FUNDING_YEAR = /^(\d{4}(-\d{4})?|X|X \([A-Z -]+\))$/;
 // Sub-classes whose lines are one person's pay each, for placing person
-// lines that do not add up to their printed subtotal (see `pay` above).
+// lines that do not add up to their stated subtotal (see `pay` above).
 const PAY = new Set(['PERSONNEL COMP. FULL-TIME PERMANENT', 'OTHER PERSONNEL COMPENSATION', 'RE-EMPLOYED ANNUITANTS', 'WHEN ACTUALLY EMPLOYED (WAE)']);
-// Sub-class labels a volume may print in the description column even when
-// it prints the rest left of it.
+// Sub-class labels a volume may put in the description column even when
+// it puts the rest left of it.
 const SUBCLASS_IN_DESC = new Set([...PAY, 'PERSONNEL BENEFITS', 'BENEFITS FOR FORMER PERSONNEL']);
 const PAY_ADJUSTMENT = /^SALARIES-.*\(INTERFACE\)$/;
-// Where the report disagrees with itself, the lines load as printed and
+// Where the report disagrees with itself, the lines load as published and
 // parseVolume lists the disagreement under `discrepancies` instead of
 // failing. Three kinds are allowed, and nothing else:
 //
 // - summary: a class total in the lines differs from the block summary's
 //   figure for that class. About a hundred payroll blocks (CHAPLAIN, FY
-//   2026: four pay lines and their printed subtotal say $344,049.88, the
+//   2026: four pay lines and their stated subtotal say $344,049.88, the
 //   summary $342,049.88), and travel in three Senators' blocks, where one
 //   $7,399.04 item is itemized under one Senator and summarized under
-//   another. The lines must still add up to their own printed subtotals.
-// - pay: person lines that do not add up to their printed subtotal
+//   another. The lines must still add up to their own stated subtotals.
+// - pay: person lines that do not add up to their stated subtotal
 //   (CONSULTANTS, FY 2026-2028: 32 lines sum to $3,082,133.99 under a
 //   subtotal of $3,075,864.55, confirmed on the -layout text), or that no
-//   subtotal takes at all (label null, printed 0). Person lines never load,
-//   and the printed subtotal that does agrees with the summary.
+//   subtotal takes at all (label null, `printed: 0`). Person lines never load,
+//   and the stated subtotal that does agrees with the summary.
 // - summary also covers a class totaled twice in one block: the totals'
 //   sum is what is held against the summary.
-// - lines: a class's lines do not add up to its printed total, and that
+// - lines: a class's lines do not add up to its stated total, and that
 //   total agrees with the block summary (a Senator's FY 2023 block in the
 //   Oct 2023 to Mar 2024 volume, page B-904: ten travel lines sum to
 //   $1,627.57 under a class total and a summary of $5,116.02). The lines load as
-//   printed, so the block's rows fall short of ORGANIZATION TOTALS by the
+//   published, so the block's rows fall short of ORGANIZATION TOTALS by the
 //   gap. Only one such class per block: two could be a line read into the
 //   wrong class.
 
@@ -161,7 +161,7 @@ export function isoDate(text) {
   // A well-formed date in no year the report can mean ("05/16/0421", Apr to
   // Sep 2021; "10/11/0211", Oct 2021 to Mar 2022; "04/24/3013"; "07/31/2109"
   // and "08/31/2109" on consecutive lines, Oct 2019 to Mar 2020) is a
-  // misprint like any other, kept as printed under extras.dates_as_filed.
+  // typo like any other, kept as published under extras.dates_as_filed.
   if (y < 1900 || y > 2099) return undefined;
   if (mo < 1 || mo > 12) return undefined;
   const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
@@ -187,13 +187,13 @@ export function baselines(lines) {
   return groups;
 }
 
-// The printed page label (B-334), set sideways in the right margin. Some
-// volumes print it a second time, small, inside the page ("B - 10", "B -1"),
+// The page label (B-334), set sideways in the right margin. Some
+// volumes show it a second time, small, inside the page ("B - 10", "B -1"),
 // and 2017's first volume stamps its jacket number and date sideways in the
 // left margin ("JA", "25-107", "05/05/2017"). Those are not the page's text:
 // `ignored` holds them, and splitBlocks drops them.
 // The committees' statements in the first volume (Apr to Sep 2011, from
-// B- 1 again at page 2101) print it upright at the foot of the page
+// B- 1 again at page 2101) set it upright at the foot of the page
 // instead, left of x = 590: the lowest label right of x = 500.
 function pageLabel(page) {
   const l = page.lines.find((x) => x.x0 > 590 && PAGE_LABEL.test(x.text))
@@ -249,7 +249,7 @@ export function splitBlocks(pages) {
   const blocks = [];
   const problems = [];
   const bPages = [];
-  // Money-shaped text in what pageLabel drops (the committees print "3.00"
+  // Money-shaped text in what pageLabel drops (the committees put "3.00"
   // beside each class total in the left margin, 2011), for the raw check.
   const margin = { money: 0, cents: 0, pages: new Set() };
   let block = null;
@@ -315,10 +315,10 @@ export function readHeader(block) {
     program = left.filter((l) => center(l) > center(fy)).sort((a, b) => a.y0 - b.y0);
   } else {
     // The committees' inquiries and investigations statements (section
-    // B-2, Apr to Sep 2011 and later) print no funding year: the committee's
+    // B-2, Apr to Sep 2011 and later) give no funding year: the committee's
     // name, then its short name and authorizing resolution ("... S.RES.89D
     // (110TH)"), then the appropriation. The first line is the office, the
-    // rest the program, as printed; the funding year is null.
+    // rest the program, as published; the funding year is null.
     const left = all.filter((l) => !used.has(l) && l.x0 < leftEdge).sort((a, b) => a.y0 - b.y0);
     if (left.length < 2) problems.push(`${where}: header lacks Funding Year`);
     office = left.slice(0, 1);
@@ -400,7 +400,7 @@ function cellsOf(g) {
       out[d].push(l);
       continue;
     }
-    // The committees print a small number ("3.00", "4.00") left of the
+    // The committees put a small number ("3.00", "4.00") left of the
     // document column beside some class totals (Apr to Sep 2016 and 2020,
     // B-2-3). No document number is shaped like it, and it is never an amount.
     if (l.x1 < c.posted.x0 - 2 && /^\d{1,2}\.00$/.test(l.text)) out.margin.push(l);
@@ -420,7 +420,7 @@ const text = (ls) => ls.map((l) => l.text).join(' ').replace(/\s+/g, ' ').trim()
 // 2012 subtotals a block's pay lines under two or three pay sub-classes at
 // once, at the end of the block (MAJORITY CONFERENCE COMMITTEE, B-47: 29
 // lines, then OTHER PERSONNEL COMPENSATION $143.46 and PERSONNEL COMP.
-// FULL-TIME PERMANENT $702,566.35). Each sub-class's lines print together,
+// FULL-TIME PERMANENT $702,566.35). Each sub-class's lines sit together,
 // so the lines split into consecutive runs, one per sub-class, each adding
 // up to its subtotal exactly. Tries every order of every subset of the open
 // pay sub-classes; returns [{ sub, lines }] for the first exact split, or
@@ -468,7 +468,7 @@ function jointPersons(lines, subs) {
 
 /**
  * Read one block's lines into items (rows and subtotals) and reconcile them.
- * `subclassInDesc`: this volume prints sub-class subtotals in the
+ * `subclassInDesc`: this volume puts sub-class subtotals in the
  * description column (decided per volume by parseVolume).
  */
 export function readDetail(block, header, subclassInDesc, volumeClasses = new Set()) {
@@ -511,7 +511,7 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
     } else if (c.desc.length) {
       items.push({ ...base, kind: 'candidate', cents, payee: [], desc: [...c.desc] });
     } else {
-      // A pay line printed with its name and title blank (Apr to Sep 2021,
+      // A pay line with its name and title blank (Apr to Sep 2021,
       // B-496: one amount, the office's whole RE-EMPLOYED ANNUITANTS
       // subtotal). It is a person line: one outside a pay run is left with
       // no subtotal to take it, which fails the block.
@@ -558,7 +558,7 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
   }
 
   // Subtotals, levels and categories. Person lines keep a run of their own,
-  // because 2012 prints a block's pay lines first and their subtotals last,
+  // because 2012 lists a block's pay lines first and their subtotals last,
   // after every other class (B-249), where 2026 subtotals them at once.
   let run = [];          // entries and continuations since the last subtotal
   let classSpan = [];    // the same, and sub-class subtotals, since the last class total
@@ -582,7 +582,7 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
     // A name too long for its cell wraps above and below the line, which
     // then carries only the title and the amount (2026, page 1678).
     if (it.kind === 'candidate' && it.payee.length) it.kind = 'person';
-    // A payroll adjustment printed among the pay lines with no name (Apr to
+    // A payroll adjustment listed among the pay lines with no name (Apr to
     // Sep 2021, B-1691: SALARIES-PERMANENT FULL-TIME (INTERFACE)
     // -$100,000.00, inside a PERSONNEL COMP. FULL-TIME PERMANENT subtotal
     // that is the pay lines plus it). It goes with the person lines.
@@ -592,8 +592,8 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
       const fits = !run.length || sumOf(run) === it.cents || (persons.length && sumOf(persons) === it.cents);
       if (subclassInDesc && (!run.length || sumOf(run) === it.cents) && labelText === labelText.toUpperCase()) subtotalOf(it, labelText);
       else if (SUBCLASS_IN_DESC.has(labelText) && fits) {
-        // A volume that prints sub-classes left of the description column
-        // can still print a pay sub-class in it, even straight after an
+        // A volume that puts sub-classes left of the description column
+        // can still put a pay sub-class in it, even straight after an
         // entry (Oct 2013 to Mar 2014, Oct 2019 to Mar 2020).
         subtotalOf(it, labelText);
       } else if (lastEntry) {
@@ -604,7 +604,7 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
         // A document's later lines with its first line missing from the
         // PDF's text (Oct 2022 to Mar 2023, B-962: the travel lines after
         // Net Payroll Expenses, whose document line is not on the page).
-        // They load as printed, with no document, payee or dates.
+        // They load as published, with no document, payee or dates.
         it.kind = 'continuation';
         it.of = null;
         it.docLine = null;
@@ -675,7 +675,7 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
         // TRANSPORTATION OF PERSONS, $4,852.90, where its summary charges
         // the same $4,852.90 to Supplies and Materials. Paired with the one
         // summary class of that figure with no total in the lines; the rows
-        // keep the class printed over them.
+        // keep the class shown over them.
         const same = [...header.classes.values()].filter((x) => !x.matched && x.period && -x.period === it.cents);
         if (same.length === 1) {
           s = same[0];
@@ -691,15 +691,15 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
           header.classes.set(category, s);
         }
       }
-      // A memo of the committee's staff pay: Oct 2016 to Mar 2017 prints
+      // A memo of the committee's staff pay: Oct 2016 to Mar 2017 lists
       // each committee's person lines under PERSONNEL COMPENSATION
       // ($3,943,307.26 at B-2-110), outside the statement's own figures,
       // which carry its pay as an unitemized PERSONNEL COMP. FULL-TIME
       // PERMANENT ($599,533.17). Left in, it lands in the next class total
       // and adds millions no ORGANIZATION TOTALS includes. A non-pay
       // sub-class over person lines only, whose removal makes what the
-      // class total covers equal its printed figure, which the summary
-      // prints too, is that memo: it does not load, and is listed (`memo`).
+      // class total covers equal its stated figure, which the summary
+      // gives too, is that memo: it does not load, and is listed (`memo`).
       if (classSpan.length && total !== it.cents && s && -(s.period ?? 0) === it.cents) {
         const memo = subs.filter((x) => !PAY.has(fold(x.labelText)) && x.covers.length && x.covers.every((c) => c.kind === 'person') && total - x.cents === it.cents);
         if (memo.length === 1) {
@@ -710,7 +710,7 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
         }
       }
       if (classSpan.length && total !== it.cents) {
-        // Lines short of (or past) a class total that the summary prints
+        // Lines short of (or past) a class total that the summary gives
         // too: the report's own two figures agree, so the gap is in its
         // lines (see `lines` above).
         if (s && -(s.period ?? 0) === it.cents) discrepancies.push({ kind: 'lines', where, label: it.labelText, page: it.page, lines: total, printed: it.cents });
@@ -733,14 +733,14 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
   }
   if (classSpan.length) {
     // Lines that net to nothing, a charge and its reversal, can end a block
-    // with no class total printed for them (Apr to Sep 2018, B-451: -$60.55
+    // with no class total given for them (Apr to Sep 2018, B-451: -$60.55
     // and $60.55 in travel). They take the one class the summary lists at
     // zero with no total in the lines. Lines that do not net to zero fail.
     // With more than one such class (Apr to Sep 2016, B-1157: three
     // charges and their three reversals), the report names none, and
     // neither does the row: category null.
-    // A class's lines can print in two places, its total over the first
-    // part: Apr to Sep 2017, B-2-93, FOREIGN RELATIONS prints OTHER
+    // A class's lines can appear in two places, its total over the first
+    // part: Apr to Sep 2017, B-2-93, FOREIGN RELATIONS lists OTHER
     // CONTRACTUAL SERVICES $24,620.40 (the summary's figure too) over
     // $4,544.50 of lines, then ends the statement, after the travel total,
     // with $20,075.90 more of the same services. Lines left at the end that
@@ -773,17 +773,17 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
   for (const s of header.classes.values()) {
     if (s.period && !s.matched) {
       const it = { page: block.page, label: block.label, c: center(s.line), kind: 'summary', level: 2, cents: -s.period, labelText: s.label, category: fold(s.label), covers: [], subs: [] };
-      // Person lines printed with no subtotal at all, whose sum is the
+      // Person lines listed with no subtotal at all, whose sum is the
       // summary's figure for a class with no total in the lines (Apr to Sep
       // 2016, B-304: one consultant's $790.00, and Net Payroll Expenses
       // $790.00 in the summary only). The summary item takes them, as a
-      // printed subtotal would.
+      // stated subtotal would.
       if (persons.length && sumOf(persons) === it.cents) { it.covers = persons; persons = []; }
       out.push(it);
     }
   }
   // Person lines no subtotal or summary figure takes (CONSULTANTS, FY 1921,
-  // Oct 2019 to Mar 2020, B-192: one consultant's $1,903.48 printed under a
+  // Oct 2019 to Mar 2020, B-192: one consultant's $1,903.48 listed under a
   // summary and ORGANIZATION TOTALS of $0.00 for the period). They never
   // load either way; listed as a pay discrepancy against nothing. A line
   // read as a person that was not one would leave the block's rows short of
@@ -885,14 +885,14 @@ export function toRow(it, n, header, source) {
  * @param {string} xhtml pdftotext -bbox-layout output for one volume
  * @param {{ unit: string, url: string, start: string, end: string, file: string }} source
  */
-// ocr: transcriptions of pages printed as images, by page number
+// ocr: transcriptions of pages published as images, by page number
 // (senate-ocr.mjs, loadOcr).
 export function parseVolume(xhtml, source, ocr = {}) {
   return parsePages(readPages(xhtml), source, ocr);
 }
 
 export function parsePages(pages, source, ocr = {}) {
-  // A page printed as an image has no text but its label (Apr to Sep 2023,
+  // A page published as an image has no text but its label (Apr to Sep 2023,
   // B-336). Its transcription's lines join the label, and the page is
   // parsed like any other; a B page with no text and no transcription fails.
   const ocrPages = new Set();
@@ -912,7 +912,7 @@ export function parsePages(pages, source, ocr = {}) {
   // Every class any block's summary names, for a class total whose own
   // summary names it otherwise (readDetail). Never a sub-class label.
   const volumeClasses = new Set(headers.flatMap((h) => (h.classes ? [...h.classes.keys()] : [])).filter((k) => !SUBCLASS_IN_DESC.has(k)));
-  // A volume prints sub-classes either left of the description column or in
+  // A volume puts sub-classes either left of the description column or in
   // it. Any sub-class label left of it settles the question for the volume.
   let subclassLeft = false;
   for (const [i, b] of blocks.entries()) {
@@ -925,9 +925,9 @@ export function parsePages(pages, source, ocr = {}) {
   }
   const rows = [];
   const discrepancies = [];
-  // B pages that print any money inside a block, for the raw scan to match
+  // B pages that carry any money inside a block, for the raw scan to match
   // (it cannot tell a B page from a contents page that lists B labels, but
-  // a contents page prints no money). The raw scan counts every word shaped
+  // a contents page carries no money). The raw scan counts every word shaped
   // like money, so a description that holds one ("8.25 MILES") is counted
   // here too, as `embedded`; amounts the parse reads are counted where it
   // reads them.
@@ -955,11 +955,11 @@ export function parsePages(pages, source, ocr = {}) {
     const h = headers[i];
     problems.push(...h.problems);
     if (!h.classes) continue;
-    // Every block prints the volume's period; a volume filed under the
+    // Every block states the volume's period; a volume listed under the
     // wrong period, or a block from another, stops here.
     const mdy = (d) => `${d.slice(5, 7)}/${d.slice(8, 10)}/${d.slice(0, 4)}`;
     if (!h.periodText.includes(mdy(source.start)) || !h.periodText.includes(mdy(source.end))) {
-      problems.push(`block at page ${b.page} "${h.office}": prints the period "${h.periodText}", not ${mdy(source.start)} to ${mdy(source.end)}`);
+      problems.push(`block at page ${b.page} "${h.office}": states the period "${h.periodText}", not ${mdy(source.start)} to ${mdy(source.end)}`);
     }
     tally.money += h.moneyCount;
     tally.moneyCents += h.moneySum;

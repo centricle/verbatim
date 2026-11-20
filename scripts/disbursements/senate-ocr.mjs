@@ -1,4 +1,4 @@
-// The one Senate page printed as an image, with no text under it, read by
+// The one Senate page published as an image, with no text under it, read by
 // OCR.
 //
 // Of the 30 volumes, only Apr to Sep 2023 has a B page like that: page 352
@@ -17,7 +17,7 @@
 // files are committed: a parse never runs tesseract, and a reviewer can read
 // exactly what the parser was given. The parser then checks the page as it
 // checks any other: every amount against the subtotals and class totals
-// printed on the text pages that follow, and the block against its
+// given on the text pages that follow, and the block against its
 // ORGANIZATION TOTALS. Rows from the page carry extras.ocr. The raw check
 // cannot see the page (its text layer is empty on both sides), so the money
 // read there is left out of that comparison only.

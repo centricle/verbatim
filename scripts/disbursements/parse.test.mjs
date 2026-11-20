@@ -61,7 +61,7 @@ test('a file with some but not all of the Q4 2022 columns stops the run', () => 
   assert.throws(() => classify(text.replace('VENDOR ID,', 'VENDOR_ID,')), /some of the Q4 2022 columns/);
 });
 
-test('pay and gratuities load as the source\'s subtotal rows; everything else as filed', () => {
+test('pay and gratuities load as the source\'s subtotal rows; everything else as published', () => {
   const { rows } = parseQuarter(read('house-12col.csv').text, SOURCE);
   assert.deepEqual(rows.map((r) => r.row_number), [1, 2, 4, 8, 12, 15]);
   assert.ok(!rows.some((r) => ['RUNNER ROAD', 'BUNNY BUGS', 'DUCK DAFFY'].includes(r.payee)));
@@ -71,7 +71,7 @@ test('pay and gratuities load as the source\'s subtotal rows; everything else as
   assert.equal(pay.description, 'PERSONNEL COMPENSATION TOTALS:');
   assert.equal(pay.amount, '42500.01');
   assert.equal(pay.payee, null);
-  // A staffer's own reimbursement stays: reimbursements are kept as filed (ksmith, 2026-11-19).
+  // A staffer's own reimbursement stays: reimbursements are kept as published (ksmith, 2026-11-19).
   assert.equal(rows.find((r) => r.row_number === 2).payee, 'COYOTE WILE E.');
 });
 
@@ -90,7 +90,7 @@ test('12-column row: fields, blanks, derived office and year', () => {
   assert.equal(g.org_year, 2016);
 });
 
-test('18-column row: added columns go to extras; an odd date is kept as filed', () => {
+test('18-column row: added columns go to extras; an odd date is kept as published', () => {
   const rows = parseQuarter(read('house-18col.csv').text, SOURCE).rows;
   assert.deepEqual(rows.map((r) => r.row_number), [1, 2, 5, 10, 13, 17, 20]);
   const r = rows[0];
@@ -107,7 +107,7 @@ test('18-column row: added columns go to extras; an odd date is kept as filed', 
   assert.equal(JSON.parse(rows.find((x) => x.row_number === 10).extras).org_code, 'CT05WOL');
 });
 
-test('a total filed in another case still closes its program (Q1 2018)', () => {
+test('a total in another letter case still closes its program (Q1 2018)', () => {
   const kinds = classify(read('house-12col.csv').text).map((c) => c.kind);
   assert.deepEqual(kinds.slice(14), ['detail', 'category', 'program', 'office']);
 });

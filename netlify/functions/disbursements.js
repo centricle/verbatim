@@ -1,5 +1,5 @@
 import { getSQL } from './shared/db.js'
-import { jsonFor } from './shared/respond.js'
+import { guard, jsonFor } from './shared/respond.js'
 import { pageNum, pageSize } from './shared/paging.js'
 
 const json = jsonFor('disbursements')
@@ -24,7 +24,7 @@ function quarterStart(raw) {
 
 // The stored function caps the total at 10,000 and clamps the page to match
 // (db/disbursements.sql); a capped answer carries total_capped.
-export async function handler(event) {
+async function handle(event) {
   const params = event.queryStringParameters || {}
   const sql = getSQL()
   const chamber = chamberOf(params.chamber)
@@ -42,3 +42,5 @@ export async function handler(event) {
   ) as data`
   return json(row.data)
 }
+
+export const handler = guard('disbursements', handle)

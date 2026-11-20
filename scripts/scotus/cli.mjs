@@ -164,13 +164,13 @@ async function scdbCheck() {
     if (isComplete(src.find(f), size)) continue;
     const { sha256 } = await hashFile(path, ['sha256']);
     const { mtime } = await stat(path);
-    await src.add({ file: f, url: SCDB_PAGE, bytes: size, sha256, fetchedAt: mtime.toISOString(), savedByHand: true });
+    await src.add({ file: f, url: SCDB_FILES[f] ?? SCDB_PAGE, bytes: size, sha256, fetchedAt: mtime.toISOString(), savedByHand: true });
   }
-  const missing = SCDB_FILES.filter((f) => !files.includes(f));
+  const missing = Object.keys(SCDB_FILES).filter((f) => !files.includes(f));
   console.log(`scdb: ${files.length} files saved by hand in ${src.dir}${files.length ? `: ${files.join(', ')}` : ''}`);
   if (missing.length) {
-    console.log(`scdb.la.psu.edu answers scripts with a Cloudflare challenge. From ${SCDB_PAGE} in a browser, save:`);
-    for (const f of missing) console.log(`  ${f}`);
+    console.log('scdb.la.psu.edu answers scripts with a Cloudflare challenge. In a browser, save:');
+    for (const f of missing) console.log(`  ${f}  (${SCDB_FILES[f]})`);
   }
 }
 

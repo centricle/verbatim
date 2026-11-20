@@ -106,16 +106,19 @@ export const transcriptPage = (term) => term <= LAST_ARCHIVED_TERM
 export const FJC_PAGE = 'https://www.fjc.gov/history/judges/biographical-directory-article-iii-federal-judges-export';
 
 // --- SCDB (saved by hand) --------------------------------------------------
-// From SCDB_PAGE in a browser; the names are the release's own. Case-centered
-// and justice-centered, organized by citation. Any file saved into
-// tmp/scotus/raw/scdb/ is taken; these are the ones the survey expects.
+// From each file's release page in a browser. Case-centered and
+// justice-centered, organized by citation. The names are the ones the site
+// serves (its download links are ?jet_download=<hash>, and WordPress's file
+// name sanitizer turns ".csv.zip" into ".csv_.zip"); the CSV inside keeps the
+// release's name. Any file saved into tmp/scotus/raw/scdb/ is taken; these
+// are the ones the survey expects, each with the page it comes from.
 export const SCDB_PAGE = 'https://scdb.la.psu.edu/data/';
-export const SCDB_FILES = [
-  'SCDB_2026_01_caseCentered_Citation.csv.zip',
-  'SCDB_2026_01_justiceCentered_Citation.csv.zip',
-  'SCDB_Legacy_07_caseCentered_Citation.csv.zip',
-  'SCDB_Legacy_07_justiceCentered_Citation.csv.zip',
-];
+export const SCDB_FILES = {
+  'SCDB_2026_01_caseCentered_Citation.csv_.zip': 'https://scdb.la.psu.edu/data/2026-release-01/',
+  'SCDB_2026_01_justiceCentered_Citation.csv_.zip': 'https://scdb.la.psu.edu/data/2026-release-01/',
+  'SCDB_Legacy_07_caseCentered_Citation.csv_.zip': 'https://scdb.la.psu.edu/data/scdb-legacy-07/',
+  'SCDB_Legacy_07_justiceCentered_Citation.csv_.zip': 'https://scdb.la.psu.edu/data/scdb-legacy-07/',
+};
 
 // --- Caselaw Access Project ------------------------------------------------
 // static.case.law serves CAP's bulk export: per volume, a zip of case JSON

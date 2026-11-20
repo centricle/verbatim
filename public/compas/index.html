@@ -186,8 +186,10 @@
           </div>
 
           <form id="compas-search-form" class="flex flex-wrap items-end gap-3 mb-6">
-            <input type="text" id="compas-search" aria-label="Search defendants" placeholder="Search by name or charge…"
-              class="field field--search flex-1 basis-full md:basis-auto min-w-[240px]">
+            <div class="search-box flex-1 basis-full md:basis-auto min-w-[240px]">
+              <input type="text" id="compas-search" aria-label="Search defendants" placeholder="Search by name or charge…"
+                class="field field--search w-full">
+            </div>
             <select id="filter-race" aria-label="Filter by race" class="field flex-1 md:flex-none">
               <option value="">All races</option>
               <option value="African-American">African-American</option>
@@ -213,7 +215,6 @@
               <option value="1">Recidivated</option>
               <option value="0">Did not recidivate</option>
             </select>
-            <button type="submit" class="button">Filter</button>
           </form>
 
           <!-- Results info -->

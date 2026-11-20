@@ -180,8 +180,10 @@
             <p class="figure-caption md:col-span-6 md:col-start-7 self-end">Search names, districts, offenses, sentences and terms of grant, or narrow by president, type and year granted. Entries are listed newest first. Entries of one date are grouped by DOJ list, each in DOJ’s order. Selecting a bar in either figure sets the matching filter. Select an offense to read the entry in full.</p>
           </div>
           <form id="clemency-search-form" class="flex flex-wrap items-end gap-3 mb-6">
-            <input type="text" id="clemency-search" aria-label="Search entries" placeholder="Search names, districts, offenses…"
-              class="field field--search flex-1 basis-full md:basis-auto min-w-[240px]">
+            <div class="search-box flex-1 basis-full md:basis-auto min-w-[240px]">
+              <input type="text" id="clemency-search" aria-label="Search entries" placeholder="Search names, districts, offenses…"
+                class="field field--search w-full">
+            </div>
             <select id="filter-president" aria-label="Filter by president" class="field flex-1 md:flex-none max-w-full md:w-48">
               <option value="">All presidents</option>
             </select>
@@ -193,7 +195,6 @@
             <select id="filter-year" aria-label="Filter by year granted" class="field flex-1 md:flex-none">
               <option value="">All years</option>
             </select>
-            <button type="submit" class="button">Filter</button>
           </form>
           <!-- Results info -->
           <div id="clemency-results-info" aria-live="polite" class="results-info mb-2"></div>

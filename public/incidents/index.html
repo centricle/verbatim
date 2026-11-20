@@ -158,8 +158,10 @@
       <section class="page-wrap mt-16">
         <div class="appendix">
           <form id="incidents-search-form" class="flex flex-wrap items-end gap-3 mb-6">
-            <input type="text" id="incidents-search" aria-label="Search incidents" placeholder="Search by name, city, or state..."
-              class="field field--search flex-1 basis-full md:basis-auto min-w-[240px]">
+            <div class="search-box flex-1 basis-full md:basis-auto min-w-[240px]">
+              <input type="text" id="incidents-search" aria-label="Search incidents" placeholder="Search by name, city, or state..."
+                class="field field--search w-full">
+            </div>
             <select id="filter-state" aria-label="Filter by state" class="field flex-1 md:flex-none">
               <option value="">All states</option>
             </select>

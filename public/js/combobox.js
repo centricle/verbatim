@@ -54,7 +54,7 @@ export const CHEVRON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="no
 const CROSS = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>';
 
 /**
- * The × that clears a field. Out of
+ * The × that clears a field, here and in the explorers' search box. Out of
  * the tab order, so Tab from the field leaves the widget in one press, and a
  * press on it never takes focus from the field. Hidden until there is
  * something to clear; it needs a positioned parent (`.field-clear` in app.css).

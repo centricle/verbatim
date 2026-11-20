@@ -208,8 +208,10 @@
           </div>
 
           <form id="crashes-search-form" class="flex flex-wrap items-end gap-3 mb-6">
-            <input type="text" id="crashes-search" aria-label="Search reports" placeholder="Search narratives, makes, models…"
-              class="field field--search flex-1 basis-full md:basis-auto min-w-[240px]">
+            <div class="search-box flex-1 basis-full md:basis-auto min-w-[240px]">
+              <input type="text" id="crashes-search" aria-label="Search reports" placeholder="Search narratives, makes, models…"
+                class="field field--search w-full">
+            </div>
             <select id="filter-system" aria-label="Filter by system" class="field flex-1 md:flex-none">
               <option value="">All systems</option>
               <option value="ADS">ADS</option>
@@ -233,7 +235,6 @@
             <select id="filter-severity" aria-label="Filter by highest injury severity alleged" class="field flex-1 md:flex-none max-w-full md:w-48">
               <option value="">All severities</option>
             </select>
-            <button type="submit" class="button">Filter</button>
           </form>
 
           <!-- Results info -->

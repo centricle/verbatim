@@ -37,7 +37,7 @@
 // the cap, the count reads "10,000+", and paging stops at the cap's last page,
 // where the stored function stops too.
 
-import { combobox } from './combobox.js';
+import { clearButton, combobox } from './combobox.js';
 
 const PAGE_SIZE = 50;
 
@@ -167,6 +167,18 @@ export function createExplorer(cfg) {
       },
     });
   }
+  // The search box's ×: empties it and, if a search was running on that
+  // text, runs the search without it.
+  const searchClear = clearButton('Clear search');
+  searchInput.after(searchClear);
+  const showSearchClear = () => { searchClear.hidden = !searchInput.value; };
+  searchInput.addEventListener('input', showSearchClear);
+  searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    showSearchClear();
+    searchInput.focus();
+    if (state.q) commit({ page: 1 });
+  });
   const keys = ['q', ...cfg.filters];
   const statsKeys = cfg.statsKeys ?? [];
   const pageParams = cfg.pageParams ?? ((page, pageSize) => ({ page, pageSize }));
@@ -199,6 +211,7 @@ export function createExplorer(cfg) {
 
   function syncControls() {
     searchInput.value = state.q;
+    showSearchClear();
     for (const key of cfg.filters) {
       if (boxes[key]) boxes[key].set(state[key]);
       else controls[key].value = state[key];
@@ -371,6 +384,16 @@ export function createExplorer(cfg) {
     .map((key) => [key, controls[key].value.trim()]));
 
   form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    commit({ ...typed(), page: 1 });
+  });
+  // The forms have no submit button: every select and the combobox act on
+  // change, so it had nothing left to do but submit typed text. Enter does
+  // that here, because a form with more than one text field and no submit
+  // button does not submit on Enter by itself (HTML implicit submission).
+  // The combobox claims its own Enter first (defaultPrevented).
+  form.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing || e.target.tagName !== 'INPUT') return;
     e.preventDefault();
     commit({ ...typed(), page: 1 });
   });

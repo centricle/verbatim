@@ -181,8 +181,10 @@
           </div>
 
           <form id="executive-search-form" class="flex flex-wrap items-end gap-3 mb-6">
-            <input type="text" id="executive-search" aria-label="Search documents" placeholder="Search the text…"
-              class="field field--search flex-1 basis-full md:basis-0 min-w-[240px]">
+            <div class="search-box flex-1 basis-full md:basis-0 min-w-[240px]">
+              <input type="text" id="executive-search" aria-label="Search documents" placeholder="Search the text…"
+                class="field field--search w-full">
+            </div>
             <select id="filter-president" aria-label="Filter by president" class="field flex-1 md:flex-none">
               <option value="">All presidents</option>
             </select>
@@ -202,7 +204,6 @@
               <input type="text" id="filter-to" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" aria-label="To year signed" placeholder="To year"
                 class="field flex-1 min-w-0 md:flex-none md:w-20">
             </div>
-            <button type="submit" class="button">Filter</button>
           </form>
 
           <!-- Results info -->

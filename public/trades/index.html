@@ -226,8 +226,10 @@
           </div>
 
           <form id="trades-search-form" class="flex flex-wrap items-end gap-3 mb-6">
-            <input type="text" id="trades-search" aria-label="Search trades" placeholder="Search by member, ticker, or description…"
-              class="field field--search flex-1 basis-full md:basis-auto min-w-[240px]">
+            <div class="search-box flex-1 basis-full md:basis-auto min-w-[240px]">
+              <input type="text" id="trades-search" aria-label="Search trades" placeholder="Search by member, ticker, or description…"
+                class="field field--search w-full">
+            </div>
             <select id="filter-chamber" aria-label="Filter by chamber" class="field flex-1 md:flex-none">
               <option value="">Both chambers</option>
               <option value="house">House</option>
@@ -246,7 +248,6 @@
             <select id="filter-year" aria-label="Filter by year" class="field flex-1 md:flex-none">
               <option value="">All years</option>
             </select>
-            <button type="submit" class="button">Filter</button>
           </form>
 
           <!-- Results info -->

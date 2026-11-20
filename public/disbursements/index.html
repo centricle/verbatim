@@ -180,8 +180,10 @@
             <p class="figure-caption md:col-span-6 md:col-start-7 self-end">Search payees, descriptions, offices and programs, or narrow by quarter, category and office. Rows are listed newest first, or by amount. Selecting a bar in Figure 1 or 2 sets the matching filter. Select a program to read the row in full. A count past 10,000 reads 10,000+ and paging stops there; narrow the search to reach the rest.</p>
           </div>
           <form id="disbursements-search-form" class="flex flex-wrap items-end gap-3 mb-6">
-            <input type="text" id="disbursements-search" aria-label="Search disbursements" placeholder="Search payees, descriptions, offices…"
-              class="field field--search flex-1 basis-full md:basis-auto min-w-[240px]">
+            <div class="search-box flex-1 basis-full md:basis-auto min-w-[240px]">
+              <input type="text" id="disbursements-search" aria-label="Search disbursements" placeholder="Search payees, descriptions, offices…"
+                class="field field--search w-full">
+            </div>
             <select id="filter-quarter" aria-label="Filter by quarter" class="field flex-1 md:flex-none">
               <option value="">All quarters</option>
             </select>
@@ -196,7 +198,6 @@
               <option value="">Newest first</option>
               <option value="amount">Largest amount first</option>
             </select>
-            <button type="submit" class="button">Filter</button>
           </form>
           <!-- Results info -->
           <div id="disbursements-results-info" aria-live="polite" class="results-info mb-2"></div>

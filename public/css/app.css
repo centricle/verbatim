@@ -753,19 +753,15 @@
   .field:focus { border-color: var(--color-ink); }
   .field::placeholder { color: var(--color-ink-dim); }
   select.field { padding-right: 1.8rem; }
-  .field--search {
-    font-family: var(--font-text);
-    font-size: 0.86rem;
-    border-width: 0 0 2px 0;
-    border-color: var(--color-ink);
-    padding-inline: 0;
-    background: transparent;
-  }
-  .field--search:hover, .field--search:focus { border-color: var(--color-ink); }
+  /* The explorers' search box: a field like the selects beside it, with
+     room on the right for its × (`.field-clear`). */
+  .search-box { position: relative; }
+  .field--search { padding-right: 1.8rem; }
 
   /* Combobox (combobox.js): a field that picks from a list too long for a
      select. The chevron is the selects' own, so it reads as a picker before
-     anyone hovers; the clear button shows only while a value is set. */
+     anyone hovers; the clear button shows only while a value is set. The ×
+     (`.field-clear`) is shared with the search box. */
   .combobox { position: relative; }
   .combobox .field { padding-right: 1.8rem; }
   .combobox.has-value .field { padding-right: 3.2rem; }

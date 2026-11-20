@@ -6,6 +6,8 @@
 //   npm run og                          # shoots https://verbatim.test
 //   npm run og -- https://verbatim.fyi  # shoots production
 //   npm run og -- <base> --preview <dir>  # also writes the raw PNGs there
+//   npm run og -- <base> --only a,b     # just those slugs (a page under work,
+//                                       # shot from a server with its data)
 //
 // Rerun after a change to a headline, a dek, the masthead or the type. Look at
 // the cards before committing them. Not part of the build: the cards are
@@ -32,7 +34,8 @@ const PAGES = [
   ['crashes', '/crashes/'],
   ['executive', '/executive/'],
   ['clemency', '/clemency/'],
-  ['disbursements', '/disbursements/'],
+  ['disbursements-house', '/disbursements/house/'],
+  ['disbursements-senate', '/disbursements/senate/'],
   ['vs', '/vs/'],
 ];
 
@@ -60,7 +63,11 @@ const CARD_CSS = `
 const args = process.argv.slice(2);
 const previewAt = args.indexOf('--preview');
 const previewDir = previewAt === -1 ? null : args[previewAt + 1];
-const base = (args.find((a, i) => !a.startsWith('--') && i !== previewAt + 1) ?? 'https://verbatim.test').replace(/\/$/, '');
+const onlyAt = args.indexOf('--only');
+const only = onlyAt === -1 ? null : new Set(args[onlyAt + 1].split(','));
+const base = (args.find((a, i) => !a.startsWith('--') && i !== previewAt + 1 && i !== onlyAt + 1) ?? 'https://verbatim.test').replace(/\/$/, '');
+const unknown = only ? [...only].filter((slug) => !PAGES.some(([s]) => s === slug)) : [];
+if (unknown.length) throw new Error(`--only: no page ${unknown.join(', ')}`);
 const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'static', 'og');
 
 await mkdir(outDir, { recursive: true });
@@ -74,7 +81,7 @@ try {
     ignoreHTTPSErrors: true,
     reducedMotion: 'reduce',
   });
-  for (const [slug, path] of PAGES) {
+  for (const [slug, path] of PAGES.filter(([s]) => !only || only.has(s))) {
     await page.goto(base + path, { waitUntil: 'networkidle' });
     await page.addStyleTag({ content: CARD_CSS });
     await page.evaluate(() => document.fonts.ready);

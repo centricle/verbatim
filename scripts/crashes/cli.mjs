@@ -7,11 +7,17 @@
 //   npm run crashes -- load       replace every row of sgo_crashes in one transaction
 //   npm run crashes -- check      compare raw, parsed and loaded rows field by field
 //   npm run crashes -- sample N   N stratified random rows to tmp/crashes/sample.json
-//   npm run crashes -- refresh    fetch, load, check
+//   npm run crashes -- archive [--dry-run]
+//                                 copy tmp/crashes/raw/ and dictionary.txt to the private R2
+//                                 bucket under the fetch date, verify every file by MD5
+//                                 (scripts/lib/archive.mjs)
+//   npm run crashes -- refresh    fetch, load, check, archive
 //
 // NHTSA republishes all six files around the 15th of each month. The whole
 // table is the unit a load replaces, because a report's latest version is
-// chosen across all six files at once.
+// chosen across all six files at once. Each fetch is archived as its own
+// vintage, verbatim/crashes/<fetch date>/<file>, since the files keep their
+// names from month to month.
 //
 // Raw downloads are untrusted data. Nothing is ever run from tmp/crashes/raw/.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -22,6 +28,7 @@ import { SOURCES, DICTIONARY } from './sources.mjs';
 import { build, decode, parseFile } from './parse.mjs';
 import { compare, rawScan, COLUMNS } from './check.mjs';
 import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
+import { archiveCommand, dirFiles, entry, latestDate } from '../lib/archive.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RAW = resolve(ROOT, 'tmp/crashes/raw');
@@ -149,6 +156,20 @@ async function sampleCmd(rest) {
   console.log(`${rows.length} rows to ${out}`);
 }
 
+// The vintage is the latest fetch in the manifest. dictionary.txt, beside
+// raw/, is the data element definitions PDF as text.
+export const ARCHIVE = {
+  crashes: {
+    prefix: 'verbatim/crashes/',
+    files: async () => {
+      const manifest = JSON.parse(await readFile(resolve(RAW, 'manifest.json'), 'utf8'));
+      const prefix = `verbatim/crashes/${latestDate(manifest.map((m) => m.fetchedAt))}/`;
+      const raw = await dirFiles(RAW, prefix, { keep: (rel) => !rel.includes('/') && /\.(csv|pdf|json)$/.test(rel) });
+      return [...raw, await entry(`${prefix}dictionary.txt`, resolve(RAW, '..', 'dictionary.txt'))];
+    },
+  },
+};
+
 async function main(argv) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
@@ -158,13 +179,17 @@ async function main(argv) {
     case 'load': await loadCmd(); break;
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
+    case 'archive': await archiveCommand(ARCHIVE, rest); break;
+    // Archive runs last and even after a failed check: the raw copies are
+    // worth keeping whatever the parse made of them.
     case 'refresh':
       await fetchAll();
       await loadCmd();
       await checkCmd([]);
+      await archiveCommand(ARCHIVE);
       break;
     default:
-      console.error('usage: cli.mjs fetch|parse|schema|load|check [--table t]|sample N|refresh');
+      console.error('usage: cli.mjs fetch [--dictionary]|parse|schema|load|check [--table t]|sample N|archive [--dry-run]|refresh');
       process.exitCode = 2;
   }
 }

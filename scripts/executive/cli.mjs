@@ -8,7 +8,14 @@
 //   npm run executive -- load       replace every row of fr_presidential_documents in one transaction
 //   npm run executive -- check      compare raw, parsed and loaded rows field by field
 //   npm run executive -- sample N   N stratified random rows to tmp/executive/sample.json
-//   npm run executive -- refresh    fetch, load, check
+//   npm run executive -- archive [--dry-run]
+//                                   copy tmp/executive/raw/ to the private R2 bucket under its
+//                                   fetch date, verify every file by MD5 (scripts/lib/archive.mjs)
+//   npm run executive -- refresh    fetch, load, check, archive
+//
+// FR's listing pages move with every new document, so each fetch is archived
+// as its own vintage: verbatim/executive/<fetch date>/<file>. The documents'
+// text is archived with the corpus build (`npm run corpus -- archive build`).
 //
 // The documents' text comes from data/corpus/release.jsonl, so a refresh that
 // should pick up new documents starts on the corpus side: rerun
@@ -25,6 +32,7 @@ import { LOAD_COLUMNS, COLUMNS, buildRows, frDocuments, irregularities } from '.
 import { compare, notesFailures, rawScan } from './check.mjs';
 import { parseRelease } from '../corpus/parse.mjs';
 import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
+import { archiveCommand, dirFiles, latestDate } from '../lib/archive.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RAW = resolve(ROOT, 'tmp/executive/raw');
@@ -188,6 +196,16 @@ async function sampleCmd(rest) {
   console.log(`${rows.length} rows to ${out}`);
 }
 
+export const ARCHIVE = {
+  executive: {
+    prefix: 'verbatim/executive/',
+    files: async () => {
+      const { fetchedAt } = JSON.parse(await readFile(resolve(RAW, 'manifest.json'), 'utf8'));
+      return dirFiles(RAW, `verbatim/executive/${latestDate([fetchedAt])}/`, { keep: (rel) => !rel.includes('/') && rel.endsWith('.json') });
+    },
+  },
+};
+
 async function main(argv) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
@@ -197,9 +215,12 @@ async function main(argv) {
     case 'load': await loadCmd(); break;
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
-    case 'refresh': await fetchCmd(); await loadCmd(); await checkCmd([]); break;
+    case 'archive': await archiveCommand(ARCHIVE, rest); break;
+    // Archive runs last and even after a failed check: the raw copies are
+    // worth keeping whatever the parse made of them.
+    case 'refresh': await fetchCmd(); await loadCmd(); await checkCmd([]); await archiveCommand(ARCHIVE); break;
     default:
-      console.error('usage: cli.mjs fetch|parse|schema|load|check [--table t]|sample N|refresh');
+      console.error('usage: cli.mjs fetch|parse|schema|load|check [--table t]|sample N|archive [--dry-run]|refresh');
       process.exitCode = 2;
   }
 }

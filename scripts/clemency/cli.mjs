@@ -7,7 +7,13 @@
 //   npm run clemency -- load       replace every row of clemency_grants in one transaction
 //   npm run clemency -- check      compare raw, parsed and loaded rows field by field
 //   npm run clemency -- sample N   N random rows, spread across pages, to tmp/clemency/sample.json
-//   npm run clemency -- refresh    fetch, load, check
+//   npm run clemency -- archive [--dry-run]
+//                                  copy tmp/clemency/raw/ to the private R2 bucket under its
+//                                  fetch date and verify every file by MD5 (scripts/lib/archive.mjs)
+//   npm run clemency -- refresh    fetch, load, check, archive
+//
+// DOJ edits these pages in place with each administration, so the archive
+// keeps each fetch as its own vintage: verbatim/clemency/<fetch date>/<file>.
 //
 // The whole table is the unit a load replaces: positions are page order, and
 // the group detail pages join the list page that points at them.
@@ -21,6 +27,7 @@ import { PAGES, PACE_MS } from './sources.mjs';
 import { build } from './parse.mjs';
 import { compare, rawCount, COLUMNS } from './check.mjs';
 import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
+import { archiveCommand, dirFiles, latestDate } from '../lib/archive.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RAW = resolve(ROOT, 'tmp/clemency/raw');
@@ -150,6 +157,18 @@ async function sampleCmd(rest) {
   console.log(`${rows.length} rows to ${out}`);
 }
 
+// The vintage is the latest fetch in the manifest.
+export const ARCHIVE = {
+  clemency: {
+    prefix: 'verbatim/clemency/',
+    files: async () => {
+      const manifest = JSON.parse(await readFile(resolve(RAW, 'manifest.json'), 'utf8'));
+      const date = latestDate(manifest.map((m) => m.fetchedAt));
+      return dirFiles(RAW, `verbatim/clemency/${date}/`, { keep: (rel) => !rel.includes('/') && /\.(html|json)$/.test(rel) });
+    },
+  },
+};
+
 async function main(argv) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
@@ -159,13 +178,17 @@ async function main(argv) {
     case 'load': await loadCmd(); break;
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
+    case 'archive': await archiveCommand(ARCHIVE, rest); break;
+    // Archive runs last and even after a failed check: the raw copies are
+    // worth keeping whatever the parse made of them.
     case 'refresh':
       await fetchAll();
       await loadCmd();
       await checkCmd([]);
+      await archiveCommand(ARCHIVE);
       break;
     default:
-      console.error('usage: cli.mjs fetch|parse|schema|load|check [--table t]|sample N|refresh');
+      console.error('usage: cli.mjs fetch|parse|schema|load|check [--table t]|sample N|archive [--dry-run]|refresh');
       process.exitCode = 2;
   }
 }

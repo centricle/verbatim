@@ -175,6 +175,10 @@ async function getJson(url, signal) {
  *                                mount must reuse its container's root (src/viz/mount.js).
  * @param {string[]} [cfg.statsKeys] Filter keys also sent with `?action=stats`. Changing
  *                                one refetches stats (comment at the top of this file).
+ * @param {Record<string, string[]>} [cfg.clears] Filters cleared whenever the named one
+ *                                changes, for values both lists hold that mean different
+ *                                things (disbursements: 2023q2 is a House quarter and a
+ *                                Senate half year).
  * @param {(stats: object, params: Record<string, string>) => void} [cfg.onStats]
  *                                Called with each stats answer and the filters it was
  *                                asked with, before the charts: page copy read off the
@@ -461,6 +465,8 @@ export function createExplorer(cfg) {
     for (const [key, pairs] of Object.entries(lists)) {
       if (boxes[key]) {
         boxes[key].setOptions(pairs);
+        // A House office on the Senate's list, and back (disbursements).
+        if (refetch && state[key] && !pairs.some(([value]) => value === state[key])) cleared[key] = '';
         continue;
       }
       const control = controls[key];
@@ -547,7 +553,7 @@ export function createExplorer(cfg) {
     // the search.
     control.addEventListener('change', () => {
       const value = control.value.trim();
-      if (value !== state[key]) commit({ [key]: value, page: 1 });
+      if (value !== state[key]) commit({ [key]: value, page: 1, ...Object.fromEntries((cfg.clears?.[key] ?? []).map((k) => [k, ''])) });
     });
   }
   prevBtn.addEventListener('click', () => {

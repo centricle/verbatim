@@ -121,6 +121,10 @@ createExplorer({
   // The stats are one chamber's, so a chamber change refetches them, and
   // clears a period, category or office the other chamber does not have.
   statsKeys: ['chamber'],
+  // A Senate half year and a House quarter that start on the same day share
+  // a key (2023q2: April to September, or April to June), so the period
+  // would survive the switch and quietly mean something else.
+  clears: { chamber: ['quarter'] },
   // Date and Amount, the two orders search_disbursements takes.
   sort: { default: 'date' },
   noun: 'rows',

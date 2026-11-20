@@ -422,10 +422,12 @@ export function readDetail(block, header, subclassInDesc) {
       problems.push(`${where}: page ${f.page}: wrapped ${f.zone} "${f.line.text}" is as near two rows`);
       continue;
     }
-    target[f.zone].push(f.line);
+    target[f.zone].push({ ...f.line, page: f.page });
   }
+  // Page first: a fragment carried over from the next page reads last.
   for (const it of items) {
-    for (const k of ['payee', 'desc']) if (it[k]) it[k].sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
+    const pg = (l) => l.page ?? it.page;
+    for (const k of ['payee', 'desc']) if (it[k]) it[k].sort((a, b) => pg(a) - pg(b) || a.y0 - b.y0 || a.x0 - b.x0);
   }
 
   // Subtotals, levels and categories. Person lines keep a run of their own,

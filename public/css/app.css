@@ -843,9 +843,11 @@
     border-top: 1px solid var(--color-ink);
   }
   .record-table {
+    /* Named so a line inside a larger cell (.cell-snippet) can match the row. */
+    --record-size: 0.74rem;
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.74rem;
+    font-size: var(--record-size);
     line-height: 1.35;
     font-variant-numeric: tabular-nums;
   }
@@ -1186,7 +1188,7 @@
   .cell-snippet {
     display: block;
     margin-top: 0.3rem;
-    font-size: 0.86rem;
+    font-size: var(--record-size, 0.74rem);
     font-weight: 400;
     line-height: 1.45;
     color: var(--color-ink-dim);

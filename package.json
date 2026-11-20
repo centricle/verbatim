@@ -15,7 +15,8 @@
     "executive": "node --env-file-if-exists=.env scripts/executive/cli.mjs",
     "clemency": "node --env-file-if-exists=.env scripts/clemency/cli.mjs",
     "disbursements": "node --env-file-if-exists=.env scripts/disbursements/cli.mjs",
-    "trades": "node --env-file-if-exists=.env scripts/trades/cli.mjs"
+    "trades": "node --env-file-if-exists=.env scripts/trades/cli.mjs",
+    "legacy": "node scripts/legacy/cli.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

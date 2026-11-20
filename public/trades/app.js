@@ -133,7 +133,7 @@ createExplorer({
   errorText: 'Could not load trades. Try again.',
   // This endpoint pages by offset, not page number.
   pageParams: (page, pageSize) => ({ pageSize, offset: (page - 1) * pageSize }),
-  // The amount column prints the filing's own range string, as published.
+  // The amount column shows the filing's own range string, as published.
   // The trade date links to the filing it was read from (a Clerk PDF or the
   // eFD page); the filed date is the default sort (decision 14).
   row: (d) => html`

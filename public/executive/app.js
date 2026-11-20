@@ -81,7 +81,7 @@ function linkMentions(text, resolved) {
   return html`${out}`;
 }
 
-// FR's note, one relation to a line: the label as FR prints it, then its
+// FR's note, one relation to a line: the label as FR gives it, then its
 // references. The loader's check proves this reads as FR's note.
 function notesMarkup(r) {
   const resolved = new Map((r.refs || []).map((x) => [`${x.type}:${x.number}`, x.id]));

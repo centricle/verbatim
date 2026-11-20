@@ -15,7 +15,7 @@ const granted = (iso) => {
 
 const EXECUTIVE_TYPES = { executive_order: 'Executive Order', proclamation: 'Proclamation' };
 
-// The entry in full: each field DOJ printed for it, under the label DOJ's own
+// The entry in full: each field DOJ lists for it, under the label DOJ's own
 // lists use, the offense first (the table clips it) and the long ones across
 // the full width.
 function detail(d) {

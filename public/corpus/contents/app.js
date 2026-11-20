@@ -85,7 +85,7 @@ function speakerGroup(g, rows) {
     const preferred = g.prefer ? es.filter((e) => e.roster === g.prefer) : [];
     return preferred.length ? preferred : es;
   };
-  // A roster that prints one line for everyone (the White House's list) says
+  // A roster that gives one line for everyone (the White House's list) says
   // nothing per row; its source line in the group head carries it.
   const uniform = new Set(rows.flatMap((s) => words(s).map((e) => e.as))).size === 1;
   return html`<div class="contents-group" id="${g.id}">

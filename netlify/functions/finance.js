@@ -1,10 +1,10 @@
 import { getSQL } from './shared/db.js'
-import { jsonFor } from './shared/respond.js'
+import { guard, jsonFor } from './shared/respond.js'
 import { pageNum, pageSize } from './shared/paging.js'
 
 const json = jsonFor('finance')
 
-export async function handler(event) {
+async function handle(event) {
   const params = event.queryStringParameters || {}
   const sql = getSQL()
 
@@ -21,3 +21,5 @@ export async function handler(event) {
   ) as data`
   return json(row.data)
 }
+
+export const handler = guard('finance', handle)

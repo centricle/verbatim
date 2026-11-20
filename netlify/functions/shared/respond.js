@@ -17,8 +17,7 @@
 // A deploy clears the cache as well. Browsers keep a response for 30
 // seconds, as before, because nothing can purge a browser.
 //
-// No handler catches a database error: a throw reaches the visitor as a 500
-// carrying none of these headers, so a failure is never cached.
+// A failure never reaches these headers: guard() below answers it, uncached.
 export function jsonFor(name) {
   const headers = {
     'Content-Type': 'application/json',
@@ -27,4 +26,32 @@ export function jsonFor(name) {
     'Netlify-Cache-Tag': `api,api-${name}`,
   }
   return (data, status = 200) => ({ statusCode: status, headers, body: JSON.stringify(data) })
+}
+
+// Every handler is exported through guard(), so no error escapes it. One that
+// did reached the visitor as Netlify's default 502: the error's name, its
+// message and a /var/task stack trace (third pre-flip review, 2026-11-15).
+// The visitor now gets one generic line and the detail goes to the function
+// log. SQLSTATE class 22, a data exception (a value Postgres cannot cast, a
+// number out of range, a NUL byte), comes from the request, so it answers
+// 400; anything else is ours and answers 500. Neither is cached, by the CDN
+// or the browser, so the next request after a fix gets a real answer.
+// api.test.mjs fails any function in netlify/functions/ not exported
+// this way.
+const FAILURE_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+
+export function guard(name, handle) {
+  return async (event) => {
+    try {
+      return await handle(event)
+    } catch (err) {
+      const badRequest = typeof err?.code === 'string' && err.code.startsWith('22')
+      console.error(`api-${name}`, err?.code ?? '-', err?.message ?? String(err), event?.rawQuery ?? '')
+      return {
+        statusCode: badRequest ? 400 : 500,
+        headers: FAILURE_HEADERS,
+        body: JSON.stringify({ error: badRequest ? 'bad request' : 'server error' }),
+      }
+    }
+  }
 }

@@ -1,5 +1,5 @@
 import { getSQL } from './shared/db.js'
-import { jsonFor } from './shared/respond.js'
+import { guard, jsonFor } from './shared/respond.js'
 import { pageSize, rowOffset } from './shared/paging.js'
 import { legacySenator } from './shared/legacy-senators.js'
 
@@ -13,7 +13,7 @@ const json = jsonFor('trades')
 // Senate, so an old link returns the same senator's Senate trades it did
 // (legacy-senators.js). An unknown string goes through as a member name and
 // matches whatever, usually nothing, carries that name.
-export async function handler(event) {
+async function handle(event) {
   const params = event.queryStringParameters || {}
   const sql = getSQL()
   const legacy = params.member ? undefined : legacySenator(params.senator)
@@ -42,3 +42,5 @@ export async function handler(event) {
   ) as data`
   return json(row.data)
 }
+
+export const handler = guard('trades', handle)

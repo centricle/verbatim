@@ -197,10 +197,11 @@
           <figure class="figure">
             <figcaption class="figure-head">
               <span class="figure-num">Figure 2</span>
-              <span class="figure-title">Amount by category</span>
+              <span class="figure-title" data-chamber="house">Amount by category</span><span class="figure-title" data-chamber="senate">Amount by class</span>
               <span class="figure-caption" data-chamber="house">The sum of every row in each category the House reports, all quarters. Select a bar to filter the appendix to that category.</span><span class="figure-caption" data-chamber="senate">The sum of every row in each class of spending the Senate reports, all half years. Rows with no class, charges and their reversals that net to $0, are left out. Select a bar to filter the appendix to that class.</span>
             </figcaption>
-            <div id="viz-by-category" role="img" aria-label="Figure 2: amount by category, largest first" class="figure-plot"></div>
+            <div id="viz-by-category" data-chamber="house" role="img" aria-label="Figure 2: amount by category, largest first" class="figure-plot"></div>
+            <div id="viz-by-category" data-chamber="senate" role="img" aria-label="Figure 2: amount by class of spending, largest first" class="figure-plot"></div>
             <p class="figure-source"><span class="byline-role">Source</span><span class="byline-source" data-chamber="house">House Statement of Disbursements</span><span class="byline-source" data-chamber="senate">Report of the Secretary of the Senate</span></p>
           </figure>
           <figure class="figure">
@@ -222,7 +223,7 @@
               <p class="kicker mb-2">Appendix</p>
               <h2 id="appendix-title" class="appendix-title">Disbursements</h2>
             </div>
-            <p class="figure-caption md:col-span-6 md:col-start-7 self-end">Search payees, descriptions, offices and programs, or narrow by period, category and office. Rows are listed newest first, or by amount. Selecting a bar in Figure 1 or 2 sets the matching filter. Select a row to read it in full. A count past 10,000 reads 10,000+ and paging stops there; narrow the search to reach the rest.</p>
+            <p class="figure-caption md:col-span-6 md:col-start-7 self-end">Search payees, descriptions, offices and programs, or narrow by period, <span data-chamber="house">category</span><span data-chamber="senate">class</span> and office. Rows are listed newest first, or by amount. Selecting a bar in Figure 1 or 2 sets the matching filter. Select a row to read it in full. A count past 10,000 reads 10,000+ and paging stops there; narrow the search to reach the rest.</p>
           </div>
           <form id="disbursements-search-form" class="flex flex-wrap items-end gap-3 mb-6">
             <div class="search-box flex-1 basis-full md:basis-auto min-w-[240px]">
@@ -233,8 +234,11 @@
               <option value="" data-chamber="house">All quarters</option>
               <option value="" data-chamber="senate">All half years</option>
             </select>
-            <select id="filter-category" aria-label="Filter by category" class="field flex-1 md:flex-none max-w-full md:w-56">
+            <select id="filter-category" data-chamber="house" aria-label="Filter by category" class="field flex-1 md:flex-none max-w-full md:w-56">
               <option value="">All categories</option>
+            </select>
+            <select id="filter-category" data-chamber="senate" aria-label="Filter by class" class="field flex-1 md:flex-none max-w-full md:w-56">
+              <option value="">All classes</option>
             </select>
             <div class="combobox flex-1 md:flex-none min-w-[12rem] md:w-56">
               <input type="text" id="filter-office" data-combobox="office" aria-label="Filter by office" placeholder="All offices"
@@ -250,7 +254,8 @@
                   <th scope="col" data-sort="date">Date</th>
                   <th scope="col">Payee</th>
                   <th scope="col">Office</th>
-                  <th scope="col">Category</th>
+                  <th scope="col" data-chamber="house">Category</th>
+                  <th scope="col" data-chamber="senate">Class</th>
                   <th scope="col" class="cell-num" data-sort="amount">Amount</th>
                   <th scope="col">Program</th>
                 </tr>

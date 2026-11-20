@@ -17,6 +17,7 @@
     "disbursements": "node --env-file-if-exists=.env scripts/disbursements/cli.mjs",
     "trades": "node --env-file-if-exists=.env scripts/trades/cli.mjs",
     "legacy": "node scripts/legacy/cli.mjs",
+    "scotus": "node --env-file-if-exists=.env scripts/scotus/cli.mjs",
     "backup": "node --env-file-if-exists=.env scripts/backup/cli.mjs"
   },
   "dependencies": {

@@ -15,7 +15,13 @@ test('raw scan counts money on B pages only', () => {
   assert.deepEqual(rawScan(`${pageA}\f${pageB}\f`), { pages: 1, money: 3, cents: 58848 - 848400 });
 });
 
-const tally = (o = {}) => ({ bPages: 1, money: 3, moneyCents: 58848 - 848400, keptCents: 58848, ...o });
+test('raw scan reads the committees\' labels and four-digit ones', () => {
+  const committee = pageB.replace('B-334', 'B-2-3');
+  const late = pageB.replace('B-334', 'B - 1,000');
+  assert.deepEqual(rawScan(`${committee}\f${late}\f`), { pages: 2, money: 6, cents: 2 * (58848 - 848400) });
+});
+
+const tally = (o = {}) => ({ bPages: 1, moneyPages: 1, money: 3, moneyCents: 58848 - 848400, keptCents: 58848, ...o });
 const row = { chamber: 'senate', unit: 'senate-fy2026h1', row_number: 4, period_start: '2025-10-01', period_end: '2026-03-31', organization: 'SENATOR WILE E. COYOTE', office: 'SENATOR WILE E. COYOTE', org_year: null, funding_year: '2026', program: 'P', category: 'OTHER CONTRACTUAL SERVICES', row_kind: 'detail', transaction_date: '2026-02-24', start_date: '2026-01-01', end_date: '2026-01-31', document: 'VSA2607203', payee: 'ACME CORPORATION', description: 'MANAGEMENT CONSULTANTS', amount: '588.48', extras: '{"page":3,"page_label":"B-334"}', source_ref: 'u#page=3' };
 const raw = { pages: 1, money: 3, cents: 58848 - 848400 };
 

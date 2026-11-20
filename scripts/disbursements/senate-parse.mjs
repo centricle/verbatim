@@ -59,10 +59,39 @@
 //   loads as null with the text under extras.dates_as_filed.
 // - extras.page (1-based page of the PDF, which source_ref links with
 //   #page=) and extras.page_label (the printed B-n).
+// - A document's later lines whose first line is missing from the PDF's
+//   text load with no document, payee or dates, and
+//   extras.no_document_line.
+// - A class the summary charges with no class total in the lines loads as
+//   one row (extras.from_summary), unitemized unless it takes person lines
+//   printed with no subtotal of their own.
+// - The committees' inquiries and investigations statements (section B-2,
+//   labeled B-2-1 on) print no funding year: funding_year is null, the
+//   first header line is the office, the rest the program.
+// - Lines that net to nothing under no class total of their own take the
+//   one class the summary lists at zero with no total, or none (null).
+// - Rows from a page the report prints as an image carry extras.ocr; the
+//   page's text is a committed transcription (senate-ocr.mjs).
 //
 // Summary figures print with the opposite sign to the lines (a period's
 // spending shows as -88,227.94 above lines that sum to 88,227.94), so the
 // checks compare lines with the negated summary.
+//
+// Every block must reconcile: its rows sum to ORGANIZATION TOTALS, its
+// lines to their subtotals, its class totals to the summary. Where the
+// report disagrees with itself, the rows load as printed and the gap is
+// listed as a discrepancy (senate-discrepancies.json), never smoothed over.
+// Any other mismatch fails the volume. The kinds:
+//
+// - summary: a class total (or two of one class, summed) differs from the
+//   summary's figure for it. Also a class the summary names otherwise
+//   (summaryLabel; paired by an equal figure) and a class the summary
+//   leaves out, compared with zero.
+// - pay: person lines that do not add up to their pay sub-class, or that no
+//   subtotal or summary figure takes at all (label null, printed 0).
+// - lines: a class's lines differ from its printed total while that total
+//   equals the summary's figure: the report's two figures agree, the lines
+//   do not. At most one per block.
 
 import { readPages } from './senate-pdf.mjs';
 import { centsText } from './parse.mjs';
@@ -70,7 +99,11 @@ import { centsText } from './parse.mjs';
 const BANNER = 'DETAILED AND SUMMARY STATEMENT OF EXPENDITURES';
 const MONEY = /^(-)?\$?(-)?(\d{1,3}(?:,\d{3})*|\d+)?\.(\d\d)$/;
 const DATE = /^(\d\d)\/(\d\d)\/(\d{4})$/;
-const PAGE_LABEL = /^([A-Z])-(\d+)$/;
+// Placed in a date column even when malformed ("10/01/118", Oct 2018 to Mar
+// 2019, B-333; "03/202023", Apr to Sep 2023, B-336); datesOf keeps such text
+// under extras.dates_as_filed.
+const DATE_SHAPED = /^(?=.{8,10}$)\d{1,2}\/\d{1,2}\/?\d{1,4}$/;
+const PAGE_LABEL = /^([A-Z])(?:-(\d+)(?=-))? ?- ?(\d{1,3}(?:,\d{3})+|\d+)$/;
 const NOT_CLASSES = new Set(['AUTHORIZATION', 'SUPPLEMENTALS', 'TRANSFERS', 'RESC / WITHDRAWALS', 'ORGANIZATION TOTALS']);
 // "2024", "2021-2026", or a no-year account: "X" (2012), "X (NO-YEAR)",
 // "X (REVOLVING)" (2026).
@@ -78,10 +111,13 @@ const FUNDING_YEAR = /^(\d{4}(-\d{4})?|X|X \([A-Z -]+\))$/;
 // Sub-classes whose lines are one person's pay each, for placing person
 // lines that do not add up to their printed subtotal (see `pay` above).
 const PAY = new Set(['PERSONNEL COMP. FULL-TIME PERMANENT', 'OTHER PERSONNEL COMPENSATION', 'RE-EMPLOYED ANNUITANTS', 'WHEN ACTUALLY EMPLOYED (WAE)']);
+// Sub-class labels a volume may print in the description column even when
+// it prints the rest left of it.
+const SUBCLASS_IN_DESC = new Set([...PAY, 'PERSONNEL BENEFITS', 'BENEFITS FOR FORMER PERSONNEL']);
+const PAY_ADJUSTMENT = /^SALARIES-.*\(INTERFACE\)$/;
 // Where the report disagrees with itself, the lines load as printed and
 // parseVolume lists the disagreement under `discrepancies` instead of
-// failing. Two kinds are allowed, both seen in the Oct 2025 to Mar 2026
-// volume, and nothing else:
+// failing. Three kinds are allowed, and nothing else:
 //
 // - summary: a class total in the lines differs from the block summary's
 //   figure for that class. About a hundred payroll blocks (CHAPLAIN, FY
@@ -91,8 +127,18 @@ const PAY = new Set(['PERSONNEL COMP. FULL-TIME PERMANENT', 'OTHER PERSONNEL COM
 //   another. The lines must still add up to their own printed subtotals.
 // - pay: person lines that do not add up to their printed subtotal
 //   (CONSULTANTS, FY 2026-2028: 32 lines sum to $3,082,133.99 under a
-//   subtotal of $3,075,864.55, confirmed on the -layout text). Person lines
-//   never load, and the printed subtotal that does agrees with the summary.
+//   subtotal of $3,075,864.55, confirmed on the -layout text), or that no
+//   subtotal takes at all (label null, printed 0). Person lines never load,
+//   and the printed subtotal that does agrees with the summary.
+// - summary also covers a class totaled twice in one block: the totals'
+//   sum is what is held against the summary.
+// - lines: a class's lines do not add up to its printed total, and that
+//   total agrees with the block summary (a Senator's FY 2023 block in the
+//   Oct 2023 to Mar 2024 volume, page B-904: ten travel lines sum to
+//   $1,627.57 under a class total and a summary of $5,116.02). The lines load as
+//   printed, so the block's rows fall short of ORGANIZATION TOTALS by the
+//   gap. Only one such class per block: two could be a line read into the
+//   wrong class.
 
 export const fold = (s) => (s ?? '').toUpperCase().replace(/\s+/g, ' ').trim();
 
@@ -133,14 +179,35 @@ export function baselines(lines) {
   return groups;
 }
 
+// The printed page label (B-334), set sideways in the right margin. Some
+// volumes print it a second time, small, inside the page ("B - 10", "B -1"),
+// and 2017's first volume stamps its jacket number and date sideways in the
+// left margin ("JA", "25-107", "05/05/2017"). Those are not the page's text:
+// `ignored` holds them, and splitBlocks drops them.
+// The committees' statements in the first volume (Apr to Sep 2011, from
+// B- 1 again at page 2101) print it upright at the foot of the page
+// instead, left of x = 590: the lowest label right of x = 500.
 function pageLabel(page) {
-  const l = page.lines.find((x) => x.x0 > 590 && PAGE_LABEL.test(x.text));
-  return l ? { line: l, label: l.text, section: l.text[0] } : { line: null, label: null, section: null };
+  const l = page.lines.find((x) => x.x0 > 590 && PAGE_LABEL.test(x.text))
+    ?? page.lines.filter((x) => x.x0 > 500 && PAGE_LABEL.test(x.text)).at(-1);
+  if (!l) return { label: null, section: null, ignored: new Set() };
+  const [, section, part, n] = PAGE_LABEL.exec(l.text);
+  const num = n.replaceAll(',', '');
+  const label = `${section}${part ? `-${part}` : ''}-${num}`;
+  // The second copy drops the part: "B-2-1" in the margin, "B- 1" below.
+  const ignored = new Set(page.lines.filter((x) => x === l
+    || (PAGE_LABEL.test(x.text) && (([, s, , m]) => s === section && m.replaceAll(',', '') === num)(PAGE_LABEL.exec(x.text)))
+    || x.x1 < 45
+    // Rules drawn as text around the column headings (Apr to Sep 2020,
+    // B-761: "-", "--", "-~", ",__", and "f----", "t--", ",-- -", ">----").
+    // Nothing in them is a word or money.
+    || /^[a-z>]?[-~_,.][-~_,. ]*$/.test(x.text)));
+  return { label, section, ignored };
 }
 
 const has = (g, text) => g.lines.find((l) => l.text === text);
 const isColumnHeading = (g) => g.lines.some((l) => l.text === 'DOCUMENT NO.');
-const HEADING_BITS = new Set(['DATES', 'POSTED', 'START', 'END', 'START END', 'OBLIGATION/SERVICE', 'DATE', 'PAYEE NAME', 'DESCRIPTION', 'AMOUNT ($)', 'DOCUMENT NO.']);
+const HEADING_BITS = new Set(['DATES', 'POSTED', 'START', 'END', 'START END', 'OBLIGATION/SERVICE', 'DATE', 'PAYEE NAME', 'DESCRIPTION', 'AMOUNT ($)', 'AMOUNT', '($)', 'DOCUMENT NO.']);
 const isHeadingBits = (g) => g.lines.every((l) => HEADING_BITS.has(l.text));
 
 // Column positions from a table's headings. START and END sit on a later
@@ -153,6 +220,8 @@ function readColumns(g, prev) {
     else if (l.text === 'PAYEE NAME') cols.payee = l;
     else if (l.text === 'DESCRIPTION') cols.desc = l;
     else if (l.text === 'AMOUNT ($)') cols.amount = l;
+    // Split in two on some pages (Apr to Sep 2016, B-534): "AMOUNT" "($)".
+    else if (l.text === 'AMOUNT') cols.amount = { ...l, x1: g.lines.find((x) => x.text === '($)' && x.x0 > l.x1 && x.x0 - l.x1 < 12)?.x1 ?? l.x1 };
     else if (l.text === 'START') cols.start = l;
     else if (l.text === 'END') cols.end = l;
     else if (l.text === 'START END') {
@@ -172,14 +241,18 @@ export function splitBlocks(pages) {
   const blocks = [];
   const problems = [];
   const bPages = [];
+  // Money-shaped text in what pageLabel drops (the committees print "3.00"
+  // beside each class total in the left margin, 2011), for the raw check.
+  const margin = { money: 0, cents: 0, pages: new Set() };
   let block = null;
   let mode = 'none';
   let cols = null;
   for (const page of pages) {
-    const { line: labelLine, label, section } = pageLabel(page);
+    const { label, section, ignored } = pageLabel(page);
+    if (section === 'B') for (const l of ignored) for (const w of l.text.split(/\s+/)) { const c = moneyCents(w); if (c != null) { margin.money++; margin.cents += c; margin.pages.add(page.number); } }
     if (section !== 'B') { if (block) { blocks.push(block); block = null; mode = 'none'; } continue; }
     bPages.push(page.number);
-    const lines = page.lines.filter((l) => l !== labelLine);
+    const lines = page.lines.filter((l) => !ignored.has(l));
     for (const g of baselines(lines)) {
       g.page = page.number;
       g.label = label;
@@ -198,7 +271,7 @@ export function splitBlocks(pages) {
     }
   }
   if (block) blocks.push(block);
-  return { blocks, problems, bPages };
+  return { blocks, problems, bPages, margin };
 }
 
 // The block header: office, funding year, appropriation title, and the
@@ -212,22 +285,37 @@ export function readHeader(block) {
   const colAvail = all.find((l) => l.text === 'NET FUNDS');
   const colPeriod = all.find((l) => l.text === 'NET EXPENDITURES FOR');
   const colYtd = all.find((l) => l.text === 'TOTAL FUNDING');
-  if (!auth || !fy || !colAvail || !colPeriod || !colYtd) {
-    problems.push(`${where}: header lacks ${[!auth && 'Authorization', !fy && 'Funding Year', !colAvail && 'NET FUNDS', !colPeriod && 'NET EXPENDITURES FOR', !colYtd && 'TOTAL FUNDING'].filter(Boolean).join(', ')}`);
+  if (!auth || !colAvail || !colPeriod || !colYtd) {
+    problems.push(`${where}: header lacks ${[!auth && 'Authorization', !colAvail && 'NET FUNDS', !colPeriod && 'NET EXPENDITURES FOR', !colYtd && 'TOTAL FUNDING'].filter(Boolean).join(', ')}`);
     return { problems };
   }
-  const used = new Set([auth, fy, colAvail, colPeriod, colYtd]);
+  const used = new Set([auth, fy, colAvail, colPeriod, colYtd].filter(Boolean));
   const leftEdge = auth.x0 - 100;
-  // Funding year: the rest of the "Funding Year" line, or the line beside it.
-  let fundingYear = fy.text.replace(/^Funding Year\s*/, '').trim();
-  if (!fundingYear) {
-    const v = all.find((l) => l !== fy && Math.abs(center(l) - center(fy)) < 1.5 && l.x0 > fy.x1 && l.x0 < auth.x0 && FUNDING_YEAR.test(l.text));
-    if (v) { fundingYear = v.text; used.add(v); }
+  let fundingYear = null;
+  let office;
+  let program;
+  if (fy) {
+    // Funding year: the rest of the "Funding Year" line, or the line beside it.
+    fundingYear = fy.text.replace(/^Funding Year\s*/, '').trim();
+    if (!fundingYear) {
+      const v = all.find((l) => l !== fy && Math.abs(center(l) - center(fy)) < 1.5 && l.x0 > fy.x1 && l.x0 < auth.x0 && FUNDING_YEAR.test(l.text));
+      if (v) { fundingYear = v.text; used.add(v); }
+    }
+    if (!FUNDING_YEAR.test(fundingYear)) problems.push(`${where}: funding year "${fundingYear}"`);
+    const left = all.filter((l) => !used.has(l) && l.x0 < leftEdge);
+    office = left.filter((l) => center(l) < center(fy)).sort((a, b) => a.y0 - b.y0);
+    program = left.filter((l) => center(l) > center(fy)).sort((a, b) => a.y0 - b.y0);
+  } else {
+    // The committees' inquiries and investigations statements (section
+    // B-2, Apr to Sep 2011 and later) print no funding year: the committee's
+    // name, then its short name and authorizing resolution ("... S.RES.89D
+    // (110TH)"), then the appropriation. The first line is the office, the
+    // rest the program, as printed; the funding year is null.
+    const left = all.filter((l) => !used.has(l) && l.x0 < leftEdge).sort((a, b) => a.y0 - b.y0);
+    if (left.length < 2) problems.push(`${where}: header lacks Funding Year`);
+    office = left.slice(0, 1);
+    program = left.slice(1);
   }
-  if (!FUNDING_YEAR.test(fundingYear)) problems.push(`${where}: funding year "${fundingYear}"`);
-  const left = all.filter((l) => !used.has(l) && l.x0 < leftEdge);
-  const office = left.filter((l) => center(l) < center(fy)).sort((a, b) => a.y0 - b.y0);
-  const program = left.filter((l) => center(l) > center(fy)).sort((a, b) => a.y0 - b.y0);
   for (const l of [...office, ...program]) used.add(l);
   // Column titles: everything above the first summary label that is not the
   // office name (DESCRIPTION, AVAILABLE AS, OF 10/01/2025, ($), ...).
@@ -249,13 +337,16 @@ export function readHeader(block) {
     used.add(a);
     const dists = summary.map((s) => Math.abs(center(s.line) - center(a))).sort((x, y) => x - y);
     const s = summary.reduce((best, s) => (Math.abs(center(s.line) - center(a)) < Math.abs(center(best.line) - center(a)) ? s : best));
-    if (dists.length > 1 && dists[1] - dists[0] < 1) problems.push(`${where}: amount ${a.text} is as near "${s.label}" as another label`);
     const cents = moneyCents(a.text);
+    // A zero changes no total, so where it lands does not matter: one
+    // summary lists "Cash 0.00 0.00" twice with an unlabeled pair of zeros
+    // between (Oct 2021 to Mar 2022, B-300).
+    if (dists.length > 1 && dists[1] - dists[0] < 1 && cents !== 0) problems.push(`${where}: amount ${a.text} is as near "${s.label}" as another label`);
     if (/^UNEXPENDED BALANCE/.test(s.label)) { s.unexpended = cents; continue; }
     const col = [['avail', colAvail], ['period', colPeriod], ['ytd', colYtd]]
       .reduce((best, c) => (Math.abs(a.x1 - c[1].x1) < Math.abs(a.x1 - best[1].x1) ? c : best))[0];
-    if (s[col] != null) problems.push(`${where}: "${s.label}" has two ${col} figures`);
-    s[col] = cents;
+    if (s[col] != null && cents !== 0 && s[col] !== 0) problems.push(`${where}: "${s.label}" has two ${col} figures`);
+    s[col] = (s[col] ?? 0) + cents;
   }
   const leftover = all.filter((l) => !used.has(l));
   for (const l of leftover) problems.push(`${where}: header text not read: "${l.text}" at ${l.x0.toFixed(1)},${l.y0.toFixed(1)}`);
@@ -289,21 +380,27 @@ export function readHeader(block) {
 // Sort one detail baseline's lines into cells by the table's columns.
 function cellsOf(g) {
   const c = g.cols;
-  const out = { doc: [], posted: [], start: [], end: [], payee: [], label: [], desc: [], amount: [], stray: [] };
+  const out = { doc: [], posted: [], start: [], end: [], payee: [], label: [], desc: [], amount: [], stray: [], margin: [] };
   if (!c || !c.posted || !c.start || !c.end || !c.amount) { out.stray.push(...g.lines); return out; }
   const postedRight = Math.max(c.posted.x1, c.posted.x0 + 20);
   const descLeft = c.end.x1 + 4;
   for (const l of g.lines) {
     if (moneyCents(l.text) != null && l.x1 > c.amount.x0) { out.amount.push(l); continue; }
-    if (DATE.test(l.text)) {
+    if (DATE_SHAPED.test(l.text)) {
       const d = [['posted', c.posted], ['start', c.start], ['end', c.end]]
         .reduce((best, k) => (Math.abs(mid(l) - mid(k[1])) < Math.abs(mid(l) - mid(best[1])) ? k : best))[0];
       out[d].push(l);
       continue;
     }
-    if (l.x1 < c.posted.x0 - 2) out.doc.push(l);
-    else if (l.x0 >= postedRight + 3 && l.x0 < c.start.x0 - 3) out.payee.push(l);
-    else if (l.x0 >= c.start.x0 - 3 && l.x0 < descLeft) out.label.push(l);
+    // The committees print a small number ("3.00", "4.00") left of the
+    // document column beside some class totals (Apr to Sep 2016 and 2020,
+    // B-2-3). No document number is shaped like it, and it is never an amount.
+    if (l.x1 < c.posted.x0 - 2 && /^\d{1,2}\.00$/.test(l.text)) out.margin.push(l);
+    else if (l.x1 < c.posted.x0 - 2) out.doc.push(l);
+    else if (l.x0 >= postedRight + 3 && l.x0 < c.start.x0 - 10) out.payee.push(l);
+    // Class labels can start a little left of START (the committees, 2011: 6 pt);
+    // payee text starts at the payee column, far to the left.
+    else if (l.x0 >= c.start.x0 - 10 && l.x0 < descLeft) out.label.push(l);
     else if (l.x0 >= descLeft) out.desc.push(l);
     else out.stray.push(l);
   }
@@ -366,7 +463,7 @@ function jointPersons(lines, subs) {
  * `subclassInDesc`: this volume prints sub-class subtotals in the
  * description column (decided per volume by parseVolume).
  */
-export function readDetail(block, header, subclassInDesc) {
+export function readDetail(block, header, subclassInDesc, volumeClasses = new Set()) {
   const where = `block at page ${block.page} (${block.label}) "${header.office}" FY ${header.fundingYear}`;
   const problems = [];
   const discrepancies = [];
@@ -379,6 +476,10 @@ export function readDetail(block, header, subclassInDesc) {
     for (const l of c.stray) problems.push(`${where}: page ${g.page}: text in no column: "${l.text}" at ${l.x0.toFixed(1)}`);
     if (c.amount.length > 1) { problems.push(`${where}: page ${g.page}: two amounts on one line: ${c.amount.map((l) => l.text).join(', ')}`); continue; }
     const base = { page: g.page, label: g.label, c: g.c };
+    // The committees' margin numbers (cellsOf): counted as money read, so
+    // the raw check agrees, and otherwise ignored.
+    for (const l of c.margin) { moneyCount++; moneySum += moneyCents(l.text); }
+    if (c.margin.length === g.lines.length) continue;
     if (!c.amount.length) {
       if (c.doc.length || c.posted.length || c.start.length || c.end.length || c.label.length) {
         problems.push(`${where}: page ${g.page}: a line with no amount: ${g.lines.map((l) => l.text).join(' | ')}`);
@@ -402,7 +503,11 @@ export function readDetail(block, header, subclassInDesc) {
     } else if (c.desc.length) {
       items.push({ ...base, kind: 'candidate', cents, payee: [], desc: [...c.desc] });
     } else {
-      problems.push(`${where}: page ${g.page}: an amount with no text: ${c.amount[0].text}`);
+      // A pay line printed with its name and title blank (Apr to Sep 2021,
+      // B-496: one amount, the office's whole RE-EMPLOYED ANNUITANTS
+      // subtotal). It is a person line: one outside a pay run is left with
+      // no subtotal to take it, which fails the block.
+      items.push({ ...base, kind: 'person', cents, payee: [], desc: [], blank: true });
     }
   }
 
@@ -414,11 +519,22 @@ export function readDetail(block, header, subclassInDesc) {
   const lastRowBefore = (page) => items.filter((it) => it.page < page && it.kind !== 'subtotal').at(-1);
   for (const f of frags) {
     const rows = rowsOn(f.page);
-    if (!rows.length) { problems.push(`${where}: page ${f.page}: wrapped text with no row: "${f.line.text}"`); continue; }
+    if (!rows.length) {
+      // A description that runs onto a page with no row of its own (Apr to
+      // Sep 2021, B-1666) continues the last row before it.
+      const prev = f.zone === 'desc' ? lastRowBefore(f.page) : null;
+      if (prev) { prev.desc.push({ ...f.line, page: f.page }); continue; }
+      problems.push(`${where}: page ${f.page}: wrapped text with no row: "${f.line.text}"`);
+      continue;
+    }
     const byDist = [...rows].sort((a, b) => Math.abs(a.c - f.c) - Math.abs(b.c - f.c));
     let target = byDist[0];
     if (f.zone === 'desc' && Math.abs(target.c - f.c) >= 4) {
-      const above = rows.filter((r) => r.c < f.c).sort((a, b) => b.c - a.c)[0] ?? lastRowBefore(f.page);
+      // With no row above at all, the description is centered on the row
+      // below, as a long title is on a person line (Apr to Sep 2025, B-331:
+      // four lines, two above the amount and two below).
+      const above = rows.filter((r) => r.c < f.c).sort((a, b) => b.c - a.c)[0] ?? lastRowBefore(f.page)
+        ?? rows.filter((r) => r.c > f.c).sort((a, b) => a.c - b.c)[0];
       if (!above) { problems.push(`${where}: page ${f.page}: wrapped description with no row above: "${f.line.text}"`); continue; }
       target = above;
     } else if (byDist[1] && Math.abs(byDist[1].c - f.c) - Math.abs(target.c - f.c) < 1) {
@@ -438,6 +554,7 @@ export function readDetail(block, header, subclassInDesc) {
   // after every other class (B-249), where 2026 subtotals them at once.
   let run = [];          // entries and continuations since the last subtotal
   let classSpan = [];    // the same, and sub-class subtotals, since the last class total
+  const netZero = [];    // lines that net to nothing under no class total of their own
   let persons = [];      // person lines no subtotal has taken yet
   let lastEntry = null;  // the entry a continuation belongs to, and its line count
   const out = [];
@@ -445,7 +562,7 @@ export function readDetail(block, header, subclassInDesc) {
   const subtotalOf = (it, labelText) => {
     it.kind = 'subtotal';
     it.labelText = labelText;
-    it.level = header.classes.has(fold(labelText)) ? 2 : 1;
+    it.level = header.classes.has(fold(labelText)) || volumeClasses.has(fold(labelText)) ? 2 : 1;
   };
   const takePersons = (sub) => {
     const sum = sumOf(persons);
@@ -457,16 +574,32 @@ export function readDetail(block, header, subclassInDesc) {
     // A name too long for its cell wraps above and below the line, which
     // then carries only the title and the amount (2026, page 1678).
     if (it.kind === 'candidate' && it.payee.length) it.kind = 'person';
+    // A payroll adjustment printed among the pay lines with no name (Apr to
+    // Sep 2021, B-1691: SALARIES-PERMANENT FULL-TIME (INTERFACE)
+    // -$100,000.00, inside a PERSONNEL COMP. FULL-TIME PERMANENT subtotal
+    // that is the pay lines plus it). It goes with the person lines.
+    if (it.kind === 'candidate' && PAY_ADJUSTMENT.test(text(it.desc))) it.kind = 'person';
     if (it.kind === 'candidate') {
       const labelText = text(it.desc);
+      const fits = !run.length || sumOf(run) === it.cents || (persons.length && sumOf(persons) === it.cents);
       if (subclassInDesc && (!run.length || sumOf(run) === it.cents) && labelText === labelText.toUpperCase()) subtotalOf(it, labelText);
-      else if (lastEntry) {
+      else if (SUBCLASS_IN_DESC.has(labelText) && fits) {
+        // A volume that prints sub-classes left of the description column
+        // can still print a pay sub-class in it, even straight after an
+        // entry (Oct 2013 to Mar 2014, Oct 2019 to Mar 2020).
+        subtotalOf(it, labelText);
+      } else if (lastEntry) {
         it.kind = 'continuation';
         it.of = lastEntry.it;
         it.docLine = ++lastEntry.lines;
       } else {
-        problems.push(`${where}: page ${it.page}: description-only line with no entry above: "${labelText}" ${centsText(it.cents)}`);
-        continue;
+        // A document's later lines with its first line missing from the
+        // PDF's text (Oct 2022 to Mar 2023, B-962: the travel lines after
+        // Net Payroll Expenses, whose document line is not on the page).
+        // They load as printed, with no document, payee or dates.
+        it.kind = 'continuation';
+        it.of = null;
+        it.docLine = null;
       }
     } else if (it.kind === 'subtotal') subtotalOf(it, it.labelText);
     if (it.kind === 'entry') lastEntry = { it, lines: 1 };
@@ -475,6 +608,15 @@ export function readDetail(block, header, subclassInDesc) {
     if (it.kind === 'person') { persons.push(it); out.push(it); continue; }
     if (it.kind !== 'subtotal') { run.push(it); classSpan.push(it); out.push(it); continue; }
     if (it.level === 1) {
+      // Lines that net to nothing with no subtotal of their own, then a pay
+      // sub-class for the person lines further up (Oct 2013 to Mar 2014,
+      // B-830: equipment $99.99 and its reversal, then PERSONNEL COMP.
+      // FULL-TIME PERMANENT). The sub-class takes the person lines; the
+      // pair takes its class at the end of the block, as trailing ones do.
+      if (run.length && sumOf(run) === 0 && it.cents !== 0 && PAY.has(fold(it.labelText)) && persons.length && sumOf(persons) === it.cents) {
+        for (const r of run) { r.netZero = true; netZero.push(r); }
+        run = [];
+      }
       if (run.length) {
         it.covers = run;
         if (sumOf(run) !== it.cents) problems.push(`${where}: sub-class "${it.labelText}" is ${centsText(it.cents)}, its ${run.length} lines sum to ${centsText(sumOf(run))}`);
@@ -517,36 +659,122 @@ export function readDetail(block, header, subclassInDesc) {
       const total = sumOf(direct) + sumOf(subs);
       it.covers = direct;
       it.subs = subs;
-      if (classSpan.length && total !== it.cents) problems.push(`${where}: class "${it.labelText}" is ${centsText(it.cents)}, what it covers sums to ${centsText(total)}`);
       const category = fold(it.labelText);
+      let s = header.classes.get(category);
+      if (!s) {
+        // A class the summary names otherwise: FOREIGN TRAVEL - MEMBERS &
+        // EMPLOYEES, Apr to Sep 2022, B-212, totals its lines as TRAVEL AND
+        // TRANSPORTATION OF PERSONS, $4,852.90, where its summary charges
+        // the same $4,852.90 to Supplies and Materials. Paired with the one
+        // summary class of that figure with no total in the lines; the rows
+        // keep the class printed over them.
+        const same = [...header.classes.values()].filter((x) => !x.matched && x.period && -x.period === it.cents);
+        if (same.length === 1) {
+          s = same[0];
+          discrepancies.push({ kind: 'summary', where, label: it.labelText, summaryLabel: s.label, page: it.page, lines: it.cents, summary: -s.period });
+        } else {
+          // Failing that, a class the summary leaves out, its money counted
+          // in another class's figure: Oct 2019 to Mar 2020, B-1946, totals
+          // OTHER CONTRACTUAL SERVICES $1,040.00 in the lines, and the
+          // summary's Travel is the lines' travel plus that $1,040.00. The
+          // class is compared with a summary figure of zero, so both gaps
+          // are listed and they cancel against ORGANIZATION TOTALS.
+          s = { label: it.labelText, period: 0, omitted: true };
+          header.classes.set(category, s);
+        }
+      }
+      if (classSpan.length && total !== it.cents) {
+        // Lines short of (or past) a class total that the summary prints
+        // too: the report's own two figures agree, so the gap is in its
+        // lines (see `lines` above).
+        if (s && -(s.period ?? 0) === it.cents) discrepancies.push({ kind: 'lines', where, label: it.labelText, page: it.page, lines: total, printed: it.cents });
+        else problems.push(`${where}: class "${it.labelText}" is ${centsText(it.cents)}, what it covers sums to ${centsText(total)}`);
+      }
       for (const x of classSpan) x.category = category;
       it.category = category;
-      const s = header.classes.get(category);
-      if (s && -(s.period ?? 0) !== it.cents) {
-        discrepancies.push({ kind: 'summary', where, label: it.labelText, page: it.page, lines: it.cents, summary: -(s.period ?? 0) });
-      }
-      if (s) s.matched = (s.matched ?? 0) + 1;
-      else problems.push(`${where}: class total "${it.labelText}" is not in the block summary`);
+      // Compared with the summary once the block is read: a class can be
+      // totaled twice (Apr to Sep 2019, B-1530: NET PAYROLL EXPENSES $231.00
+      // under one commuting subsidy, then again under the pay sub-classes).
+      if (s) {
+        s.matched = (s.matched ?? 0) + 1;
+        s.totaled = (s.totaled ?? 0) + it.cents;
+        s.firstTotal ??= it;
+      } else problems.push(`${where}: class total "${it.labelText}" is not in the block summary`);
       classSpan = [];
     }
     run = [];
     out.push(it);
   }
-  if (classSpan.length) problems.push(`${where}: ${classSpan.length} lines after the last class total`);
-  if (persons.length) problems.push(`${where}: ${persons.length} person lines (${centsText(sumOf(persons))}) that no subtotal takes`);
+  if (classSpan.length) {
+    // Lines that net to nothing, a charge and its reversal, can end a block
+    // with no class total printed for them (Apr to Sep 2018, B-451: -$60.55
+    // and $60.55 in travel). They take the one class the summary lists at
+    // zero with no total in the lines. Lines that do not net to zero fail.
+    // With more than one such class (Apr to Sep 2016, B-1157: three
+    // charges and their three reversals), the report names none, and
+    // neither does the row: category null.
+    // A class's lines can print in two places, its total over the first
+    // part: Apr to Sep 2017, B-2-93, FOREIGN RELATIONS prints OTHER
+    // CONTRACTUAL SERVICES $24,620.40 (the summary's figure too) over
+    // $4,544.50 of lines, then ends the statement, after the travel total,
+    // with $20,075.90 more of the same services. Lines left at the end that
+    // make up exactly one class's `lines` gap take that class, and the gap
+    // is closed.
+    const plain = classSpan.every((x) => x.kind !== 'subtotal');
+    const gap = discrepancies.filter((d) => d.kind === 'lines' && d.printed - d.lines === sumOf(classSpan));
+    if (sumOf(classSpan) === 0 && plain) {
+      for (const x of classSpan) { x.netZero = true; netZero.push(x); }
+    } else if (plain && gap.length === 1) {
+      for (const x of classSpan) x.category = fold(gap[0].label);
+      discrepancies.splice(discrepancies.indexOf(gap[0]), 1);
+    } else problems.push(`${where}: ${classSpan.length} lines after the last class total (${centsText(sumOf(classSpan))}${plain ? '' : ', with sub-class subtotals'})`);
+  }
+  if (netZero.length) {
+    const zero = [...header.classes.values()].filter((s) => !s.matched && !s.period);
+    const category = zero.length === 1 ? fold(zero[0].label) : null;
+    for (const x of netZero) x.category = category;
+    if (zero.length === 1) Object.assign(zero[0], { matched: 1, totaled: 0 });
+  }
   // A class the summary charges for the period with no class total in the
   // lines was not itemized (the leadership expense allowances, among
   // others): its summary figure, sign turned to match the lines, becomes a
   // summary item, or the office's spending would be short by it.
   for (const s of header.classes.values()) {
-    if (s.period && !s.matched) {
-      out.push({ page: block.page, label: block.label, c: center(s.line), kind: 'summary', level: 2, cents: -s.period, labelText: s.label, category: fold(s.label), covers: [], subs: [] });
+    if (s.matched && -(s.period ?? 0) !== s.totaled) {
+      discrepancies.push({ kind: 'summary', where, label: s.firstTotal.labelText, page: s.firstTotal.page, lines: s.totaled, summary: -(s.period ?? 0) });
     }
-    if (s.matched > 1) problems.push(`${where}: class "${s.label}" totaled ${s.matched} times`);
+  }
+  for (const s of header.classes.values()) {
+    if (s.period && !s.matched) {
+      const it = { page: block.page, label: block.label, c: center(s.line), kind: 'summary', level: 2, cents: -s.period, labelText: s.label, category: fold(s.label), covers: [], subs: [] };
+      // Person lines printed with no subtotal at all, whose sum is the
+      // summary's figure for a class with no total in the lines (Apr to Sep
+      // 2016, B-304: one consultant's $790.00, and Net Payroll Expenses
+      // $790.00 in the summary only). The summary item takes them, as a
+      // printed subtotal would.
+      if (persons.length && sumOf(persons) === it.cents) { it.covers = persons; persons = []; }
+      out.push(it);
+    }
+  }
+  // Person lines no subtotal or summary figure takes (CONSULTANTS, FY 1921,
+  // Oct 2019 to Mar 2020, B-192: one consultant's $1,903.48 printed under a
+  // summary and ORGANIZATION TOTALS of $0.00 for the period). They never
+  // load either way; listed as a pay discrepancy against nothing. A line
+  // read as a person that was not one would leave the block's rows short of
+  // ORGANIZATION TOTALS, which still fails.
+  if (persons.length) {
+    discrepancies.push({ kind: 'pay', where, label: null, page: persons[0].page, lines: sumOf(persons), printed: 0 });
+    persons = [];
   }
   const classSum = out.filter((x) => (x.kind === 'subtotal' && x.level === 2) || x.kind === 'summary').reduce((a, x) => a + x.cents, 0);
-  const allowed = discrepancies.filter((d) => d.kind === 'summary').reduce((a, d) => a + d.lines - d.summary, 0);
-  if (header.orgPeriod != null && classSum !== -header.orgPeriod + allowed) problems.push(`${where}: class totals sum to ${centsText(classSum)}, ORGANIZATION TOTALS says ${centsText(-header.orgPeriod)}${allowed ? ` (${centsText(allowed)} of payroll difference allowed)` : ''}`);
+  const classAllowed = discrepancies.filter((d) => d.kind === 'summary').reduce((a, d) => a + d.lines - d.summary, 0);
+  if (header.orgPeriod != null && classSum !== -header.orgPeriod + classAllowed) problems.push(`${where}: class totals sum to ${centsText(classSum)}, ORGANIZATION TOTALS says ${centsText(-header.orgPeriod)}${classAllowed ? ` (${centsText(classAllowed)} of payroll difference allowed)` : ''}`);
+  // Two classes off in one block could be one line read into the wrong
+  // class, which would look like two gaps that cancel: never allowed.
+  const short = discrepancies.filter((d) => d.kind === 'lines');
+  if (short.length > 1) problems.push(`${where}: ${short.length} classes whose lines do not make their totals (${short.map((d) => d.label).join(', ')})`);
+  // What the kept rows may differ from ORGANIZATION TOTALS by.
+  const allowed = classAllowed + short.reduce((a, d) => a + d.lines - d.printed, 0);
   return { items: out, problems, discrepancies, allowed, moneyCount, moneySum, lineCount: block.detail.reduce((a, g) => a + g.lines.length, 0) };
 }
 
@@ -556,7 +784,10 @@ export function keepItems(items, where) {
   const kept = [];
   for (const it of items) {
     if (it.kind === 'entry' || it.kind === 'continuation') kept.push(it);
-    else if (it.kind === 'summary') { it.unitemized = true; kept.push(it); }
+    else if (it.kind === 'summary') {
+      if (it.covers.length) it.collapses = it.covers.length; else it.unitemized = true;
+      kept.push(it);
+    }
     else if (it.kind === 'subtotal') {
       const covered = it.level === 1 ? it.covers : [...it.covers, ...(it.subs ?? [])];
       const persons = it.covers.filter((r) => r.kind === 'person');
@@ -591,9 +822,12 @@ export function toRow(it, n, header, source) {
     if (it.kind === 'summary') extras.from_summary = true;
     r = { row_kind: 'subtotal', transaction_date: null, start_date: null, end_date: null, document: null, payee: null, description: it.labelText };
   } else {
-    const e = it.kind === 'continuation' ? it.of : it;
+    // A continuation whose document line is missing from the text has
+    // nothing to inherit (see readDetail).
+    const e = it.kind === 'continuation' ? (it.of ?? { doc: [], payee: [], posted: [], start: [], end: [] }) : it;
     if (it.subclass) extras.subclass = it.subclass;
-    if (it.kind === 'continuation') extras.doc_line = it.docLine;
+    if (it.kind === 'continuation' && it.of) extras.doc_line = it.docLine;
+    if (it.kind === 'continuation' && !it.of) extras.no_document_line = true;
     r = {
       row_kind: 'detail',
       ...datesOf(e, extras),
@@ -625,13 +859,33 @@ export function toRow(it, n, header, source) {
  * @param {string} xhtml pdftotext -bbox-layout output for one volume
  * @param {{ unit: string, url: string, start: string, end: string, file: string }} source
  */
-export function parseVolume(xhtml, source) {
-  return parsePages(readPages(xhtml), source);
+// ocr: transcriptions of pages printed as images, by page number
+// (senate-ocr.mjs, loadOcr).
+export function parseVolume(xhtml, source, ocr = {}) {
+  return parsePages(readPages(xhtml), source, ocr);
 }
 
-export function parsePages(pages, source) {
-  const { blocks, problems, bPages } = splitBlocks(pages);
+export function parsePages(pages, source, ocr = {}) {
+  // A page printed as an image has no text but its label (Apr to Sep 2023,
+  // B-336). Its transcription's lines join the label, and the page is
+  // parsed like any other; a B page with no text and no transcription fails.
+  const ocrPages = new Set();
+  const ocrProblems = [];
+  for (const page of pages) {
+    const t = ocr[page.number];
+    if (t) {
+      page.lines = [...page.lines, ...t.lines].sort((l, m) => l.y0 - m.y0 || l.x0 - m.x0);
+      ocrPages.add(page.number);
+    } else if (page.lines.length && page.lines.every((l) => l.x1 < 45 || PAGE_LABEL.test(l.text)) && page.lines.some((l) => PAGE_LABEL.exec(l.text)?.[1] === 'B')) {
+      ocrProblems.push(`page ${page.number}: no text but its page label, and no transcription in senate-ocr/`);
+    }
+  }
+  const { blocks, problems, bPages, margin } = splitBlocks(pages);
+  problems.push(...ocrProblems);
   const headers = blocks.map(readHeader);
+  // Every class any block's summary names, for a class total whose own
+  // summary names it otherwise (readDetail). Never a sub-class label.
+  const volumeClasses = new Set(headers.flatMap((h) => (h.classes ? [...h.classes.keys()] : [])).filter((k) => !SUBCLASS_IN_DESC.has(k)));
   // A volume prints sub-classes either left of the description column or in
   // it. Any sub-class label left of it settles the question for the volume.
   let subclassLeft = false;
@@ -645,7 +899,31 @@ export function parsePages(pages, source) {
   }
   const rows = [];
   const discrepancies = [];
-  const tally = { blocks: blocks.length, bPages: bPages.length, entries: 0, continuations: 0, persons: 0, subtotals: 0, summaries: 0, kept: 0, collapsedPersons: 0, unitemized: 0, keptCents: 0, orgCents: 0, discrepancyCents: 0, money: 0, moneyCents: 0, subclassLabels: {} };
+  // B pages that print any money inside a block, for the raw scan to match
+  // (it cannot tell a B page from a contents page that lists B labels, but
+  // a contents page prints no money). The raw scan counts every word shaped
+  // like money, so a description that holds one ("8.25 MILES") is counted
+  // here too, as `embedded`; amounts the parse reads are counted where it
+  // reads them.
+  const moneyPages = new Set();
+  let embedded = margin.money;
+  let embeddedCents = margin.cents;
+  for (const p of margin.pages) moneyPages.add(p);
+  for (const b of blocks) {
+    for (const g of [...b.header, ...b.detail]) {
+      for (const l of g.lines) {
+        if (moneyCents(l.text) != null) { moneyPages.add(g.page); continue; }
+        for (const w of l.text.split(/\s+/)) {
+          const c = moneyCents(w);
+          if (c == null) continue;
+          moneyPages.add(g.page);
+          embedded++;
+          embeddedCents += c;
+        }
+      }
+    }
+  }
+  const tally = { blocks: blocks.length, bPages: bPages.length, moneyPages: moneyPages.size, entries: 0, continuations: 0, persons: 0, subtotals: 0, summaries: 0, kept: 0, collapsedPersons: 0, unitemized: 0, keptCents: 0, orgCents: 0, discrepancyCents: 0, money: embedded, moneyCents: embeddedCents, embeddedMoney: embedded, subclassLabels: {} };
   let n = 0;
   for (const [i, b] of blocks.entries()) {
     const h = headers[i];
@@ -659,7 +937,7 @@ export function parsePages(pages, source) {
     }
     tally.money += h.moneyCount;
     tally.moneyCents += h.moneySum;
-    const d = readDetail(b, h, !subclassLeft);
+    const d = readDetail(b, h, !subclassLeft, volumeClasses);
     problems.push(...d.problems);
     discrepancies.push(...d.discrepancies);
     tally.discrepancyCents += d.allowed;
@@ -688,5 +966,18 @@ export function parsePages(pages, source) {
     }
   }
   tally.subclassInDesc = !subclassLeft;
+  // The raw scan sees no text on a transcribed page, so its money is taken
+  // back out of the comparison: every money-shaped word on it, which the
+  // parse must have read in full for the raw and parsed counts to agree.
+  for (const p of ocrPages) {
+    if (!moneyPages.has(p)) continue;
+    tally.moneyPages--;
+    for (const l of ocr[p].lines) for (const w of l.text.split(/\s+/)) {
+      const c = moneyCents(w);
+      if (c != null) { tally.money--; tally.moneyCents -= c; }
+    }
+  }
+  tally.ocrPages = [...ocrPages];
+  for (const r of rows) if (ocrPages.has(JSON.parse(r.extras).page)) r.extras = JSON.stringify({ ...JSON.parse(r.extras), ocr: true });
   return { rows, problems, discrepancies, tally, blocks, headers };
 }

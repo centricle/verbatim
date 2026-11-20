@@ -47,10 +47,11 @@ function senateDetail(d) {
     ? Object.entries(x.dates_as_filed).map(([k, v]) => `${SENATE_DATE_COLUMNS[k]}: ${v}`).join('\n')
     : '';
   const how = x.from_summary
-    ? 'From the office’s summary: the report charges this amount to the class without listing its lines'
+    ? 'From the office’s summary: the report charges this amount to the class without a total in its lines'
     : x.unitemized
       ? 'A subtotal the report prints with no lines above it'
-      : d.row_kind === 'subtotal' ? 'A subtotal the report prints for the lines above it' : '';
+      : d.row_kind === 'subtotal' ? 'A subtotal the report prints for the lines above it'
+        : x.no_document_line ? 'A later line of a document whose first line is not in the report’s text' : '';
   return fieldList([
     ['Program', d.program],
     ['Office', d.office],
@@ -62,6 +63,7 @@ function senateDetail(d) {
     ['Obligation or service dates', span(d.start_date, d.end_date)],
     ['Dates as printed', asFiled],
     ['Row', how],
+    ['Read from', x.ocr && 'An image of the page (the report gives this page no text): read by OCR, checked by eye and against the totals the report prints'],
     ['Source', html`<a href="${d.source_ref}" class="text-link" target="_blank" rel="noopener">Senate report, page ${x.page_label ?? x.page}</a>`],
   ]);
 }

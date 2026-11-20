@@ -25,7 +25,7 @@ function header26({ office, fy, program, summary, org }) {
     line(278, 65.4, 'DESCRIPTION'), { ...line(373, 65.4, 'NET FUNDS'), x1: 399 }, { ...line(446, 65.4, 'NET EXPENDITURES FOR'), x1: 503 }, { ...line(542, 65.4, 'TOTAL FUNDING'), x1: 579 },
     line(369, 72.3, 'AVAILABLE AS'), line(457, 72.3, 'THE PERIOD OF'), line(556, 72.3, 'YTD'),
     line(370, 79.3, 'OF 10/01/2025'), line(454, 79.3, '10/01/2025 THRU'),
-    line(h.fy, 81.9, 'Funding Year'), line(h.fyValue, 81.9, fy),
+    ...(fy ? [line(h.fy, 81.9, 'Funding Year'), line(h.fyValue, 81.9, fy)] : []),
     line(383, 86, '($)'), line(454, 86, '03/31/2026'), line(488, 86, '($)'), line(558, 86, '($)'),
   ];
   program.forEach((t, i) => out.push(line(h.office, 96.9 + 7.7 * i, t)));
@@ -55,21 +55,21 @@ const entry = (y, doc, posted, payee, start, end, desc, amount) => [line(h.doc, 
 const person = (y, name, title, amount) => [...(name ? [line(h.payee, y, name)] : []), line(h.desc, y, title), right(h.amount, y, amount)];
 const sub26 = (y, label, amount) => [line(h.subtotal, y, label), right(h.amount, y, amount)];
 
-function volume26({ payrollSummary = '-150,000.00', org = '-$174,455.50', ocsSecond = '$3,000.00' } = {}) {
+function volume26({ payrollSummary = '-150,000.00', org = '-$174,455.50', ocsSecond = '$3,000.00', ocsSummary = '-23,100.00', fy = '2026', labels = ['B-1', 'B-2'], extra1 = [], summary = null } = {}) {
   const top = header26({
     office: 'SENATOR WILE E. COYOTE (I) - COYOTE',
-    fy: '2026',
+    fy,
     program: ['CONTINGENT EXPENSES OF THE SENATE', "SENATORS' OFFICIAL PERSONNEL AND", 'OFFICE EXPENSE ACCOUNT'],
-    summary: [
+    summary: summary ?? [
       ['Net Payroll Expenses', payrollSummary],
       ['Travel and Transportation of Persons', '-1,045.50'],
-      ['Other Contractual Services', '-23,100.00'],
+      ['Other Contractual Services', ocsSummary],
       ['Supplies and Materials', '-310.00'],
     ],
     org,
   });
   let y = top.y + 30;
-  const p1 = [...top.lines, ...headings26(top.y), line(h.pageLabel, 211.5, 'B-1')];
+  const p1 = [...top.lines, ...headings26(top.y), line(h.pageLabel, 211.5, labels[0]), ...extra1];
   p1.push(...person(y, 'WOLF, RALPH', 'CHIEF OF STAFF', '$60,000.00')); y += 6.2;
   p1.push(...person(y, 'SHEEPDOG, SAM', 'LEGISLATIVE DIRECTOR', '$40,000.00')); y += 6.2;
   // A name too long for its cell: one fragment above, one below.
@@ -90,7 +90,7 @@ function volume26({ payrollSummary = '-150,000.00', org = '-$174,455.50', ocsSec
   // A payee wrapped around its row, centered.
   p2.push(line(h.payee, y - 2.6, 'DAFFY DUCK INFORMATION TECHNOLOGY'), ...entry(y, 'VSA2600002', '01/08/2026', null, '10/27/2025', '10/27/2025', 'TECHNICAL SUPPORT', '$100.00'), line(h.payee, y + 2.6, 'SOLUTIONS LLC')); y += 8.4;
   p2.push(...sub26(y, 'OTHER CONTRACTUAL SERVICES', '$23,100.00'));
-  p2.push(line(h.pageLabel, 211.5, 'B-2'));
+  p2.push(line(h.pageLabel, 211.5, labels[1]));
   return [page(1, p1), page(2, p2)];
 }
 
@@ -158,9 +158,62 @@ test('a class total that differs from the summary is a discrepancy, not a failur
   assert.equal(r.discrepancies[0].lines - r.discrepancies[0].summary, 100000);
 });
 
-test('a line that breaks its printed subtotal fails', () => {
-  const r = parsePages(volume26({ ocsSecond: '$3,000.01' }), source);
+test('a line that breaks its printed subtotal fails, unless the summary agrees with the subtotal', () => {
+  // The summary agrees with the printed class total: the gap is the report's
+  // own, and loads as printed.
+  const ok = parsePages(volume26({ ocsSecond: '$3,000.01' }), source);
+  assert.deepEqual(ok.problems, []);
+  assert.deepEqual(ok.discrepancies.filter((d) => d.kind === 'lines').map((d) => [d.label, d.lines, d.printed]), [['OTHER CONTRACTUAL SERVICES', 2310001, 2310000]]);
+  // Nothing printed backs the class total: a misread, never allowed.
+  const r = parsePages(volume26({ ocsSecond: '$3,000.01', ocsSummary: '-23,100.01', org: '-$174,455.51' }), source);
   assert.ok(r.problems.some((p) => /class "OTHER CONTRACTUAL SERVICES" is 23100.00, what it covers sums to 23100.01/.test(p)), r.problems.join('\n'));
+});
+
+test('the committees: B-2-n labels, no funding year, rules drawn as text', () => {
+  const r = parsePages(volume26({
+    fy: null,
+    labels: ['B-2-1', 'B-2-2'],
+    // The label again at the foot of the page, part dropped, and a rule.
+    extra1: [line(560, 400, 'B- 1'), line(230, 150, 'f----'), line(380, 150, ',-- -')],
+  }), source);
+  assert.deepEqual(r.problems, []);
+  assert.equal(r.rows.length, 8);
+  for (const x of r.rows) {
+    assert.equal(x.funding_year, null);
+    assert.equal(x.office, 'SENATOR WILE E. COYOTE (I) - COYOTE');
+    assert.equal(x.program, "CONTINGENT EXPENSES OF THE SENATE SENATORS' OFFICIAL PERSONNEL AND OFFICE EXPENSE ACCOUNT");
+  }
+  assert.deepEqual([...new Set(r.rows.map((x) => JSON.parse(x.extras).page_label))], ['B-2-1', 'B-2-2']);
+});
+
+test('a page printed as an image: its transcription is parsed, and without one it fails', () => {
+  const plain = parsePages(volume26(), source);
+  const pages = volume26();
+  const label = pages[1].lines.find((l) => l.text === 'B-2');
+  const lines = pages[1].lines.filter((l) => l !== label);
+  pages[1].lines = [label];
+  const r = parsePages(pages, source, { 2: { lines } });
+  assert.deepEqual(r.problems, []);
+  assert.equal(r.rows.length, plain.rows.length);
+  for (const x of r.rows) assert.equal(JSON.parse(x.extras).ocr, JSON.parse(x.extras).page === 2 ? true : undefined);
+  // The raw scan sees no text on the page: its money is out of the count.
+  assert.ok(r.tally.money < plain.tally.money);
+  assert.equal(r.tally.moneyPages, plain.tally.moneyPages - 1);
+
+  const bare = volume26();
+  bare[1].lines = [label];
+  assert.ok(parsePages(bare, source).problems.some((p) => /page 2: no text but its page label/.test(p)));
+});
+
+test('a class total the summary leaves out, its money in another class', () => {
+  // The summary charges OTHER CONTRACTUAL SERVICES to Travel: two listed
+  // gaps that cancel. Another office's summary names the class, so the
+  // volume knows it for one.
+  const other = header26({ office: 'SENATOR ROAD RUNNER (I) - RUNNER', fy: '2026', program: ['CONTINGENT EXPENSES OF THE SENATE'], summary: [['Other Contractual Services', '0.00']], org: '$0.00' });
+  const pages = [...volume26({ summary: [['Net Payroll Expenses', '-150,000.00'], ['Travel and Transportation of Persons', '-24,145.50'], ['Supplies and Materials', '-310.00']] }), page(3, [...other.lines, line(h.pageLabel, 211.5, 'B-3')])];
+  const r = parsePages(pages, source);
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(r.discrepancies.map((d) => [d.kind, d.label, d.lines - d.summary]).sort(), [['summary', 'OTHER CONTRACTUAL SERVICES', 2310000], ['summary', 'TRAVEL AND TRANSPORTATION OF PERSONS', -2310000]]);
 });
 
 // ---- 2012 layout ---------------------------------------------------------

@@ -19,20 +19,25 @@
 import { COLUMNS, norm } from './check.mjs';
 import { moneyCents } from './senate-parse.mjs';
 
-const LABEL = /(?:^|\s{2,})([A-D])-\d+\s*$/m;
+// A page label ends a line: "B-334", "B-2-3" (the committees), or "B - 10"
+// where a volume prints it small inside the page as well. The contents pages end lines with B labels
+// too, but print no money, so pages are compared by whether they carry any.
+const LABEL = /(?:^|\s{2,})([A-D])(?:-\d+)? ?- ?\d{1,3}(?:,?\d{3})*\s*$/m;
 
 export function rawScan(layoutText) {
   const out = { pages: 0, money: 0, cents: 0 };
   for (const page of layoutText.split('\f')) {
     const m = [...page.matchAll(new RegExp(LABEL.source, 'gm'))];
     if (!m.length || m.at(-1)[1] !== 'B') continue;
-    out.pages++;
+    let any = false;
     for (const tok of page.split(/\s+/)) {
       const c = moneyCents(tok);
       if (c == null) continue;
+      any = true;
       out.money++;
       out.cents += c;
     }
+    if (any) out.pages++;
   }
   return out;
 }
@@ -51,7 +56,7 @@ export function compare({ unit, raw, parsed, loaded }) {
   for (const p of parsed.problems.slice(0, 20)) fail(p);
   if (parsed.problems.length > 20) fail(`${parsed.problems.length - 20} more parse problems`);
   const t = parsed.tally;
-  if (raw.pages !== t.bPages) fail(`B pages: raw ${raw.pages}, parsed ${t.bPages}`);
+  if (raw.pages !== t.moneyPages) fail(`B pages with money: raw ${raw.pages}, parsed ${t.moneyPages}`);
   if (raw.money !== t.money) fail(`money on B pages: raw ${raw.money}, parsed ${t.money}`);
   if (raw.cents !== t.moneyCents) fail(`money on B pages sums: raw ${raw.cents} cents, parsed ${t.moneyCents}`);
   if (loaded == null) return failures;

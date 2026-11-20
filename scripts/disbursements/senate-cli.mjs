@@ -14,6 +14,7 @@
 // Needs poppler's pdftotext (Homebrew `poppler`). The PDFs are untrusted
 // data: pdftotext reads them, nothing runs from tmp/disbursements/raw/.
 import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises';
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -21,6 +22,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SENATE_PAGE, senateVolumes } from './senate-sources.mjs';
 import { parseVolume } from './senate-parse.mjs';
+import { loadOcr, ocrPage, ocrFile } from './senate-ocr.mjs';
 import { rawScan, compare } from './senate-check.mjs';
 import { COLUMNS } from './check.mjs';
 import { LOAD_COLUMNS, requireTarget, refreshStats, checkStats } from './cli.mjs';
@@ -117,7 +119,7 @@ async function parseOne(m) {
     run('pdftotext', ['-layout', file, '-'], opts),
   ]);
   const source = { unit: m.unit, url: m.url, start: m.start, end: m.end, file: m.file };
-  return { source, parsed: parseVolume(bbox, source), raw: rawScan(layout) };
+  return { source, parsed: parseVolume(bbox, source, loadOcr(source.unit)), raw: rawScan(layout) };
 }
 
 const dollars = (c) => (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -192,6 +194,20 @@ async function checkCmd(rest) {
   else console.log(`PASS: ${total.toLocaleString()} rows in ${ms.length} volumes match their sources, all ${COLUMNS.length} columns`);
 }
 
+// Raw OCR of one page, for building its transcription (senate-ocr.mjs).
+// Written under tmp/, never to senate-ocr/: what is committed there is the
+// reviewed transcription, not tesseract's first reading.
+async function ocrCmd([unit, page]) {
+  const manifest = await readManifest();
+  const m = manifest[unit];
+  if (!m || !/^\d+$/.test(page ?? '')) throw new Error('usage: senate ocr <unit> <page>');
+  const out = resolve(ROOT, `tmp/disbursements/ocr/${unit}-p${page}.raw.json`);
+  mkdirSync(dirname(out), { recursive: true });
+  const r = ocrPage(resolve(RAW, m.file), Number(page));
+  writeFileSync(out, `${JSON.stringify(r, null, 1)}\n`);
+  console.log(`${r.lines.length} lines -> ${out}${existsSync(ocrFile(unit, page)) ? ' (a transcription is already committed)' : ''}`);
+}
+
 export async function main(argv) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
@@ -200,8 +216,9 @@ export async function main(argv) {
     case 'parse': await parseCmd(rest); break;
     case 'load': await loadCmd(rest); break;
     case 'check': await checkCmd(rest); break;
+    case 'ocr': await ocrCmd(rest); break;
     default:
-      console.error('usage: cli.mjs senate links|fetch [--again] [U...]|parse [U...]|load --target E [U...]|check [U...]');
+      console.error('usage: cli.mjs senate links|fetch [--again] [U...]|parse [U...]|load --target E [U...]|check [U...]|ocr <unit> <page>');
       process.exitCode = 2;
   }
 }

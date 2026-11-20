@@ -17,8 +17,9 @@
 --
 -- Netlify functions in netlify/functions/ call the search_* and *_stats
 -- functions; sorting is whitelisted inside each function with CASE.
--- disbursements_stats() reads a materialized view that its loader refreshes,
--- because the queries behind it are too slow to run per request.
+-- disbursements_stats(chamber) reads a materialized view, one row per
+-- chamber, that both chambers' loaders refresh, because the queries behind
+-- it are too slow to run per request.
 
 --
 -- PostgreSQL database dump
@@ -258,12 +259,12 @@ $$;
 
 
 --
--- Name: disbursements_stats(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: disbursements_stats(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.disbursements_stats() RETURNS jsonb
+CREATE FUNCTION public.disbursements_stats(filter_chamber text) RETURNS jsonb
     LANGUAGE sql STABLE
-    AS $$ SELECT data FROM disbursements_stats_mv $$;
+    AS $$ SELECT data FROM disbursements_chamber_stats_mv WHERE chamber = filter_chamber $$;
 
 
 --
@@ -1335,10 +1336,10 @@ ALTER TABLE ONLY public.disbursements ALTER COLUMN tsv SET (pg_attver=1404510616
 
 
 --
--- Name: disbursements_stats_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
+-- Name: disbursements_chamber_stats_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
 --
 
-CREATE MATERIALIZED VIEW public.disbursements_stats_mv AS
+CREATE MATERIALIZED VIEW public.disbursements_chamber_stats_mv AS
  WITH g AS (
          SELECT disbursements.chamber,
             disbursements.period_start,
@@ -1348,37 +1349,56 @@ CREATE MATERIALIZED VIEW public.disbursements_stats_mv AS
             sum(disbursements.amount) AS amount
            FROM public.disbursements
           GROUP BY disbursements.chamber, disbursements.period_start, disbursements.period_end, disbursements.category
+        ), p AS (
+         SELECT r.chamber,
+            r.payee,
+            r.count,
+            r.amount
+           FROM ( SELECT disbursements.chamber,
+                    disbursements.payee,
+                    count(*) AS count,
+                    sum(disbursements.amount) AS amount,
+                    row_number() OVER (PARTITION BY disbursements.chamber ORDER BY (sum(disbursements.amount)) DESC, disbursements.payee) AS rank
+                   FROM public.disbursements
+                  WHERE (disbursements.payee IS NOT NULL)
+                  GROUP BY disbursements.chamber, disbursements.payee) r
+          WHERE (r.rank <= 25)
+        ), o AS (
+         SELECT DISTINCT disbursements.chamber,
+            disbursements.office
+           FROM public.disbursements
         )
- SELECT 1 AS id,
-    jsonb_build_object('total', ( SELECT sum(g.count) AS sum
-           FROM g), 'amount', ( SELECT sum(g.amount) AS sum
-           FROM g), 'period_range', ( SELECT jsonb_build_object('min', min(g.period_start), 'max', max(g.period_end)) AS jsonb_build_object
-           FROM g), 'by_period', ( SELECT COALESCE(jsonb_agg(row_to_json(s.*) ORDER BY s.period_start, s.chamber), '[]'::jsonb) AS "coalesce"
+ SELECT chamber,
+    jsonb_build_object('chamber', chamber, 'total', ( SELECT sum(g.count) AS sum
+           FROM g
+          WHERE (g.chamber = c.chamber)), 'amount', ( SELECT sum(g.amount) AS sum
+           FROM g
+          WHERE (g.chamber = c.chamber)), 'period_range', ( SELECT jsonb_build_object('min', min(g.period_start), 'max', max(g.period_end)) AS jsonb_build_object
+           FROM g
+          WHERE (g.chamber = c.chamber)), 'by_period', ( SELECT COALESCE(jsonb_agg(row_to_json(s.*) ORDER BY s.period_start), '[]'::jsonb) AS "coalesce"
            FROM ( SELECT g.chamber,
                     g.period_start,
                     g.period_end,
                     sum(g.count) AS count,
                     sum(g.amount) AS amount
                    FROM g
+                  WHERE (g.chamber = c.chamber)
                   GROUP BY g.chamber, g.period_start, g.period_end) s), 'by_category', ( SELECT COALESCE(jsonb_agg(row_to_json(s.*) ORDER BY s.amount DESC), '[]'::jsonb) AS "coalesce"
            FROM ( SELECT g.category,
                     sum(g.count) AS count,
                     sum(g.amount) AS amount
                    FROM g
-                  GROUP BY g.category) s), 'top_payees', ( SELECT COALESCE(jsonb_agg(row_to_json(s.*) ORDER BY s.amount DESC), '[]'::jsonb) AS "coalesce"
-           FROM ( SELECT disbursements.payee,
-                    count(*) AS count,
-                    sum(disbursements.amount) AS amount
-                   FROM public.disbursements
-                  WHERE (disbursements.payee IS NOT NULL)
-                  GROUP BY disbursements.payee
-                  ORDER BY (sum(disbursements.amount)) DESC
-                 LIMIT 25) s), 'office_list', ( SELECT COALESCE(jsonb_agg(s.office ORDER BY s.office), '[]'::jsonb) AS "coalesce"
-           FROM ( SELECT DISTINCT disbursements.office
-                   FROM public.disbursements) s)) AS data
+                  WHERE (g.chamber = c.chamber)
+                  GROUP BY g.category) s), 'top_payees', ( SELECT COALESCE(jsonb_agg(jsonb_build_object('payee', p.payee, 'count', p.count, 'amount', p.amount) ORDER BY p.amount DESC, p.payee), '[]'::jsonb) AS "coalesce"
+           FROM p
+          WHERE (p.chamber = c.chamber)), 'office_list', ( SELECT COALESCE(jsonb_agg(o.office ORDER BY o.office), '[]'::jsonb) AS "coalesce"
+           FROM o
+          WHERE (o.chamber = c.chamber))) AS data
+   FROM ( SELECT DISTINCT g.chamber
+           FROM g) c
   WITH NO DATA;
-ALTER TABLE ONLY public.disbursements_stats_mv ALTER COLUMN id SET (pg_attver=1404552888);
-ALTER TABLE ONLY public.disbursements_stats_mv ALTER COLUMN data SET (pg_attver=1404552888);
+ALTER TABLE ONLY public.disbursements_chamber_stats_mv ALTER COLUMN chamber SET (pg_attver=7384355416);
+ALTER TABLE ONLY public.disbursements_chamber_stats_mv ALTER COLUMN data SET (pg_attver=7384355416);
 
 
 --
@@ -1942,10 +1962,10 @@ ALTER TABLE ONLY public.trade_members
 
 
 --
--- Name: disbursements_stats_mv_id; Type: INDEX; Schema: public; Owner: -
+-- Name: disbursements_chamber_stats_mv_chamber; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX disbursements_stats_mv_id ON public.disbursements_stats_mv USING btree (id);
+CREATE UNIQUE INDEX disbursements_chamber_stats_mv_chamber ON public.disbursements_chamber_stats_mv USING btree (chamber);
 
 
 --

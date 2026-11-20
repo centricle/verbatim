@@ -2,11 +2,22 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { chamberPages } from './scripts/chamber-pages.mjs';
 
 export default defineConfig({
   root: 'public',
   envDir: resolve(__dirname),
-  plugins: [tailwindcss(), react()],
+  plugins: [
+    tailwindcss(),
+    react(),
+    // public/disbursements/index.html is the source of /disbursements/house/
+    // and /disbursements/senate/, not a page of its own (netlify.toml).
+    chamberPages({
+      template: resolve(__dirname, 'public/disbursements/index.html'),
+      dir: 'disbursements',
+      chambers: ['house', 'senate'],
+    }),
+  ],
   publicDir: resolve(__dirname, 'public/static'),
   build: {
     outDir: resolve(__dirname, 'dist'),

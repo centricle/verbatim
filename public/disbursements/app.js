@@ -17,38 +17,13 @@ function when(d) {
   return periodLabel(d.period_start, d.period_end, { short: true });
 }
 
-// The page shows one chamber at a time (the switch in the kicker; the House
-// when the chamber filter is empty). Copy that differs by chamber is marked
-// data-chamber in the HTML, and only the shown chamber's is visible. Set from
-// the URL before the first stats arrive, so a Senate link never flashes the
-// House's copy.
-const chamberOf = (value) => (value === 'senate' ? 'senate' : 'house');
-function showChamber(chamber) {
-  for (const el of document.querySelectorAll('[data-chamber]')) el.hidden = el.dataset.chamber !== chamber;
-  for (const a of document.querySelectorAll('[data-chamber-link]')) {
-    if (a.dataset.chamberLink === chamber) a.setAttribute('aria-current', 'page');
-    else a.removeAttribute('aria-current');
-  }
-  const all = document.querySelector('#filter-quarter option[value=""]');
-  if (all) all.textContent = chamber === 'senate' ? 'All half years' : 'All quarters';
-}
-showChamber(chamberOf(new URLSearchParams(location.search).get('chamber')));
-
-// The switch's links work as links: a new tab, or no script. A plain click is
-// a change of the hidden #filter-chamber instead, so it takes the explorer's
-// path (one history entry, the stats refetch, the period cleared) without
-// reloading the page. The copy swaps when the new stats arrive (onStats).
-const chamberInput = document.getElementById('filter-chamber');
-for (const a of document.querySelectorAll('[data-chamber-link]')) {
-  a.addEventListener('click', (e) => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    const value = a.dataset.chamberLink === 'senate' ? 'senate' : '';
-    if (chamberInput.value === value) return;
-    chamberInput.value = value;
-    chamberInput.dispatchEvent(new Event('change'));
-  });
-}
+// Each chamber has its own page, /disbursements/house/ and /senate/, built from
+// one source (scripts/chamber-pages.mjs). The build marks the page's own link
+// in the kicker's switch current, so the HTML says which chamber this is and
+// every request asks for that one.
+const CHAMBER = document.querySelector('[data-chamber-link][aria-current="page"]')?.dataset.chamberLink === 'senate'
+  ? 'senate'
+  : 'house';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthYear = (iso) => `${MONTHS[Number(String(iso).slice(5, 7)) - 1]} ${String(iso).slice(0, 4)}`;
@@ -138,14 +113,10 @@ const charts = Promise.all([
 createExplorer({
   prefix: 'disbursements',
   endpoint: '/api/disbursements',
-  filters: ['chamber', 'quarter', 'category', 'office'],
-  // The stats are one chamber's, so a chamber change refetches them, and
-  // clears a period, category or office the other chamber does not have.
-  statsKeys: ['chamber'],
-  // A Senate half year and a House quarter that start on the same day share
-  // a key (2023q2: April to September, or April to June), so the period
-  // would survive the switch and quietly mean something else.
-  clears: { chamber: ['quarter'] },
+  filters: ['quarter', 'category', 'office'],
+  // The page's chamber, on every search and stats request. It is the page's
+  // address, so never a filter in its query string.
+  fixed: { chamber: CHAMBER },
   // Date and Amount, the two orders search_disbursements takes.
   sort: { default: 'date' },
   noun: 'rows',
@@ -180,11 +151,9 @@ createExplorer({
     // combobox's list.
     office: (stats.office_list || []).map((o) => [o, o]),
   }),
-  onStats: (stats, params) => {
-    const chamber = chamberOf(params.chamber);
-    showChamber(chamber);
+  onStats: (stats) => {
     // The dek's reach, read off the data so it never goes stale in the HTML.
-    const reach = document.querySelector(`[data-chamber="${chamber}"] .disbursements-reach`);
+    const reach = document.querySelector('.disbursements-reach');
     const range = stats.period_range;
     if (reach && stats.total && range?.min) {
       reach.textContent = ` ${Number(stats.total).toLocaleString()} rows, ${monthYear(range.min)} to ${monthYear(range.max)}.`;

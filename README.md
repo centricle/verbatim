@@ -22,7 +22,7 @@ searchable, filterable and charted, with nothing added.
 | [`/crashes/`](https://verbatim.fyi/crashes/) | Crash reports filed with NHTSA under Standing General Order 2021-01 for vehicles with automated driving systems or Level 2 driver assistance |
 | [`/executive/`](https://verbatim.fyi/executive/) | Executive orders and proclamations published in the Federal Register since 1994, with the Federal Register’s disposition notes |
 | [`/clemency/`](https://verbatim.fyi/clemency/) | Pardons and commutations on the Justice Department’s clemency recipient lists, Richard Nixon to the present |
-| [`/disbursements/`](https://verbatim.fyi/disbursements/) | The House Statement of Disbursements detail files, quarter by quarter since 2016: payee, description, office, category and amount as published |
+| [`/disbursements/`](https://verbatim.fyi/disbursements/house/) | The House Statement of Disbursements detail files, quarter by quarter since 2016: payee, description, office, category and amount as published |
 | [`/vs/`](https://verbatim.fyi/vs/) | Vs.: two historical speakers on one topic, quoted side by side |
 
 The data explorers each have full-text search, filters, charts and a

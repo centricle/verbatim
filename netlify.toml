@@ -13,3 +13,13 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# Each chamber's report has its own page (/disbursements/house/, /senate/),
+# both built from public/disbursements/index.html. The old address, and the
+# query strings of links to it, go to the House's, which it always was.
+# force: in dev, Vite serves the unbuilt source at /disbursements/.
+[[redirects]]
+  from = "/disbursements/"
+  to = "/disbursements/house/"
+  status = 301
+  force = true

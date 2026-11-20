@@ -1,21 +1,32 @@
 <!DOCTYPE html>
+<!-- The source of two pages, /disbursements/house/ and /disbursements/senate/.
+     Copy marked data-chamber appears only on that chamber's page; the build
+     removes the other's (scripts/chamber-pages.mjs). Unmarked copy is on both. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Congressional Disbursements — Verbatim</title>
-  <meta name="description" content="The U.S. House Statement of Disbursements since January 2016 and the Report of the Secretary of the Senate since April 2011, as each chamber publishes them: payee, description, office, category and amount. Search payees and descriptions in either chamber; filter by period and category.">
+  <title data-chamber="house">House Disbursements — Verbatim</title>
+  <title data-chamber="senate">Senate Disbursements — Verbatim</title>
+  <meta name="description" data-chamber="house" content="The U.S. House Statement of Disbursements since January 2016, as the House publishes it: payee, description, office, category and amount. Search payees and descriptions; filter by period, category and office.">
+  <meta name="description" data-chamber="senate" content="The Report of the Secretary of the Senate since April 2011, as the Senate publishes it: payee, description, office, class of spending and amount. Search payees and descriptions; filter by period, class and office.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://verbatim.fyi/og/disbursements.webp">
+  <meta property="og:image" data-chamber="house" content="https://verbatim.fyi/og/disbursements-house.webp">
+  <meta property="og:image" data-chamber="senate" content="https://verbatim.fyi/og/disbursements-senate.webp">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="Verbatim">
-  <meta property="og:title" content="Congressional Disbursements — Verbatim">
-  <meta property="og:description" content="The U.S. House Statement of Disbursements since January 2016 and the Report of the Secretary of the Senate since April 2011, as each chamber publishes them: payee, description, office, category and amount. Search payees and descriptions in either chamber; filter by period and category.">
-  <meta property="og:url" content="https://verbatim.fyi/disbursements/">
+  <meta property="og:title" data-chamber="house" content="House Disbursements — Verbatim">
+  <meta property="og:title" data-chamber="senate" content="Senate Disbursements — Verbatim">
+  <meta property="og:description" data-chamber="house" content="The U.S. House Statement of Disbursements since January 2016, as the House publishes it: payee, description, office, category and amount. Search payees and descriptions; filter by period, category and office.">
+  <meta property="og:description" data-chamber="senate" content="The Report of the Secretary of the Senate since April 2011, as the Senate publishes it: payee, description, office, class of spending and amount. Search payees and descriptions; filter by period, class and office.">
+  <meta property="og:url" data-chamber="house" content="https://verbatim.fyi/disbursements/house/">
+  <meta property="og:url" data-chamber="senate" content="https://verbatim.fyi/disbursements/senate/">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://verbatim.fyi/og/disbursements.webp">
-  <link rel="canonical" href="https://verbatim.fyi/disbursements/">
+  <meta name="twitter:image" data-chamber="house" content="https://verbatim.fyi/og/disbursements-house.webp">
+  <meta name="twitter:image" data-chamber="senate" content="https://verbatim.fyi/og/disbursements-senate.webp">
+  <link rel="canonical" data-chamber="house" href="https://verbatim.fyi/disbursements/house/">
+  <link rel="canonical" data-chamber="senate" href="https://verbatim.fyi/disbursements/senate/">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="/apple-touch-icon.png" sizes="180x180">
@@ -59,7 +70,7 @@
               <a href="/crashes/" class="nav-link">Crashes</a>
               <a href="/executive/" class="nav-link">Executive Orders</a>
               <a href="/clemency/" class="nav-link">Clemency</a>
-              <a href="/disbursements/" class="nav-link" aria-current="page">Disbursements</a>
+              <a href="/disbursements/house/" class="nav-link" aria-current="page">Disbursements</a>
             </div>
           </details>
           <a href="/about.html" class="nav-link">About</a>
@@ -88,7 +99,7 @@
           <a href="/crashes/" class="nav-link">Crashes</a>
           <a href="/executive/" class="nav-link">Executive Orders</a>
           <a href="/clemency/" class="nav-link">Clemency</a>
-          <a href="/disbursements/" class="nav-link" aria-current="page">Disbursements</a>
+          <a href="/disbursements/house/" class="nav-link" aria-current="page">Disbursements</a>
         </div>
         <a href="/about.html" class="nav-link">About</a>
       </nav>
@@ -99,13 +110,13 @@
     <article>
       <!-- Story header: headline, dek, credit -->
       <header class="story-head page-wrap">
-        <!-- The chamber is which report the page shows, not a filter on one, so it
-             is chosen here, above all the copy it changes. Links, so ?chamber=senate
-             works without the script; app.js makes a click a #filter-chamber change. -->
+        <!-- The chamber is which report the page shows, not a filter on one, so
+             each has its own page and the switch is above all the copy it changes.
+             The build marks this page's own link current. -->
         <nav class="kicker chamber-switch" aria-label="Chamber">
-          <a href="/disbursements/" data-chamber-link="house" aria-current="page">House</a>
+          <a href="/disbursements/house/" data-chamber-link="house">House</a>
           <span aria-hidden="true">·</span>
-          <a href="/disbursements/?chamber=senate" data-chamber-link="senate">Senate</a>
+          <a href="/disbursements/senate/" data-chamber-link="senate">Senate</a>
         </nav>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-7">
           <h1 class="headline md:col-span-10">Congressional Disbursements</h1>
@@ -121,7 +132,7 @@
               for each office.<span class="disbursements-reach"></span>
             </p>
           </div>
-          <div class="md:col-span-7 md:row-start-2" data-chamber="senate" hidden>
+          <div class="md:col-span-7 md:row-start-2" data-chamber="senate">
             <p class="dek">
               Twice a year the Secretary of the Senate publishes the expenditures of every senator’s office,
               committee and Senate office: payee, description, dates and amount, line by line.
@@ -137,7 +148,7 @@
             <p class="byline credit">
               <span class="byline-role">Data</span>
               <span class="byline-source" data-chamber="house">U.S. House of Representatives, Chief Administrative Officer</span>
-              <span class="byline-source" data-chamber="senate" hidden>Secretary of the Senate</span>
+              <span class="byline-source" data-chamber="senate">Secretary of the Senate</span>
             </p>
             <details class="note" data-chamber="house">
               <summary>How the House reports them</summary>
@@ -152,7 +163,7 @@
                 </ul>
               </div>
             </details>
-            <details class="note" data-chamber="senate" hidden>
+            <details class="note" data-chamber="senate">
               <summary>How the Senate reports them</summary>
               <div class="note-body">
                 <ul class="note-list">
@@ -177,20 +188,20 @@
           <figure class="figure figure--wide">
             <figcaption class="figure-head">
               <span class="figure-num">Figure 1</span>
-              <span class="figure-title" data-chamber="house">Amount by quarter</span><span class="figure-title" data-chamber="senate" hidden>Amount by half year</span>
-              <span class="figure-caption" data-chamber="house">The sum of every row in each quarter, staff pay at its subtotals. Select a bar to filter the appendix to that quarter.</span><span class="figure-caption" data-chamber="senate" hidden>The sum of every row in each half year the Senate reports, April to September and October to March, staff pay at its subtotals. Select a bar to filter the appendix to that half year.</span>
+              <span class="figure-title" data-chamber="house">Amount by quarter</span><span class="figure-title" data-chamber="senate">Amount by half year</span>
+              <span class="figure-caption" data-chamber="house">The sum of every row in each quarter, staff pay at its subtotals. Select a bar to filter the appendix to that quarter.</span><span class="figure-caption" data-chamber="senate">The sum of every row in each half year the Senate reports, April to September and October to March, staff pay at its subtotals. Select a bar to filter the appendix to that half year.</span>
             </figcaption>
             <div id="viz-by-quarter" role="img" aria-label="Figure 1: amount disbursed by reporting period" class="figure-plot"></div>
-            <p class="figure-source"><span class="byline-role">Source</span><span class="byline-source" data-chamber="house">House Statement of Disbursements</span><span class="byline-source" data-chamber="senate" hidden>Report of the Secretary of the Senate</span></p>
+            <p class="figure-source"><span class="byline-role">Source</span><span class="byline-source" data-chamber="house">House Statement of Disbursements</span><span class="byline-source" data-chamber="senate">Report of the Secretary of the Senate</span></p>
           </figure>
           <figure class="figure">
             <figcaption class="figure-head">
               <span class="figure-num">Figure 2</span>
               <span class="figure-title">Amount by category</span>
-              <span class="figure-caption" data-chamber="house">The sum of every row in each category the House reports, all quarters. Select a bar to filter the appendix to that category.</span><span class="figure-caption" data-chamber="senate" hidden>The sum of every row in each class of spending the Senate reports, all half years. Rows with no class, charges and their reversals that net to $0, are left out. Select a bar to filter the appendix to that class.</span>
+              <span class="figure-caption" data-chamber="house">The sum of every row in each category the House reports, all quarters. Select a bar to filter the appendix to that category.</span><span class="figure-caption" data-chamber="senate">The sum of every row in each class of spending the Senate reports, all half years. Rows with no class, charges and their reversals that net to $0, are left out. Select a bar to filter the appendix to that class.</span>
             </figcaption>
             <div id="viz-by-category" role="img" aria-label="Figure 2: amount by category, largest first" class="figure-plot"></div>
-            <p class="figure-source"><span class="byline-role">Source</span><span class="byline-source" data-chamber="house">House Statement of Disbursements</span><span class="byline-source" data-chamber="senate" hidden>Report of the Secretary of the Senate</span></p>
+            <p class="figure-source"><span class="byline-role">Source</span><span class="byline-source" data-chamber="house">House Statement of Disbursements</span><span class="byline-source" data-chamber="senate">Report of the Secretary of the Senate</span></p>
           </figure>
           <figure class="figure">
             <figcaption class="figure-head">
@@ -199,7 +210,7 @@
               <span class="figure-caption">The 25 payee names with the largest sums in the chamber shown, all periods, as published. Spellings of one vendor are not combined. Rows with no payee are left out.</span>
             </figcaption>
             <div id="viz-top-payees" role="img" aria-label="Figure 3: the 25 payees with the largest sums" class="figure-plot"></div>
-            <p class="figure-source"><span class="byline-role">Source</span><span class="byline-source" data-chamber="house">House Statement of Disbursements</span><span class="byline-source" data-chamber="senate" hidden>Report of the Secretary of the Senate</span></p>
+            <p class="figure-source"><span class="byline-role">Source</span><span class="byline-source" data-chamber="house">House Statement of Disbursements</span><span class="byline-source" data-chamber="senate">Report of the Secretary of the Senate</span></p>
           </figure>
         </div>
       </section>
@@ -218,10 +229,9 @@
               <input type="text" id="disbursements-search" aria-label="Search disbursements" placeholder="Search payees, descriptions, offices…"
                 class="field field--search w-full">
             </div>
-            <!-- The chamber filter's value, set by the switch in the kicker. Empty is the House. -->
-            <input type="hidden" id="filter-chamber">
             <select id="filter-quarter" aria-label="Filter by period" class="field flex-1 md:flex-none">
-              <option value="">All quarters</option>
+              <option value="" data-chamber="house">All quarters</option>
+              <option value="" data-chamber="senate">All half years</option>
             </select>
             <select id="filter-category" aria-label="Filter by category" class="field flex-1 md:flex-none max-w-full md:w-56">
               <option value="">All categories</option>

@@ -175,10 +175,9 @@ async function getJson(url, signal) {
  *                                mount must reuse its container's root (src/viz/mount.js).
  * @param {string[]} [cfg.statsKeys] Filter keys also sent with `?action=stats`. Changing
  *                                one refetches stats (comment at the top of this file).
- * @param {Record<string, string[]>} [cfg.clears] Filters cleared whenever the named one
- *                                changes, for values both lists hold that mean different
- *                                things (disbursements: 2023q2 is a House quarter and a
- *                                Senate half year).
+ * @param {Record<string, string>} [cfg.fixed] Params sent with every search and stats
+ *                                request and never put in the URL: what the page's
+ *                                address already says (disbursements' chamber, a page each).
  * @param {(stats: object, params: Record<string, string>) => void} [cfg.onStats]
  *                                Called with each stats answer and the filters it was
  *                                asked with, before the charts: page copy read off the
@@ -336,7 +335,7 @@ export function createExplorer(cfg) {
     const controller = new AbortController();
     inFlight = controller;
 
-    const params = {};
+    const params = { ...cfg.fixed };
     for (const key of keys) params[key] = state[key];
     Object.assign(params, pageParams(state.page, PAGE_SIZE));
 
@@ -465,7 +464,7 @@ export function createExplorer(cfg) {
     for (const [key, pairs] of Object.entries(lists)) {
       if (boxes[key]) {
         boxes[key].setOptions(pairs);
-        // A House office on the Senate's list, and back (disbursements).
+        // A value the refetched list no longer holds (one chamber's member).
         if (refetch && state[key] && !pairs.some(([value]) => value === state[key])) cleared[key] = '';
         continue;
       }
@@ -496,7 +495,7 @@ export function createExplorer(cfg) {
   // so the selects never wait on the React + D3 chunk. Asking again for the
   // stats already asked for does nothing.
   function loadStats() {
-    const params = { action: 'stats' };
+    const params = { action: 'stats', ...cfg.fixed };
     for (const key of statsKeys) if (state[key]) params[key] = state[key];
     const query = new URLSearchParams(params).toString();
     if (query === statsQuery) return;
@@ -553,7 +552,7 @@ export function createExplorer(cfg) {
     // the search.
     control.addEventListener('change', () => {
       const value = control.value.trim();
-      if (value !== state[key]) commit({ [key]: value, page: 1, ...Object.fromEntries((cfg.clears?.[key] ?? []).map((k) => [k, ''])) });
+      if (value !== state[key]) commit({ [key]: value, page: 1 });
     });
   }
   prevBtn.addEventListener('click', () => {

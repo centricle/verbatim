@@ -793,8 +793,6 @@
   .combobox .field-clear { right: 1.65rem; }
   .field-clear:hover, .combobox-toggle:hover { color: var(--color-ink); }
   .field-clear[hidden], .combobox-list[hidden] { display: none; }
-  /* Copy for the chamber not shown (/disbursements/), whatever display its class sets. */
-  [data-chamber][hidden] { display: none; }
   .combobox-toggle svg { transition: transform 0.15s; }
   .combobox.is-open .combobox-toggle svg { transform: rotate(180deg); }
   .combobox.is-open .field { border-color: var(--color-ink); }

@@ -70,8 +70,8 @@ function senateDetail(d) {
   const how = x.from_summary
     ? 'From the office’s summary: the report charges this amount to the class without a total in its lines'
     : x.unitemized
-      ? 'A subtotal the report prints with no lines above it'
-      : d.row_kind === 'subtotal' ? 'A subtotal the report prints for the lines above it'
+      ? 'A subtotal in the report with no lines above it'
+      : d.row_kind === 'subtotal' ? 'A subtotal in the report for the lines above it'
         : x.no_document_line ? 'A later line of a document whose first line is not in the report’s text' : '';
   return fieldList([
     ['Program', d.program],
@@ -82,9 +82,9 @@ function senateDetail(d) {
     ['Document number', d.document],
     ['Line of the document', x.doc_line && `Line ${x.doc_line}, continuing the line above`],
     ['Obligation or service dates', span(d.start_date, d.end_date)],
-    ['Dates as printed', asFiled],
+    ['Dates as published', asFiled],
     ['Row', how],
-    ['Read from', x.ocr && 'An image of the page (the report gives this page no text): read by OCR, checked by eye and against the totals the report prints'],
+    ['Read from', x.ocr && 'An image of the page (the report gives this page no text): read by OCR, checked by eye and against the report’s own totals'],
     ['Source', html`<a href="${d.source_ref}" class="text-link" target="_blank" rel="noopener">Senate report, page ${x.page_label ?? x.page}</a>`],
   ]);
 }
@@ -96,7 +96,7 @@ const SENATE_DATE_COLUMNS = {
 };
 
 // The row in full: first the three columns the table clips, then every other
-// field the House files for the row, under the House's own column names.
+// field the House publishes for the row, under the House's own column names.
 function detail(d) {
   if (d.chamber === 'senate') return senateDetail(d);
   const x = d.extras || {};
@@ -111,7 +111,7 @@ function detail(d) {
     ['Fiscal year or legislative year', d.funding_year],
     ['Document', d.document],
     ['Performance period', span(d.start_date, d.end_date)],
-    ['Dates as filed', asFiled],
+    ['Dates as published', asFiled],
     ['Vendor ID', x.vendor_id],
     ['Organization code', x.org_code],
     ['Program code', x.program_code],
@@ -194,7 +194,7 @@ createExplorer({
     const [{ mountDisbursementsByQuarter }, { mountRankedBars }] = await charts;
     mountDisbursementsByQuarter(document.getElementById('viz-by-quarter'), stats, opts);
     // Rows with no category are left out, as the Senate caption says: charges
-    // and their reversals the Senate prints under no class (senate-parse.mjs),
+    // and their reversals the Senate lists under no class (senate-parse.mjs),
     // netting to $0. Drawn, they were a $0 bar named "null". The House has none.
     mountRankedBars(document.getElementById('viz-by-category'), (stats.by_category || []).filter((c) => c.category), {
       label: 'category', value: 'amount', noun: '', filterKey: 'category',

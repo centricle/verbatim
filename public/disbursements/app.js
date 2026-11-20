@@ -193,7 +193,10 @@ createExplorer({
   charts: async (stats, opts) => {
     const [{ mountDisbursementsByQuarter }, { mountRankedBars }] = await charts;
     mountDisbursementsByQuarter(document.getElementById('viz-by-quarter'), stats, opts);
-    mountRankedBars(document.getElementById('viz-by-category'), stats.by_category || [], {
+    // Rows with no category are left out, as the Senate caption says: charges
+    // and their reversals the Senate prints under no class (senate-parse.mjs),
+    // netting to $0. Drawn, they were a $0 bar named "null". The House has none.
+    mountRankedBars(document.getElementById('viz-by-category'), (stats.by_category || []).filter((c) => c.category), {
       label: 'category', value: 'amount', noun: '', filterKey: 'category',
       onFilter: opts.onFilter, format: moneyShort, exact: moneyExact,
     });

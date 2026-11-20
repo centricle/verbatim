@@ -16,7 +16,8 @@
     "clemency": "node --env-file-if-exists=.env scripts/clemency/cli.mjs",
     "disbursements": "node --env-file-if-exists=.env scripts/disbursements/cli.mjs",
     "trades": "node --env-file-if-exists=.env scripts/trades/cli.mjs",
-    "legacy": "node scripts/legacy/cli.mjs"
+    "legacy": "node scripts/legacy/cli.mjs",
+    "backup": "node --env-file-if-exists=.env scripts/backup/cli.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

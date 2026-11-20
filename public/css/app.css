@@ -499,11 +499,12 @@
   }
   .story-head .kicker { margin-bottom: 0.9rem; }
   /* The chamber switch (/disbursements/): the kicker names both chambers and
-     marks the one shown with a 2px rule, as the masthead marks the current
-     page. The padding makes each a 24px target at kicker size; the negative
-     margin keeps it from moving the headline. The rule is an underline, not
-     the masthead's inset shadow, so it sits by the word instead of at the
-     padding's edge, against the headline's caps. */
+     marks the one shown with a 2px underline. The masthead marks its current
+     page by ink alone, but this is a two-way toggle in kicker type, where ink
+     against dim is too faint to read as state. The padding makes each a 24px
+     target at kicker size; the negative margin keeps it from moving the
+     headline. An underline rather than an inset shadow, so the rule sits by
+     the word instead of at the padding's edge, against the headline's caps. */
   .chamber-switch { display: flex; align-items: center; gap: 0.6rem; color: var(--color-ink-dim); }
   .chamber-switch a {
     color: var(--color-ink-dim);

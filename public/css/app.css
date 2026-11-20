@@ -737,7 +737,9 @@
     letter-spacing: -0.02em;
   }
   .field {
-    background: var(--color-ground);
+    /* background-color, not the shorthand: the shorthand resets the select
+       rule's chevron (background-image) to none, and every select lost it. */
+    background-color: var(--color-ground);
     border: 1px solid var(--color-rule);
     border-radius: 0;
     color: var(--color-ink);

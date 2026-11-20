@@ -307,6 +307,7 @@ test('money and dates as the report prints them', () => {
   assert.equal(isoDate('12/16/2025'), '2025-12-16');
   assert.equal(isoDate('02/30/2026'), undefined);
   assert.equal(isoDate('2025-12-16'), undefined);
+  assert.equal(isoDate('10/11/0211'), undefined, 'a year the report cannot mean');
 });
 
 test('readPages reads pdftotext -bbox-layout output', () => {

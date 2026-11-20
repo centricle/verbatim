@@ -498,6 +498,27 @@
     padding-bottom: clamp(1.6rem, 3vw, 2.4rem);
   }
   .story-head .kicker { margin-bottom: 0.9rem; }
+  /* The chamber switch (/disbursements/): the kicker names both chambers and
+     marks the one shown with a 2px rule, as the masthead marks the current
+     page. The padding makes each a 24px target at kicker size; the negative
+     margin keeps it from moving the headline. The rule is an underline, not
+     the masthead's inset shadow, so it sits by the word instead of at the
+     padding's edge, against the headline's caps. */
+  .chamber-switch { display: flex; align-items: center; gap: 0.6rem; color: var(--color-ink-dim); }
+  .chamber-switch a {
+    color: var(--color-ink-dim);
+    text-decoration: none;
+    padding-block: 0.45rem;
+    margin-block: -0.45rem;
+    transition: color 0.15s;
+  }
+  .chamber-switch a:hover { color: var(--color-ink); }
+  .chamber-switch a[aria-current="page"] {
+    color: var(--color-ink);
+    text-decoration-line: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.5em;
+  }
 
   .note {
     border-top: 1px solid var(--color-rule);

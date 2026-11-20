@@ -3,7 +3,7 @@
 // are drawn as empty periods, not skipped, so the axis is true time.
 // Selecting a bar sets the period filter.
 //
-// The stats follow the chamber select, so the periods are one chamber's: the
+// The stats follow the chamber switch, so the periods are one chamber's: the
 // House's calendar quarters or the Senate's half years (April to September,
 // October to March). The period length is read off the data, never mixed on
 // one axis.

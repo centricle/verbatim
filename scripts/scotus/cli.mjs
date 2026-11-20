@@ -16,7 +16,8 @@
 //       tmp/scotus/raw/cl/slices/*.scotus.csv.zst, byte for byte.
 //   npm run scotus -- archive [source...] [--dry-run]
 //       Copy each source to the private R2 bucket under verbatim/scotus/ and
-//       verify every file by MD5 (scripts/lib/archive.mjs).
+//       verify every file by MD5 (scripts/lib/archive.mjs). Bound volumes and
+//       transcripts stay off R2 (the archive section says why).
 //
 // Every file lands in tmp/scotus/raw/<source>/ with a manifest.json entry:
 // url, bytes, sha256, fetchedAt, Last-Modified, ETag. A rerun skips a file
@@ -33,7 +34,8 @@ import { join } from 'node:path';
 import { archiveCommand, entry, hashFile, localDate } from '../lib/archive.mjs';
 import {
   BOUND_NEW, BOUND_SAMPLE, CAP, CAP_BASE, CL_BASE, CL_SLICED, CL_SNAPSHOT, CL_WHOLE, COURT,
-  FIRST_PRELIM, FIRST_SLIP_TERM, FIRST_TRANSCRIPT_TERM, FJC_PAGE, SCDB_FILES, SCDB_PAGE, US_REPORTS_PAGE,
+  FIRST_PRELIM, FIRST_SLIP_TERM, FIRST_TRANSCRIPT_TERM, FJC_PAGE, LAST_ARCHIVED_TERM, SCDB_FILES, SCDB_PAGE,
+  TRANSCRIPT_SCAN_SAMPLE, US_REPORTS_PAGE,
   currentTerm, ordersPage, range, rawDir, sliceName, slipPage, transcriptPage,
 } from './sources.mjs';
 import { collisions, links, localName, pdfLinks, usReportsVolumes } from './links.mjs';
@@ -124,6 +126,7 @@ const DISCOVER = {
   async transcripts(src) {
     const out = [];
     for (const term of range(FIRST_TRANSCRIPT_TERM, currentTerm())) {
+      if (term <= LAST_ARCHIVED_TERM && !TRANSCRIPT_SCAN_SAMPLE.includes(term)) continue;
       const p = transcriptPage(term);
       const html = await page(src, p);
       if (!html) continue;
@@ -338,9 +341,20 @@ async function filterCl() {
 // - CourtListener under its snapshot date: the whole tables and the slices,
 //   never the all-court originals (the manifest keeps their URLs and sha256).
 // - manifest.json files are replaceable: they grow as files are added.
+//
+// R2 holds only what a publisher may stop serving or edit in place (ksmith,
+// 2026-11-20; the free tier is 10 GB for the whole account). So:
+// - bound volumes stay off R2: the Court serves them unchanged and they are
+//   2.1 GB. The copies uploaded before the rule are removed from R2 once the
+//   HDD mirror (npm run backup -- mirror) holds them verified; until then
+//   archive lists them as extra.
+// - transcripts are not archived until the design gate decides whether oral
+//   arguments ship.
 
 const DATED = { 'court-pdf': /^(pages|slip|orders)\//, transcripts: /^pages\//, 'cap-us': /^pages\//, 'cap-sct': /^pages\//, fjc: /./ };
 const isManifest = (key) => key.endsWith('/manifest.json');
+
+const OFF_R2 = { 'court-pdf': /^bound\// };
 
 function manifestKeys(name, prefix) {
   return async () => {
@@ -348,6 +362,7 @@ function manifestKeys(name, prefix) {
     const dated = DATED[name];
     const out = [];
     for (const e of src.manifest) {
+      if (OFF_R2[name]?.test(e.file)) continue;
       const key = dated?.test(e.file) ? `${prefix}${localDate(e.fetchedAt)}/${e.file}` : `${prefix}${e.file}`;
       out.push(await entry(key, join(src.dir, e.file)));
     }
@@ -377,7 +392,7 @@ const ARCHIVE = {
       return out;
     },
   },
-  ...Object.fromEntries(['scdb', 'fjc', 'court-pdf', 'transcripts', 'cap-us', 'cap-sct'].map((name) => {
+  ...Object.fromEntries(['scdb', 'fjc', 'court-pdf', 'cap-us', 'cap-sct'].map((name) => {
     const prefix = `verbatim/scotus/${name}/`;
     return [name, { prefix, replaceable: isManifest, files: manifestKeys(name, prefix) }];
   })),
@@ -387,7 +402,14 @@ async function main([cmd, ...rest]) {
   switch (cmd) {
     case 'fetch': await fetchCmd(rest); break;
     case 'filter-cl': await filterCl(); break;
-    case 'archive': await archiveCommand(ARCHIVE, rest); break;
+    case 'archive':
+      if (rest.includes('transcripts')) {
+        console.error('archive: transcripts stay off R2 until the design gate decides whether oral arguments ship');
+        process.exitCode = 2;
+        break;
+      }
+      await archiveCommand(ARCHIVE, rest);
+      break;
     default:
       console.error('usage: cli.mjs fetch [source...] [--dry-run] | filter-cl | archive [source...] [--dry-run]');
       process.exitCode = 2;

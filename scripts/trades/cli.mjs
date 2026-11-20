@@ -47,7 +47,7 @@ import { filingId } from './senate.mjs';
 import { compare, efdRawRows } from './check.mjs';
 import { MEMBER_COLUMNS, FILING_COLUMNS, ROW_COLUMNS, selectList } from './columns.mjs';
 import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
-import { archive } from './archive.mjs';
+import { archiveCmd } from './archive.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let lastRequest = 0;
@@ -309,13 +309,6 @@ async function senateTargetsCmd(rest) {
   ];
   await save(mdPath, lines.join('\n'));
   console.log(`senate-targets: ${targets.length} filings, ${Object.entries(by((t) => t.state)).map(([k, n]) => `${n} ${k}`).join(', ')}; ${efd.targets}, ${mdPath}`);
-}
-
-async function archiveCmd(rest) {
-  const named = rest.filter((a) => a === 'house' || a === 'senate');
-  const failures = await archive({ dryRun: rest.includes('--dry-run'), ...(named.length && { sources: named }) });
-  for (const f of failures) console.log(`FAIL ${f}`);
-  if (failures.length) process.exitCode = 1;
 }
 
 async function main([cmd, ...rest]) {

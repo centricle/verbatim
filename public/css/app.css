@@ -932,6 +932,31 @@
   .cell-num { text-align: right; white-space: nowrap; }
   .record-table th.cell-num { text-align: right; }
   .record-table th:last-child, .record-table td:last-child { padding-right: 0; }
+
+  /* Sortable headings (explorer.js, cfg.sort): the heading is a button, and
+     its two arrows show the order in force, the one lit pointing the way the
+     column runs. A right-aligned heading puts them first, so its label keeps
+     the edge the numbers below it share. */
+  .sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  .sort-button:hover,
+  .record-table th[aria-sort] .sort-button { color: var(--color-ink); }
+  .record-table th.cell-num .sort-button { flex-direction: row-reverse; }
+  .sort-icon { width: 0.34rem; height: 0.56rem; flex: none; }
+  .sort-icon path { opacity: 0.3; }
+  .record-table th[aria-sort='ascending'] .sort-up,
+  .record-table th[aria-sort='descending'] .sort-down { opacity: 1; }
   .cell-code {
     font-family: var(--font-label);
     font-stretch: 87.5%;
@@ -1008,6 +1033,10 @@
       white-space: nowrap;
       border: 0;
     }
+    /* In the clipped thead a sort button would still take focus where nobody
+       can see it, so it is hidden here; its heading keeps the column name in
+       aria-label (explorer.js). No sorting below 768px (ksmith, 2026-11-19). */
+    .record-table .sort-button { visibility: hidden; }
     .record-table tbody tr {
       display: flex;
       flex-wrap: wrap;

@@ -194,23 +194,18 @@
               <input type="text" id="filter-office" data-combobox="office" aria-label="Filter by office" placeholder="All offices"
                 autocomplete="off" spellcheck="false" class="field w-full">
             </div>
-            <select id="filter-sortBy" aria-label="Order" class="field flex-1 md:flex-none">
-              <option value="">Newest first</option>
-              <option value="amount">Largest amount first</option>
-            </select>
           </form>
-          <!-- Results info -->
           <div id="disbursements-results-info" aria-live="polite" class="results-info mb-2"></div>
-          <!-- Results table -->
+          <!-- Results table. Date and Amount sort (data-sort, explorer.js). -->
           <div class="record-table-wrap">
             <table class="record-table">
               <thead>
                 <tr>
-                  <th scope="col">Date</th>
+                  <th scope="col" data-sort="date">Date</th>
                   <th scope="col">Payee</th>
                   <th scope="col">Office</th>
                   <th scope="col">Category</th>
-                  <th scope="col" class="cell-num">Amount</th>
+                  <th scope="col" class="cell-num" data-sort="amount">Amount</th>
                   <th scope="col">Program</th>
                 </tr>
               </thead>

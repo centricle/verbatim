@@ -44,10 +44,23 @@
 // exact count of a broad filter outlasts a function's 10 s). `total` is then
 // the cap, the count reads "10,000+", and paging stops at the cap's last page,
 // where the stored function stops too.
+//
+// A page with `cfg.sort` sorts from its column headings: each
+// `<th data-sort="<key>">` becomes a button, the order in force is its
+// `aria-sort`, and the state is two more URL and API params, `sortBy` (empty
+// for `cfg.sort.default`) and `sortDir` (empty for descending). A heading's
+// first click sorts it descending (newest, largest), the next flips it. It
+// replaced disbursements' order select (2026-11-19). Below 768px the headings
+// are clipped and the buttons hidden (app.css), so phones do not sort.
 
 import { CHEVRON, clearButton, combobox } from './combobox.js';
 
 const PAGE_SIZE = 50;
+
+// Two arrows, the lit one the way the sorted column runs (app.css).
+const SORT_ICON = '<svg class="sort-icon" viewBox="0 0 6 10" aria-hidden="true" focusable="false">'
+  + '<path class="sort-up" d="M3 0 6 4H0z" fill="currentColor"/>'
+  + '<path class="sort-down" d="M3 10 0 6h6z" fill="currentColor"/></svg>';
 
 // ---- Escaping -------------------------------------------------------------
 
@@ -139,6 +152,9 @@ async function getJson(url, signal) {
  *                                select, or an input such as a year), a URL param
  *                                and an API param of the same name.
  * @param {(row: object) => Markup} cfg.row  One `<tr>`, built with `html`.
+ * @param {{ default: string }} [cfg.sort] Sorting from the headings marked
+ *                                `data-sort` (top of this file). `default` is the key
+ *                                the endpoint sorts by when `sortBy` is empty.
  * @param {(row: object) => Markup} [cfg.detail] The row's detail, built with `html`
  *                                (`fieldList`). Adds the toggle column and the
  *                                full-width detail row (top of this file).
@@ -218,7 +234,25 @@ export function createExplorer(cfg) {
       toggleDetail(tr);
     });
   }
-  const keys = ['q', ...cfg.filters];
+  // Sortable headings (top of this file). The heading keeps its name in
+  // aria-label, because below 768px its button is hidden (app.css).
+  const sortHeads = cfg.sort
+    ? [...resultsBody.closest('table').tHead.querySelectorAll('th[data-sort]')]
+    : [];
+  for (const th of sortHeads) {
+    const label = th.textContent.trim();
+    th.setAttribute('aria-label', label);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'sort-button';
+    const text = document.createElement('span');
+    text.textContent = label;
+    button.append(text);
+    button.insertAdjacentHTML('beforeend', SORT_ICON);
+    button.addEventListener('click', () => sortOn(th.dataset.sort));
+    th.replaceChildren(button);
+  }
+  const keys = ['q', ...cfg.filters, ...(cfg.sort ? ['sortBy', 'sortDir'] : [])];
   const statsKeys = cfg.statsKeys ?? [];
   const pageParams = cfg.pageParams ?? ((page, pageSize) => ({ page, pageSize }));
 
@@ -269,7 +303,31 @@ export function createExplorer(cfg) {
     loadStats();
   }
 
+  // The order in force. A key no heading names (an edited URL) reads as the
+  // default.
+  function sorted() {
+    const by = sortHeads.some((th) => th.dataset.sort === state.sortBy) ? state.sortBy : cfg.sort.default;
+    return [by, state.sortDir === 'asc' ? 'asc' : 'desc'];
+  }
+
+  function showSort() {
+    if (!sortHeads.length) return;
+    const [by, dir] = sorted();
+    for (const th of sortHeads) {
+      if (th.dataset.sort === by) th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
+      else th.removeAttribute('aria-sort');
+    }
+  }
+
+  function sortOn(key) {
+    const [by, dir] = sorted();
+    const asc = key === by && dir === 'desc';
+    commit({ sortBy: key === cfg.sort.default ? '' : key, sortDir: asc ? 'asc' : '', page: 1 });
+  }
+
   async function search() {
+    // Every change of state ends here, the back button included.
+    showSort();
     inFlight?.abort();
     const controller = new AbortController();
     inFlight = controller;

@@ -72,7 +72,9 @@ const charts = Promise.all([
 createExplorer({
   prefix: 'disbursements',
   endpoint: '/api/disbursements',
-  filters: ['quarter', 'category', 'office', 'sortBy'],
+  filters: ['quarter', 'category', 'office'],
+  // Date and Amount, the two orders search_disbursements takes.
+  sort: { default: 'date' },
   noun: 'rows',
   emptyText: 'No rows match your filters.',
   errorText: 'Could not load rows. Try again.',

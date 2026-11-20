@@ -253,8 +253,12 @@ export async function archive(sources, { dryRun = false, names = Object.keys(sou
   return failures;
 }
 
-async function archiveSource(s, name, { prefix, files, replaceable = () => false, stage = stageFor(name), sha256 = false }, dryRun) {
+// A source: { prefix, files, replaceable?, stage?, sha256? }. prefix is what
+// the bucket is listed under (a string, or a function for a vintage whose
+// date is only known once the files are read); files() returns entries.
+async function archiveSource(s, name, { prefix: p, files, replaceable = () => false, stage = stageFor(name), sha256 = false }, dryRun) {
   const local = await files();
+  const prefix = typeof p === 'function' ? await p() : p;
   const before = plan(local, await listRemote(s, prefix), replaceable);
   const todo = [...before.upload, ...before.replace];
   console.log(`archive ${name}: ${local.length.toLocaleString()} local files (${mb(local)} MB); bucket ${s.bucket} already has ${before.same.toLocaleString()}, lacks ${before.upload.length.toLocaleString()}; ${before.replace.length} replaceable files changed; ${before.extra.length.toLocaleString()} archived under ${prefix} with no local copy`);

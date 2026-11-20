@@ -6,17 +6,29 @@
 //   npm run corpus -- check      compare raw, parsed and loaded records field by field
 //   npm run corpus -- sample N   N stratified random rows to tmp/corpus/sample.json
 //   npm run corpus -- terms      rebuild the /over-time/ term counts from the loaded rows
+//   npm run corpus -- archive [raw|rosters|build] [--dry-run]
+//                                copy to the private R2 bucket and verify every file by MD5
+//                                (scripts/lib/archive.mjs):
+//                                raw      tmp/corpus/raw/, the importers' downloads, to
+//                                         verbatim/corpus/raw/ (immutable)
+//                                rosters  tmp/contents/raw/, the roster pages rosters.json was
+//                                         transcribed from, to verbatim/corpus/rosters-raw/<date>/
+//                                build    corpus.db, release.jsonl and release-report.json to
+//                                         verbatim/corpus/<date>/, each with sha256 metadata, as
+//                                         the March original at verbatim/corpus/2026-03-21/ has
+//                                Dates are the newest file's modification date.
 //
 // The input is data/corpus/release.jsonl, written by build_release.py (Python,
 // same directory; check_release.py must pass first). This side never reads
 // corpus.db and never changes a value: what the release holds is decided
 // there, and this loads it.
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COLUMNS, LOAD_COLUMNS, parseRelease, siteRows } from './parse.mjs';
 import { compare, rawScan } from './check.mjs';
 import { withClient, inTransaction, insertBatches } from '../lib/db.mjs';
+import { REPO, archiveCommand, dirFiles, entry, latestDate, newestMtime } from '../lib/archive.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const RELEASE = resolve(process.env.CORPUS_DIR ?? resolve(ROOT, 'data/corpus'), 'release.jsonl');
@@ -112,6 +124,28 @@ async function sampleCmd(rest) {
   console.log(`${rows.length} rows to ${out}`);
 }
 
+const CORPUS_DIR = process.env.CORPUS_DIR ?? resolve(ROOT, 'data/corpus');
+const BUILD = ['corpus.db', 'release.jsonl', 'release-report.json'];
+const buildPrefix = async () => {
+  const stamps = await Promise.all(BUILD.map(async (f) => (await stat(resolve(CORPUS_DIR, f))).mtimeMs));
+  return `verbatim/corpus/${latestDate(stamps)}/`;
+};
+const ROSTERS_RAW = resolve(REPO, 'tmp/contents/raw');
+const rostersPrefix = async () => `verbatim/corpus/rosters-raw/${await newestMtime(ROSTERS_RAW)}/`;
+
+export const ARCHIVE = {
+  raw: { prefix: 'verbatim/corpus/raw/', files: () => dirFiles(resolve(REPO, 'tmp/corpus/raw'), 'verbatim/corpus/raw/', { keep: (rel) => !rel.includes('/') }) },
+  rosters: { prefix: rostersPrefix, files: async () => dirFiles(ROSTERS_RAW, await rostersPrefix(), { keep: (rel) => rel.endsWith('.html') }) },
+  build: {
+    prefix: buildPrefix,
+    sha256: true,
+    files: async () => {
+      const prefix = await buildPrefix();
+      return Promise.all(BUILD.map((f) => entry(prefix + f, resolve(CORPUS_DIR, f), { sha256: true })));
+    },
+  },
+};
+
 async function main(argv) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
@@ -120,8 +154,9 @@ async function main(argv) {
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
     case 'terms': await termsCmd(); break;
+    case 'archive': await archiveCommand(ARCHIVE, rest); break;
     default:
-      console.error('usage: cli.mjs schema|load|check [--table t]|sample N|terms');
+      console.error('usage: cli.mjs schema|load|check [--table t]|sample N|terms|archive [raw|rosters|build] [--dry-run]');
       process.exitCode = 2;
   }
 }

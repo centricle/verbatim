@@ -476,11 +476,6 @@
     color: var(--color-ink-dim);
     margin-right: 0.3em;
   }
-  .toc-entry--lead { padding-block: 1.6rem 1.9rem; border-bottom-color: var(--color-ink); }
-  .toc-entry--lead .toc-num { font-size: clamp(3rem, 1.8rem + 4vw, 5.4rem); }
-  .toc-entry--lead .toc-title { font-size: clamp(2.1rem, 1.3rem + 3vw, 3.5rem); }
-  .toc-entry--lead .toc-dek { font-size: 1.05rem; font-style: italic; }
-  .toc-entry--lead .byline-source { font-size: 1.25rem; }
   /* A part ends on white space, not a rule: the next part's head rule (or the
      footer's) does the closing. */
   .toc-entry:last-child { border-bottom: 0; }

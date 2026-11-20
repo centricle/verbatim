@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { plan } from '../lib/archive.mjs';
-import { localFiles, senateFiles, pdfKey, indexKey, isIndexKey, senatePageKey, senateIndexKey, isSenateIndexKey } from './archive.mjs';
+import { localFiles, senateFiles, stockWatcherFiles, pdfKey, indexKey, isIndexKey, senatePageKey, senateIndexKey, isSenateIndexKey, STOCK_WATCHER_PREFIX } from './archive.mjs';
 
 const md5 = (s) => createHash('md5').update(s).digest('hex');
 const file = (key, body) => ({ key, path: `/cache/${key}`, size: Buffer.byteLength(body), md5: md5(body) });
@@ -79,4 +79,15 @@ test('Senate: a changed ledger is replaced; a changed page is a conflict', () =>
   assert.deepEqual(p.replace.map((f) => f.key), [senateIndexKey('filings.json')]);
   assert.deepEqual(p.conflicts.map((f) => f.key), [senatePageKey(U)]);
   assert.deepEqual(plan(local, remote, isIndexKey).replace, [], 'the House predicate replaces no Senate key');
+});
+
+test('stockWatcherFiles takes the three all_*.json files and nothing else', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'archive-test-'));
+  try {
+    for (const n of ['all_transactions.json', 'all_daily_summaries.json', 'notes.txt', 'all_transactions.json.tmp']) await writeFile(join(dir, n), n);
+    const files = await stockWatcherFiles(dir);
+    assert.deepEqual(files.map((f) => f.key), [`${STOCK_WATCHER_PREFIX}all_daily_summaries.json`, `${STOCK_WATCHER_PREFIX}all_transactions.json`]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

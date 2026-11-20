@@ -16,9 +16,10 @@
 //   npm run trades -- check               raw vs parsed vs loaded, every column
 //   npm run trades -- sample N            N counted House rows spread across years,
 //                                         to tmp/trades/sample.json
-//   npm run trades -- archive [house|senate] [--dry-run]
-//                                         copy tmp/trades/house/ and the eFD pages,
-//                                         list and ledger to the private R2 bucket:
+//   npm run trades -- archive [house|senate|stock-watcher] [--dry-run]
+//                                         copy tmp/trades/house/, the eFD pages,
+//                                         list and ledger, and Senate Stock
+//                                         Watcher's JSON to the private R2 bucket:
 //                                         upload what it lacks, then verify every
 //                                         file by MD5 (archive.mjs)
 //   npm run trades -- senate-targets [--md P]  every filing eFD may destroy that we hold
@@ -333,7 +334,7 @@ async function main([cmd, ...rest]) {
       await archiveCmd([]);
       break;
     default:
-      console.error('usage: cli.mjs index|fetch|parse [--no-efd]|schema --target E|load --target E [--no-efd]|check [--no-efd]|sample N|archive [house|senate] [--dry-run]|senate-targets [--md P]|refresh --target E');
+      console.error('usage: cli.mjs index|fetch|parse [--no-efd]|schema --target E|load --target E [--no-efd]|check [--no-efd]|sample N|archive [house|senate|stock-watcher] [--dry-run]|senate-targets [--md P]|refresh --target E');
       process.exitCode = 2;
   }
 }

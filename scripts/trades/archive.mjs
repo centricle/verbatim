@@ -7,12 +7,16 @@
 //   and the ledger. eFD says it keeps reports six years after a senator
 //   leaves, and has already stopped serving Jeff Sessions' pages while still
 //   listing them.
+// - stock-watcher: Senate Stock Watcher's three JSON files in
+//   tmp/trades/carambat/raw/, the source of every Senate row through March
+//   2021. Frozen upstream since then, so immutable.
 //
 // Keys: verbatim/house-ptr/<Year>/<DocID>.pdf and
 // verbatim/house-ptr/index/<Year>FD.zip (Year is the index's Year column, the
 // folder the Clerk serves the PDF from, same as the local layout);
 // verbatim/senate-ptr/<uuid>.html, lowercase, and
-// verbatim/senate-ptr/index/{p<NN>,filings}.json.
+// verbatim/senate-ptr/index/{p<NN>,filings}.json;
+// verbatim/senate-stock-watcher/<file>.json.
 //
 // A filing (a PDF, a report page) is never replaced: a DocID or a UUID names
 // one filing. (eFD serves a page byte for byte the same on every fetch, so a
@@ -21,11 +25,12 @@
 // and the ledger keeps its own history.
 import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { archive as archiveSources, archiveCommand, entry } from '../lib/archive.mjs';
+import { archive as archiveSources, archiveCommand, dirFiles, entry } from '../lib/archive.mjs';
 import { RAW, efd } from './sources.mjs';
 
 export const PREFIX = 'verbatim/house-ptr/';
 export const SENATE_PREFIX = 'verbatim/senate-ptr/';
+export const STOCK_WATCHER_PREFIX = 'verbatim/senate-stock-watcher/';
 const HOUSE = resolve(RAW, 'house');
 const AWS_CONFIG = resolve(RAW, 'archive-aws.config');
 
@@ -73,9 +78,13 @@ export async function senateFiles(dir = efd.dir) {
   return out;
 }
 
+export const stockWatcherFiles = (dir = resolve(RAW, 'carambat/raw')) =>
+  dirFiles(dir, STOCK_WATCHER_PREFIX, { keep: (rel) => /^all_[a-z_]+\.json$/.test(rel) });
+
 export const SOURCES = {
   house: { prefix: PREFIX, stage: resolve(RAW, 'archive-stage'), files: () => localFiles(), replaceable: isIndexKey },
   senate: { prefix: SENATE_PREFIX, stage: resolve(RAW, 'archive-stage-senate'), files: () => senateFiles(), replaceable: isSenateIndexKey },
+  'stock-watcher': { prefix: STOCK_WATCHER_PREFIX, stage: resolve(RAW, 'archive-stage-stock-watcher'), files: () => stockWatcherFiles() },
 };
 
 // Returns the failures; an empty list means every local file of every source
@@ -83,5 +92,5 @@ export const SOURCES = {
 export const archive = ({ dryRun = false, sources = Object.keys(SOURCES) } = {}) =>
   archiveSources(SOURCES, { dryRun, names: sources, config: AWS_CONFIG });
 
-// `archive [house|senate] [--dry-run]`, for cli.mjs.
+// `archive [house|senate|stock-watcher] [--dry-run]`, for cli.mjs.
 export const archiveCmd = (args) => archiveCommand(SOURCES, args, { config: AWS_CONFIG });

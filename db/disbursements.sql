@@ -188,14 +188,9 @@ CREATE OR REPLACE FUNCTION public.disbursements_stats(filter_chamber text) RETUR
   LANGUAGE sql STABLE
   AS $$ SELECT data FROM disbursements_chamber_stats_mv WHERE chamber = filter_chamber $$;
 
--- The House-only page, from before the chamber select, asks with no
--- chamber. It gets the House's row, which is all it ever showed. Kept so
--- this file can run before the deploy that passes a chamber; drop it once
--- that deploy is live.
-CREATE OR REPLACE FUNCTION public.disbursements_stats() RETURNS jsonb
-  LANGUAGE sql STABLE
-  AS $$ SELECT data FROM disbursements_chamber_stats_mv WHERE chamber = 'house' $$;
-
--- The one-row view this replaced (2026-11-19). Nothing reads it once the
--- function above is replaced: a LANGUAGE sql body is not a dependency.
+-- What the chamber select replaced: the House-only page's no-argument stats
+-- function (kept as a House-row shim until the chamber deploy went live,
+-- 2026-11-20) and the one-row view it read. A LANGUAGE sql body is not a
+-- dependency, so either drop works alone.
+DROP FUNCTION IF EXISTS public.disbursements_stats();
 DROP MATERIALIZED VIEW IF EXISTS public.disbursements_stats_mv;

@@ -49,7 +49,7 @@ export function resolveTyped(text, options) {
   return shown.length === 1 ? shown[0] : null;
 }
 
-// The selects' chevron (app.css).
+// The selects' chevron (app.css), also the explorers' row toggle.
 export const CHEVRON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 const CROSS = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>';
 

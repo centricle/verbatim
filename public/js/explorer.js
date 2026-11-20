@@ -32,12 +32,20 @@
 // comes from `state` and changes only when an option is picked or cleared, so
 // half-typed text never filters, and Enter in it never submits the form.
 //
+// A page with `cfg.detail` gets row details: a last column holding each
+// row's toggle (a real button, for keyboard and screen readers), and a click
+// anywhere on the row, or on its open detail, does the same, except on a link
+// or after a drag that selected text. The detail opens as a full-width row
+// beneath, its fields in a grid (`fieldList`). It replaced a <details> inside
+// the row's last cell (2026-11-19), which put a dozen fields in the narrowest
+// column.
+//
 // A search can answer with `total_capped` (disbursements: 3.9 M rows, where an
 // exact count of a broad filter outlasts a function's 10 s). `total` is then
 // the cap, the count reads "10,000+", and paging stops at the cap's last page,
 // where the stored function stops too.
 
-import { clearButton, combobox } from './combobox.js';
+import { CHEVRON, clearButton, combobox } from './combobox.js';
 
 const PAGE_SIZE = 50;
 
@@ -103,6 +111,16 @@ export function highlight(text) {
     : interpolate(part.replace(/[\u0001\u0002]/g, '')))).join(''));
 }
 
+// A row's detail (`cfg.detail`): each field under its label, in a grid.
+// `[label, value]`, or `[label, value, 'wide']` for a value that reads best
+// across the whole width. Empty values are dropped. Values are escaped like
+// any other; an `html` result (a link) passes through.
+export function fieldList(fields) {
+  const kept = fields.filter(([, value]) => value != null && value !== '' && value !== false);
+  return html`<dl class="row-fields">${kept.map(([label, value, wide]) => html`
+    <div class="${wide ? 'row-field row-field--wide' : 'row-field'}"><dt>${label}</dt><dd>${value}</dd></div>`)}</dl>`;
+}
+
 // ---- Explorer -------------------------------------------------------------
 
 async function getJson(url, signal) {
@@ -121,6 +139,9 @@ async function getJson(url, signal) {
  *                                select, or an input such as a year), a URL param
  *                                and an API param of the same name.
  * @param {(row: object) => Markup} cfg.row  One `<tr>`, built with `html`.
+ * @param {(row: object) => Markup} [cfg.detail] The row's detail, built with `html`
+ *                                (`fieldList`). Adds the toggle column and the
+ *                                full-width detail row (top of this file).
  * @param {string} cfg.noun       Plural noun in "Showing 1–50 of 7,740 <noun>".
  * @param {string} cfg.emptyText  Results line when nothing matches.
  * @param {string} [cfg.errorText] Results line when a search fails. Unset leaves the
@@ -179,6 +200,24 @@ export function createExplorer(cfg) {
     searchInput.focus();
     if (state.q) commit({ page: 1 });
   });
+  // Row details: the rows on show, by index, for the detail of the one opened.
+  let shown = [];
+  if (cfg.detail) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.className = 'cell-toggle';
+    th.innerHTML = '<span class="visually-hidden">Details</span>';
+    resultsBody.closest('table').tHead.rows[0].append(th);
+    resultsBody.addEventListener('click', (e) => {
+      // A click in an open detail closes it, as one on its row does.
+      const detail = e.target.closest('tr.row-detail');
+      const tr = detail ? detail.previousElementSibling : e.target.closest('tr.has-detail');
+      if (!tr?.classList.contains('has-detail')) return;
+      if (!e.target.closest('.row-toggle')
+        && (e.target.closest('a, button, input, select, summary') || String(getSelection()).length)) return;
+      toggleDetail(tr);
+    });
+  }
   const keys = ['q', ...cfg.filters];
   const statsKeys = cfg.statsKeys ?? [];
   const pageParams = cfg.pageParams ?? ((page, pageSize) => ({ page, pageSize }));
@@ -281,6 +320,8 @@ export function createExplorer(cfg) {
     }
 
     resultsBody.innerHTML = rows.map(cfg.row).join('');
+    shown = rows;
+    if (cfg.detail) addToggles();
 
     if (totalPages > 1) {
       pagination.classList.remove('hidden');
@@ -290,6 +331,49 @@ export function createExplorer(cfg) {
     } else {
       pagination.classList.add('hidden');
     }
+  }
+
+  // Each row's toggle, in the last column. Its label names the row by the
+  // lead cell's own text (a payee, a recipient), not any link under it.
+  function addToggles() {
+    [...resultsBody.rows].forEach((tr, i) => {
+      tr.classList.add('has-detail');
+      tr.dataset.i = String(i);
+      const lead = tr.querySelector('.cell-lead')?.firstChild?.textContent.trim();
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'row-toggle';
+      button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-label', lead ? `Details: ${lead}` : 'Details');
+      button.innerHTML = CHEVRON;
+      const td = document.createElement('td');
+      td.className = 'cell-toggle';
+      td.append(button);
+      tr.append(td);
+    });
+  }
+
+  function toggleDetail(tr) {
+    const button = tr.querySelector('.row-toggle');
+    const next = tr.nextElementSibling;
+    if (next?.classList.contains('row-detail')) {
+      next.remove();
+      tr.classList.remove('is-open');
+      button.setAttribute('aria-expanded', 'false');
+      button.removeAttribute('aria-controls');
+      return;
+    }
+    const detail = document.createElement('tr');
+    detail.className = 'row-detail';
+    detail.id = `${cfg.prefix}-detail-${tr.dataset.i}`;
+    const td = document.createElement('td');
+    td.colSpan = tr.cells.length;
+    td.innerHTML = String(cfg.detail(shown[Number(tr.dataset.i)]));
+    detail.append(td);
+    tr.after(detail);
+    tr.classList.add('is-open');
+    button.setAttribute('aria-expanded', 'true');
+    button.setAttribute('aria-controls', detail.id);
   }
 
   // Chart click: same path as choosing the option by hand. A value the select

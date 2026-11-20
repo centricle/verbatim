@@ -1,4 +1,4 @@
-import { createExplorer, html } from '../js/explorer.js';
+import { createExplorer, fieldList, html } from '../js/explorer.js';
 import { moneyExact, moneyShort, quarterKey, quarterLabel } from '../../src/viz/disbursements-format.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -25,14 +25,22 @@ const monthYear = (iso) => `${MONTHS[Number(String(iso).slice(5, 7)) - 1]} ${Str
 
 const span = (a, b) => (a && b && a !== b ? `${day(a)} to ${day(b)}` : a ? day(a) : '');
 
-// Every other field the House files for the row, under the House's own
-// column names. The program leads the record, so it is the summary.
-function record(d) {
+// A break opportunity after each slash. The House runs words together with
+// one ("PUBLICATIONS/REFERENCE", 22 letters), and the longest such word set
+// the payee column's floor and pushed the table past its frame.
+const slashBreaks = (text) => String(text ?? '').split('/').map((part, i) => html`${i ? html`/<wbr>` : ''}${part}`);
+
+// The row in full: first the three columns the table clips, then every other
+// field the House files for the row, under the House's own column names.
+function detail(d) {
   const x = d.extras || {};
   const asFiled = x.dates_as_filed
     ? Object.entries(x.dates_as_filed).map(([k, v]) => `${DATE_COLUMNS[k]}: ${v}`).join('\n')
     : '';
-  const rows = [
+  return fieldList([
+    ['Program', d.program],
+    ['Office', d.office],
+    ['Category', d.category],
     ['Organization', d.organization],
     ['Fiscal year or legislative year', d.funding_year],
     ['Document', d.document],
@@ -45,16 +53,8 @@ function record(d) {
     ['Budget object code', x.object_code],
     ['Data source', x.data_source],
     ['Unquoted comma', x.unquoted_comma && `Rejoined in ${x.unquoted_comma === 'payee' ? 'vendor name' : 'description'}`],
-  ].filter(([, v]) => v);
-  return html`
-    <details class="narrative">
-      <summary>${d.program || '—'}</summary>
-      <dl class="record-meta grant-record">
-        ${rows.map(([k, v]) => html`<div class="record-meta-row"><dt>${k}</dt><dd>${v}</dd></div>`)}
-        <div class="record-meta-row"><dt>Source</dt><dd><a href="${d.source_ref}" class="text-link" target="_blank" rel="noopener">House CSV, row ${d.row_number.toLocaleString()}</a></dd></div>
-      </dl>
-    </details>
-  `;
+    ['Source', html`<a href="${d.source_ref}" class="text-link" target="_blank" rel="noopener">House CSV, row ${d.row_number.toLocaleString()}</a>`],
+  ]);
 }
 
 const DATE_COLUMNS = {
@@ -76,18 +76,22 @@ createExplorer({
   noun: 'rows',
   emptyText: 'No rows match your filters.',
   errorText: 'Could not load rows. Try again.',
+  // Office, Category and Program all clip at --narrow: at their widest, with
+  // the details column, anything wider runs the table past its 1184px frame.
+  // The detail shows all three in full.
   row: (d) => html`
     <tr>
       <td class="cell-dim cell-nowrap">${when(d)}</td>
-      <td class="cell-name cell-lead cell-wrap">${d.payee
-        ? html`${d.payee}<span class="cell-snippet">${d.description}</span>`
+      <td class="cell-name cell-lead cell-wrap cell-break">${d.payee
+        ? html`${d.payee}<span class="cell-snippet">${slashBreaks(d.description)}</span>`
         : d.description}</td>
-      <td class="cell-dim cell-clip cell-clip--mid" title="${d.office}" data-label="Office">${d.office}</td>
+      <td class="cell-dim cell-clip cell-clip--narrow" title="${d.office}" data-label="Office">${d.office}</td>
       <td class="cell-dim cell-clip cell-clip--narrow" title="${d.category || ''}">${d.category || '—'}</td>
       <td class="cell-num cell-trail">${moneyExact(d.amount)}</td>
-      <td class="cell-dim cell-wide cell-narrative">${record(d)}</td>
+      <td class="cell-dim cell-clip cell-clip--narrow cell-wide" title="${d.program || ''}">${d.program || '—'}</td>
     </tr>
   `,
+  detail,
   options: (stats) => ({
     // Newest first, as the table lists rows.
     quarter: [...new Set((stats.by_period || []).map((p) => String(p.period_start).slice(0, 10)))]

@@ -839,6 +839,11 @@
   }
 
   .record-table-wrap {
+    /* The containing block for anything absolutely positioned in the table
+       (the details column's visually hidden heading). Without it that box
+       escaped the scroll clip, and a table wider than its frame widened the
+       whole page. */
+    position: relative;
     overflow-x: auto;
     border-top: 1px solid var(--color-ink);
   }
@@ -938,6 +943,11 @@
   .cell-nowrap { white-space: nowrap; }
   /* A table cell ignores max-width, so a long value that must not clip wraps instead. */
   .cell-wrap { white-space: normal; min-width: 9rem; }
+  /* For a lead cell whose source runs words together with nothing to break
+     at (card processors' merchant names, 26 letters without a space): breaks
+     inside a word only when nothing else fits, so one long word cannot hold
+     the column above its 9rem floor and push the table past its frame. */
+  .cell-break { overflow-wrap: anywhere; }
   .cell-clip {
     max-width: 16rem;
     overflow: hidden;
@@ -1127,6 +1137,88 @@
       text-transform: uppercase;
       color: var(--color-ink-dim);
     }
+    /* Row details: the toggle ends the entry head, after the trail; the
+       detail is a plain block under the entry, not another flex record. */
+    .record-table td.cell-toggle { order: 1; flex: none; margin: -0.2rem -0.3rem 0 0.2rem; }
+    .record-table tbody tr.is-open { border-bottom-color: transparent; padding-bottom: 0.2rem; }
+    .record-table tbody tr.row-detail { display: block; padding: 0 0 0.9rem; }
+    .record-table tbody tr.row-detail::before,
+    .record-table tbody tr.row-detail::after { content: none; }
+  }
+
+  /* ---------- Row details (cfg.detail in explorer.js) ----------
+     A last column holds each row's toggle; the detail opens as a full-width
+     row beneath it, the fields in a grid, labels set like the table's
+     headings. The open row and its detail share one tint, so they read as
+     one record. */
+  .record-table tr.has-detail,
+  .record-table tr.row-detail { cursor: pointer; }
+  .record-table .cell-toggle { width: 1.6rem; padding-right: 0; text-align: right; }
+  .row-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-ink-dim);
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .row-toggle svg { transition: transform 0.15s; }
+  .record-table tr.has-detail:hover .row-toggle { color: var(--color-ink); }
+  .record-table tr.is-open .row-toggle svg { transform: rotate(180deg); }
+  .record-table tbody tr.is-open,
+  .record-table tbody tr.row-detail { background: var(--color-ground-2); }
+  /* The tint, not transparent: a collapsed border is not painted by either
+     row's background, so a transparent one showed the page as a light seam. */
+  .record-table tr.is-open > td { border-bottom-color: var(--color-ground-2); }
+  /* Inset from the tint's edges, so the fields sit inside the block. */
+  .record-table tr.row-detail > td { padding: 0.2rem 0.9rem 1rem; }
+  .row-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+  }
+  /* A hairline over an open detail's fields, inset with them: across the
+     whole width it would read as the rule between two rows, and the open row
+     and its detail are one record. Lighter than the table's rules. */
+  .record-table tr.row-detail .row-fields {
+    padding-top: 0.75rem;
+    border-top: 1px solid color-mix(in oklch, var(--color-rule) 70%, var(--color-ground-2));
+  }
+  @media (max-width: 767px) {
+    .row-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 1rem; }
+  }
+  .row-field--wide { grid-column: 1 / -1; }
+  .row-fields dt {
+    font-family: var(--font-label);
+    font-stretch: 87.5%;
+    font-size: 0.56rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink-dim);
+  }
+  .row-fields dd {
+    margin: 0.15rem 0 0;
+    max-width: 44rem;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   /*
@@ -1214,8 +1306,8 @@
   /* ---------- Clemency recipients (/clemency/) ----------
      DOJ prints multi-part values one part to a line ("1. ...", "2. ...") and
      some names on several lines (a family pardoned together); .cell-lines
-     keeps those breaks. The offense opens in place, as a crash narrative
-     does, onto every other field DOJ printed for the entry. */
+     keeps those breaks. Each row opens a full-width detail (row details,
+     above) onto every other field DOJ printed for the entry. */
   .record-table td.cell-lines { white-space: pre-line; }
   .record-table td.cell-clip.cell-lines { white-space: nowrap; }
   /* A touch screen never shows the title attribute that holds a clipped
@@ -1235,8 +1327,6 @@
     font-size: 0.64rem;
     font-weight: 500;
   }
-  .grant-record { margin-top: 0.5rem; max-width: 34rem; white-space: normal; }
-  .grant-record dd { white-space: pre-line; }
 
   /* ---------- Amendments (/amendments/) ----------
      One entry per amendment: title, dates and sources in a left column, the

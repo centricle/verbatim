@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rawScan, compare } from './senate-check.mjs';
+import { norm } from './check.mjs';
+
+test('extras compare with keys sorted all the way down, as jsonb returns them', () => {
+  assert.equal(norm('extras', { page: 3, dates_as_filed: { end_date: '12/03/2222', start_date: '11/30/2222' } }), norm('extras', '{"page":3,"dates_as_filed":{"start_date":"11/30/2222","end_date":"12/03/2222"}}'));
+});
 
 const pageB = `   DOCUMENT NO.   DATE   PAYEE NAME   DESCRIPTION   AMOUNT ($)
  VSA2607203   02/24/2026   ACME CORPORATION   01/01/2026   01/31/2026   MANAGEMENT CONSULTANTS   $588.48

@@ -110,8 +110,13 @@ export function norm(col, v) {
   }
   if (col === 'amount') return cents(String(v));
   if (col === 'extras') {
-    const o = typeof v === 'string' ? JSON.parse(v) : v;
-    return JSON.stringify(Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b))));
+    // jsonb keeps keys in its own order, nested objects too (the Senate's
+    // dates_as_filed comes back end_date first), so keys are sorted all the
+    // way down.
+    const sorted = (x) => (x && typeof x === 'object' && !Array.isArray(x)
+      ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b)).map(([k, y]) => [k, sorted(y)]))
+      : x);
+    return JSON.stringify(sorted(typeof v === 'string' ? JSON.parse(v) : v));
   }
   return v;
 }

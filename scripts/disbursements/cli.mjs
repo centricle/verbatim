@@ -164,7 +164,7 @@ async function schemaCmd(rest) {
 // CONCURRENTLY keeps it readable while it rebuilds (33 s to 3 minutes at 0.25 CU).
 export async function refreshStats(client) {
   const t0 = Date.now();
-  await client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY disbursements_stats_mv');
+  await client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY disbursements_chamber_stats_mv');
   console.log(`stats refreshed  ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 }
 
@@ -227,18 +227,21 @@ async function checkCmd(rest) {
   else console.log(`PASS: ${total.toLocaleString()} rows in ${qs.length} quarters match their sources, all ${COLUMNS.length} columns`);
 }
 
-// The stats view against the table, by row count per chamber and quarter (an
-// index-only scan, about a second). A quarter reissued in place with the same
+// The stats view against the table, by row count per chamber and period (an
+// index-only scan, about a second). A period reissued in place with the same
 // count would pass; `load` always refreshes, so this catches a load that died
 // before its refresh, or a hand edit.
 export async function checkStats(client) {
-  const { rows: [{ data }] } = await client.query('SELECT data FROM disbursements_stats_mv');
+  const { rows: views } = await client.query('SELECT chamber, data FROM disbursements_chamber_stats_mv');
   const { rows } = await client.query(`SELECT chamber, period_start::text AS p, count(*)::int AS n FROM ${TABLE} GROUP BY 1, 2`);
   const want = new Map(rows.map((r) => [`${r.chamber} ${r.p}`, r.n]));
-  const have = new Map((data.by_period ?? []).map((r) => [`${r.chamber} ${r.period_start}`, Number(r.count)]));
+  const have = new Map(views.flatMap(({ data }) => (data.by_period ?? []).map((r) => [`${r.chamber} ${r.period_start}`, Number(r.count)])));
   const bad = [...new Set([...want.keys(), ...have.keys()])].filter((k) => want.get(k) !== have.get(k));
-  const total = rows.reduce((a, r) => a + r.n, 0);
-  if (Number(data.total) !== total) bad.unshift(`total ${data.total} vs ${total}`);
+  for (const chamber of new Set([...rows.map((r) => r.chamber), ...views.map((v) => v.chamber)])) {
+    const total = rows.filter((r) => r.chamber === chamber).reduce((a, r) => a + r.n, 0);
+    const shown = Number(views.find((v) => v.chamber === chamber)?.data.total ?? 0);
+    if (shown !== total) bad.unshift(`${chamber} total ${shown} vs ${total}`);
+  }
   if (bad.length) console.log(`FAIL stats view is stale (${bad.slice(0, 3).join('; ')}); run stats --target E`);
   else console.log('stats view matches the table');
   return bad.length ? 1 : 0;

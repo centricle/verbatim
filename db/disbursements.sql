@@ -9,6 +9,12 @@
 -- subtotal rows (row_kind 'subtotal'), office and org_year are derived from
 -- the filed organization name, and fields only one chamber files live in
 -- extras. Everything else is as published.
+--
+-- Senate rows come from the Report of the Secretary of the Senate, one unit
+-- per semiannual volume (`senate-fy2026h1`, October 2025 to March 2026), and
+-- scripts/disbursements/senate-parse.mjs documents what its loader keeps:
+-- every printed line except the per-person pay lines, which arrive as the
+-- report's own subtotals, as the House's do.
 CREATE TABLE IF NOT EXISTS public.disbursements (
   chamber text NOT NULL CHECK (chamber IN ('house', 'senate')),
   unit text NOT NULL,
@@ -132,38 +138,64 @@ END; $$;
 
 -- Stats for the charts and filter lists, computed once per load: live, each
 -- query took 7 to 25 s at 0.25 CU (2026-11-19), and a function stops at 10 s.
+-- One row per chamber, because /disbursements/ shows one chamber at a time:
+-- the House files by quarter and the Senate by half year, their categories
+-- are different lists, and no office is in both.
+--
 -- `g` is one heap scan behind every count and sum; the payees and the office
 -- list take one each. At 0.25 CU a refresh took 33 s straight after a load
 -- and 177 s on a cold cache, where five scans took 344 s (2026-11-19).
--- `cli.mjs load` refreshes the view as its last step, `cli.mjs stats`
--- refreshes it alone, and `cli.mjs check` fails while its counts disagree
--- with the table. The unique index is what REFRESH ... CONCURRENTLY needs, so
--- a reader never waits on a refresh. IF NOT EXISTS keeps a changed
--- definition from applying: drop the view first, then rerun `schema` and
--- `stats`.
-CREATE MATERIALIZED VIEW IF NOT EXISTS public.disbursements_stats_mv AS
+-- `cli.mjs load` and `cli.mjs senate load` refresh the view as their last
+-- step, `cli.mjs stats` refreshes it alone, and both checks fail while its
+-- counts disagree with the table. The unique index is what REFRESH ...
+-- CONCURRENTLY needs, so a reader never waits on a refresh. IF NOT EXISTS
+-- keeps a changed definition from applying: drop the view first, then rerun
+-- `schema` and `stats`.
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.disbursements_chamber_stats_mv AS
 WITH g AS (
   SELECT chamber, period_start, period_end, category, count(*) AS count, sum(amount) AS amount
   FROM disbursements GROUP BY chamber, period_start, period_end, category
+), p AS (
+  SELECT chamber, payee, count, amount FROM (
+    SELECT chamber, payee, count(*) AS count, sum(amount) AS amount,
+      row_number() OVER (PARTITION BY chamber ORDER BY sum(amount) DESC, payee) AS rank
+    FROM disbursements WHERE payee IS NOT NULL GROUP BY chamber, payee
+  ) r WHERE rank <= 25
+), o AS (
+  SELECT DISTINCT chamber, office FROM disbursements
 )
-SELECT 1 AS id, jsonb_build_object(
-  'total', (SELECT sum(count) FROM g),
-  'amount', (SELECT sum(amount) FROM g),
-  'period_range', (SELECT jsonb_build_object('min', min(period_start), 'max', max(period_end)) FROM g),
-  'by_period', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.period_start, s.chamber), '[]'::jsonb) FROM (
+SELECT c.chamber, jsonb_build_object(
+  'chamber', c.chamber,
+  'total', (SELECT sum(count) FROM g WHERE g.chamber = c.chamber),
+  'amount', (SELECT sum(amount) FROM g WHERE g.chamber = c.chamber),
+  'period_range', (SELECT jsonb_build_object('min', min(period_start), 'max', max(period_end))
+    FROM g WHERE g.chamber = c.chamber),
+  'by_period', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.period_start), '[]'::jsonb) FROM (
     SELECT chamber, period_start, period_end, sum(count) AS count, sum(amount) AS amount
-    FROM g GROUP BY chamber, period_start, period_end) s),
+    FROM g WHERE g.chamber = c.chamber GROUP BY chamber, period_start, period_end) s),
   'by_category', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.amount DESC), '[]'::jsonb) FROM (
     SELECT category, sum(count) AS count, sum(amount) AS amount
-    FROM g GROUP BY category) s),
-  'top_payees', (SELECT coalesce(jsonb_agg(row_to_json(s) ORDER BY s.amount DESC), '[]'::jsonb) FROM (
-    SELECT payee, count(*) AS count, sum(amount) AS amount
-    FROM disbursements WHERE payee IS NOT NULL GROUP BY payee ORDER BY amount DESC LIMIT 25) s),
-  'office_list', (SELECT coalesce(jsonb_agg(office ORDER BY office), '[]'::jsonb) FROM (
-    SELECT DISTINCT office FROM disbursements) s)
-) AS data;
-CREATE UNIQUE INDEX IF NOT EXISTS disbursements_stats_mv_id ON public.disbursements_stats_mv (id);
+    FROM g WHERE g.chamber = c.chamber GROUP BY category) s),
+  'top_payees', (SELECT coalesce(jsonb_agg(jsonb_build_object('payee', payee, 'count', count, 'amount', amount)
+    ORDER BY amount DESC, payee), '[]'::jsonb) FROM p WHERE p.chamber = c.chamber),
+  'office_list', (SELECT coalesce(jsonb_agg(office ORDER BY office), '[]'::jsonb) FROM o WHERE o.chamber = c.chamber)
+) AS data
+FROM (SELECT DISTINCT chamber FROM g) c;
+CREATE UNIQUE INDEX IF NOT EXISTS disbursements_chamber_stats_mv_chamber ON public.disbursements_chamber_stats_mv (chamber);
 
+-- A chamber with no rows yet answers null; the page draws nothing for it.
+CREATE OR REPLACE FUNCTION public.disbursements_stats(filter_chamber text) RETURNS jsonb
+  LANGUAGE sql STABLE
+  AS $$ SELECT data FROM disbursements_chamber_stats_mv WHERE chamber = filter_chamber $$;
+
+-- The House-only page, from before the chamber select, asks with no
+-- chamber. It gets the House's row, which is all it ever showed. Kept so
+-- this file can run before the deploy that passes a chamber; drop it once
+-- that deploy is live.
 CREATE OR REPLACE FUNCTION public.disbursements_stats() RETURNS jsonb
   LANGUAGE sql STABLE
-  AS $$ SELECT data FROM disbursements_stats_mv $$;
+  AS $$ SELECT data FROM disbursements_chamber_stats_mv WHERE chamber = 'house' $$;
+
+-- The one-row view this replaced (2026-11-19). Nothing reads it once the
+-- function above is replaced: a LANGUAGE sql body is not a dependency.
+DROP MATERIALIZED VIEW IF EXISTS public.disbursements_stats_mv;

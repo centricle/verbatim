@@ -1,24 +1,33 @@
 import { createExplorer, fieldList, html } from '../js/explorer.js';
-import { moneyExact, moneyShort, quarterKey, quarterLabel } from '../../src/viz/disbursements-format.js';
+import { moneyExact, moneyShort, quarterKey, periodLabel } from '../../src/viz/disbursements-format.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const day = (iso) => {
   const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
   return `${MON[m - 1]} ${d}, ${y}`;
 };
-// '2026-04-01' -> 'Apr–Jun 2026', for the date cell of a subtotal row, which
-// covers the quarter and carries no date of its own.
-const quarterShort = (iso) => {
-  const m = Number(String(iso).slice(5, 7));
-  return `${MON[m - 1]}–${MON[m + 1]} ${String(iso).slice(0, 4)}`;
-};
 
+// A subtotal row covers its whole period and carries no date of its own, so
+// its date cell names the period: 'Apr–Jun 2026', or 'Oct 2025–Mar 2026'
+// for a Senate half year.
 function when(d) {
   if (d.transaction_date) return day(d.transaction_date);
   const filed = d.extras?.dates_as_filed?.transaction_date;
   if (filed) return filed;
-  return quarterShort(d.period_start);
+  return periodLabel(d.period_start, d.period_end, { short: true });
 }
+
+// The page shows one chamber at a time (the chamber select; the House when
+// it is empty). Copy that differs by chamber is marked data-chamber in the
+// HTML, and only the shown chamber's is visible. Set from the URL before the
+// first stats arrive, so a Senate link never flashes the House's copy.
+const chamberOf = (value) => (value === 'senate' ? 'senate' : 'house');
+function showChamber(chamber) {
+  for (const el of document.querySelectorAll('[data-chamber]')) el.hidden = el.dataset.chamber !== chamber;
+  const all = document.querySelector('#filter-quarter option[value=""]');
+  if (all) all.textContent = chamber === 'senate' ? 'All half years' : 'All quarters';
+}
+showChamber(chamberOf(new URLSearchParams(location.search).get('chamber')));
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthYear = (iso) => `${MONTHS[Number(String(iso).slice(5, 7)) - 1]} ${String(iso).slice(0, 4)}`;
@@ -30,9 +39,43 @@ const span = (a, b) => (a && b && a !== b ? `${day(a)} to ${day(b)}` : a ? day(a
 // the payee column's floor and pushed the table past its frame.
 const slashBreaks = (text) => String(text ?? '').split('/').map((part, i) => html`${i ? html`/<wbr>` : ''}${part}`);
 
+// A Senate row in full, under the report's own column names where it has
+// them. The source link opens the report's PDF at the row's page.
+function senateDetail(d) {
+  const x = d.extras || {};
+  const asFiled = x.dates_as_filed
+    ? Object.entries(x.dates_as_filed).map(([k, v]) => `${SENATE_DATE_COLUMNS[k]}: ${v}`).join('\n')
+    : '';
+  const how = x.from_summary
+    ? 'From the office’s summary: the report charges this amount to the class without listing its lines'
+    : x.unitemized
+      ? 'A subtotal the report prints with no lines above it'
+      : d.row_kind === 'subtotal' ? 'A subtotal the report prints for the lines above it' : '';
+  return fieldList([
+    ['Program', d.program],
+    ['Office', d.office],
+    ['Class', d.category],
+    ['Subclass', x.subclass],
+    ['Funding year', d.funding_year],
+    ['Document number', d.document],
+    ['Line of the document', x.doc_line && `Line ${x.doc_line}, continuing the line above`],
+    ['Obligation or service dates', span(d.start_date, d.end_date)],
+    ['Dates as printed', asFiled],
+    ['Row', how],
+    ['Source', html`<a href="${d.source_ref}" class="text-link" target="_blank" rel="noopener">Senate report, page ${x.page_label ?? x.page}</a>`],
+  ]);
+}
+
+const SENATE_DATE_COLUMNS = {
+  transaction_date: 'Date posted',
+  start_date: 'Start date',
+  end_date: 'End date',
+};
+
 // The row in full: first the three columns the table clips, then every other
 // field the House files for the row, under the House's own column names.
 function detail(d) {
+  if (d.chamber === 'senate') return senateDetail(d);
   const x = d.extras || {};
   const asFiled = x.dates_as_filed
     ? Object.entries(x.dates_as_filed).map(([k, v]) => `${DATE_COLUMNS[k]}: ${v}`).join('\n')
@@ -72,7 +115,10 @@ const charts = Promise.all([
 createExplorer({
   prefix: 'disbursements',
   endpoint: '/api/disbursements',
-  filters: ['quarter', 'category', 'office'],
+  filters: ['chamber', 'quarter', 'category', 'office'],
+  // The stats are one chamber's, so a chamber change refetches them, and
+  // clears a period, category or office the other chamber does not have.
+  statsKeys: ['chamber'],
   // Date and Amount, the two orders search_disbursements takes.
   sort: { default: 'date' },
   noun: 'rows',
@@ -96,16 +142,22 @@ createExplorer({
   detail,
   options: (stats) => ({
     // Newest first, as the table lists rows.
-    quarter: [...new Set((stats.by_period || []).map((p) => String(p.period_start).slice(0, 10)))]
-      .sort().reverse().map((iso) => [quarterKey(iso), quarterLabel(iso)]),
+    // A Senate half year starts on a quarter's first day, so it takes the
+    // same key (2025q4, October 2025 to March 2026).
+    quarter: [...(stats.by_period || [])]
+      .sort((a, b) => String(b.period_start).localeCompare(String(a.period_start)))
+      .map((p) => [quarterKey(p.period_start), periodLabel(p.period_start, p.period_end)]),
     category: (stats.by_category || []).map((c) => c.category).filter(Boolean)
       .sort().map((c) => [c, c]),
-    // 1,221 names, too many for a select: the office combobox's list.
+    // The House's 1,221 names are too many for a select: the office
+    // combobox's list.
     office: (stats.office_list || []).map((o) => [o, o]),
   }),
-  onStats: (stats) => {
+  onStats: (stats, params) => {
+    const chamber = chamberOf(params.chamber);
+    showChamber(chamber);
     // The dek's reach, read off the data so it never goes stale in the HTML.
-    const reach = document.getElementById('disbursements-reach');
+    const reach = document.querySelector(`[data-chamber="${chamber}"] .disbursements-reach`);
     const range = stats.period_range;
     if (reach && stats.total && range?.min) {
       reach.textContent = ` ${Number(stats.total).toLocaleString()} rows, ${monthYear(range.min)} to ${monthYear(range.max)}.`;

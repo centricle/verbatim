@@ -4,7 +4,7 @@
 // order it chose (presidents in term order on /executive/). This draws them
 // at true size and sets a filter when a bar is selected.
 import React, { useRef, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
+import { rootFor } from './mount.js';
 import * as d3 from 'd3';
 import { showTooltip, hideTooltip } from './tooltip.js';
 import { useContainerWidth, measureText, fitText } from './chart-size.js';
@@ -105,5 +105,5 @@ function RankedBars({ data, label, value, noun, filterKey, onFilter, display, fo
  */
 export function mountRankedBars(container, data, opts) {
   if (!container) return;
-  createRoot(container).render(<RankedBars data={data} {...opts} />);
+  rootFor(container).render(<RankedBars data={data} {...opts} />);
 }

@@ -1,29 +1,38 @@
-// Figure 1 on /disbursements/: the amount disbursed in each quarter, summed
-// from the rows as loaded. Quarters with no rows are drawn as empty quarters,
-// not skipped, so the axis is true time. Selecting a bar sets the quarter
-// filter.
+// Figure 1 on /disbursements/: the amount disbursed in each reporting period
+// of the chamber shown, summed from the rows as loaded. Periods with no rows
+// are drawn as empty periods, not skipped, so the axis is true time.
+// Selecting a bar sets the period filter.
 //
-// House rows only so far, which come by calendar quarter. The Senate reports
-// by half year (April to September, October to March), so it needs its own
-// treatment here when it arrives, not another series on this axis.
+// The stats follow the chamber select, so the periods are one chamber's: the
+// House's calendar quarters or the Senate's half years (April to September,
+// October to March). The period length is read off the data, never mixed on
+// one axis.
 import React, { useRef, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
 import * as d3 from 'd3';
+import { rootFor } from './mount.js';
 import { showTooltip, hideTooltip } from './tooltip.js';
 import { useContainerWidth } from './chart-size.js';
-import { moneyExact, moneyShort, quarterKey, quarterLabel } from './disbursements-format.js';
+import { moneyExact, moneyShort, quarterKey, periodLabel, periodMonths } from './disbursements-format.js';
 
-function quarterRange(first, last) {
+const iso = (y, m) => `${y}-${String(m).padStart(2, '0')}-01`;
+const lastDay = (start, months) => {
+  const y = Number(start.slice(0, 4));
+  const m = Number(start.slice(5, 7)) + months - 1;
+  const d = new Date(Date.UTC(y, m, 0));
+  return d.toISOString().slice(0, 10);
+};
+
+function periodRange(first, last, step) {
   const out = [];
   let y = Number(first.slice(0, 4));
   let m = Number(first.slice(5, 7));
   const end = last.slice(0, 7);
   for (;;) {
-    const iso = `${y}-${String(m).padStart(2, '0')}-01`;
-    out.push(iso);
-    if (iso.slice(0, 7) >= end) return out;
-    m += 3;
-    if (m > 12) { m -= 12; y += 1; }
+    const key = iso(y, m);
+    out.push(key);
+    if (key.slice(0, 7) >= end) return out;
+    m += step;
+    while (m > 12) { m -= 12; y += 1; }
   }
 }
 
@@ -42,9 +51,10 @@ function DisbursementsByQuarter({ stats, onFilter }) {
       m.count += Number(d.count) || 0;
       byStart.set(key, m);
     }
+    const step = periodMonths(periods[0].period_start, periods[0].period_end);
     const starts = [...byStart.keys()].sort();
-    const quarters = quarterRange(starts[0], starts[starts.length - 1]);
-    const data = quarters.map((key) => ({ key, ...(byStart.get(key) || { amount: 0, count: 0 }) }));
+    const quarters = periodRange(starts[0], starts[starts.length - 1], step);
+    const data = quarters.map((key) => ({ key, end: lastDay(key, step), ...(byStart.get(key) || { amount: 0, count: 0 }) }));
 
     const narrow = fullWidth < 560;
     const margin = { top: 12, right: 4, bottom: 26, left: 52 };
@@ -69,8 +79,10 @@ function DisbursementsByQuarter({ stats, onFilter }) {
       .attr('class', 'axis axis-y')
       .call(d3.axisLeft(y).ticks(narrow ? 4 : 5).tickSize(-width).tickPadding(8).tickFormat(moneyShort));
 
-    // Each year's first quarter, every other year on narrow screens.
-    const januaries = quarters.filter((k) => k.endsWith('-01-01')
+    // Each year's first period (January for the House, April for the
+    // Senate), every other year on narrow screens.
+    const firstMonth = quarters.map((k) => k.slice(5, 7)).sort()[0];
+    const januaries = quarters.filter((k) => k.slice(5, 7) === firstMonth
       && (!narrow || Number(k.slice(0, 4)) % 2 === 0));
     svg.append('g')
       .attr('class', 'axis axis-x')
@@ -92,7 +104,7 @@ function DisbursementsByQuarter({ stats, onFilter }) {
       .on('mouseenter', function () { d3.select(this).style('opacity', 0.8); })
       .on('mouseleave', function () { d3.select(this).style('opacity', 1); hideTooltip(); })
       .on('mousemove', (event, d) => {
-        showTooltip(event, `<strong>${quarterLabel(d.key)}</strong><br>${moneyExact(d.amount)}`
+        showTooltip(event, `<strong>${periodLabel(d.key, d.end)}</strong><br>${moneyExact(d.amount)}`
           + `<br>${d.count.toLocaleString()} rows`);
       })
       .on('click', (event, d) => { if (onFilter && d.count) onFilter({ key: 'quarter', value: quarterKey(d.key) }); });
@@ -108,5 +120,5 @@ function DisbursementsByQuarter({ stats, onFilter }) {
 
 export function mountDisbursementsByQuarter(container, stats, { onFilter } = {}) {
   if (!container) return;
-  createRoot(container).render(<DisbursementsByQuarter stats={stats} onFilter={onFilter} />);
+  rootFor(container).render(<DisbursementsByQuarter stats={stats} onFilter={onFilter} />);
 }

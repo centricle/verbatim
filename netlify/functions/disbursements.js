@@ -4,10 +4,16 @@ import { pageNum, pageSize } from './shared/paging.js'
 
 const json = jsonFor('disbursements')
 
-const CHAMBERS = new Set(['house', 'senate'])
+// The page shows one chamber at a time, and the House is the default: a
+// request without `chamber=senate` (every link from before the Senate
+// arrived among them) is the House's, for the stats and the rows alike, so
+// the two always describe the same chamber.
+const chamberOf = (raw) => (raw === 'senate' ? 'senate' : 'house')
 
-// `2026q2` becomes the quarter's first day, the table's period_start. Any
-// other value drops the filter rather than reaching Postgres as a cast error.
+// `2026q2` becomes the quarter's first day, the table's period_start. A
+// Senate half year starts on a quarter's first day too (`2025q4` is October
+// to March). Any other value drops the filter rather than reaching Postgres
+// as a cast error.
 const QUARTER = /^(\d{4})q([1-4])$/
 function quarterStart(raw) {
   const m = QUARTER.exec(raw || '')
@@ -21,13 +27,12 @@ function quarterStart(raw) {
 export async function handler(event) {
   const params = event.queryStringParameters || {}
   const sql = getSQL()
+  const chamber = chamberOf(params.chamber)
 
   if (params.action === 'stats') {
-    const [row] = await sql`SELECT disbursements_stats() as data`
-    return json(row.data)
+    const [row] = await sql`SELECT disbursements_stats(${chamber}::text) as data`
+    return json(row.data ?? {})
   }
-
-  const chamber = CHAMBERS.has(params.chamber) ? params.chamber : null
 
   const [row] = await sql`SELECT search_disbursements(
     ${params.q || null}, ${chamber}, ${quarterStart(params.quarter)},

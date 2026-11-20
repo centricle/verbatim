@@ -156,8 +156,9 @@ export function isoDate(text) {
   if (!m) return undefined;
   const [mo, d, y] = [Number(m[1]), Number(m[2]), Number(m[3])];
   // A well-formed date in no year the report can mean ("05/16/0421", Apr to
-  // Sep 2021; "10/11/0211", Oct 2021 to Mar 2022) is a misprint like any
-  // other, kept as printed under extras.dates_as_filed.
+  // Sep 2021; "10/11/0211", Oct 2021 to Mar 2022; "04/24/3013"; "07/31/2109"
+  // and "08/31/2109" on consecutive lines, Oct 2019 to Mar 2020) is a
+  // misprint like any other, kept as printed under extras.dates_as_filed.
   if (y < 1900 || y > 2099) return undefined;
   if (mo < 1 || mo > 12) return undefined;
   const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();

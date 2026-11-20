@@ -10,6 +10,9 @@
 //   npm run disbursements -- stats --target E      refresh the stats view alone
 //   npm run disbursements -- check [Q...] [--table t]  raw vs parsed vs loaded, every column
 //   npm run disbursements -- sample N              N random rows, spread over quarters, to tmp/disbursements/sample.json
+//   npm run disbursements -- archive [house|senate] [--dry-run]
+//                                                  copy both chambers' raw volumes to the private
+//                                                  R2 bucket and verify every file by MD5 (archive.mjs)
 //
 //   npm run disbursements -- senate ...            the Senate's volumes (senate-cli.mjs)
 //
@@ -288,8 +291,9 @@ async function main(argv) {
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
     case 'senate': await (await import('./senate-cli.mjs')).main(rest); break;
+    case 'archive': await (await import('./archive.mjs')).archiveCmd(rest); break;
     default:
-      console.error('usage: cli.mjs links|fetch [--again] [Q...]|parse [Q...]|schema --target E|load --target E [Q...]|stats --target E|check [Q...] [--table t]|sample N|senate ...');
+      console.error('usage: cli.mjs links|fetch [--again] [Q...]|parse [Q...]|schema --target E|load --target E [Q...]|stats --target E|check [Q...] [--table t]|sample N|archive [house|senate] [--dry-run]|senate ...');
       process.exitCode = 2;
   }
 }

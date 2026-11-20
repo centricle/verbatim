@@ -126,6 +126,18 @@ export function latestDate(stamps) {
   return localDate(Math.max(...ms));
 }
 
+// The files a manifest lists ({ file, fetchedAt }), each keyed under its own
+// fetch date, prefix + <YYYY-MM-DD>/<file>. For a publisher that re-issues a
+// file in place under the same name: the re-issue lands under its own date,
+// and the issue it replaced stays.
+export async function datedFiles(dir, prefix, entries) {
+  const out = [];
+  for (const e of [...entries].sort((a, b) => a.file.localeCompare(b.file))) {
+    out.push(await entry(`${prefix}${localDate(e.fetchedAt)}/${e.file}`, join(dir, e.file)));
+  }
+  return out;
+}
+
 // The newest modification time of the files under dir, for a working set with
 // no manifest.
 export async function newestMtime(dir) {

@@ -55,7 +55,7 @@ const entry = (y, doc, posted, payee, start, end, desc, amount) => [line(h.doc, 
 const person = (y, name, title, amount) => [...(name ? [line(h.payee, y, name)] : []), line(h.desc, y, title), right(h.amount, y, amount)];
 const sub26 = (y, label, amount) => [line(h.subtotal, y, label), right(h.amount, y, amount)];
 
-function volume26({ payrollSummary = '-150,000.00', org = '-$174,455.50', ocsSecond = '$3,000.00', ocsSummary = '-23,100.00', fy = '2026', labels = ['B-1', 'B-2'], extra1 = [], summary = null } = {}) {
+function volume26({ payrollSummary = '-150,000.00', org = '-$174,455.50', ocsSecond = '$3,000.00', ocsSummary = '-23,100.00', fy = '2026', labels = ['B-1', 'B-2'], extra1 = [], summary = null, memo = false } = {}) {
   const top = header26({
     office: 'SENATOR WILE E. COYOTE (I) - COYOTE',
     fy,
@@ -74,6 +74,7 @@ function volume26({ payrollSummary = '-150,000.00', org = '-$174,455.50', ocsSec
   p1.push(...person(y, 'SHEEPDOG, SAM', 'LEGISLATIVE DIRECTOR', '$40,000.00')); y += 6.2;
   // A name too long for its cell: one fragment above, one below.
   p1.push(line(h.payee, y - 2.6, 'BUNNY-ACME,'), ...person(y, null, 'STAFF ASSISTANT', '$20,000.00'), line(h.payee, y + 2.6, 'BUGS Q')); y += 9.3;
+  if (memo) { p1.push(...sub26(y, 'PERSONNEL COMPENSATION', '$120,000.00')); y += 8.3; }
   p1.push(...sub26(y, 'PERSONNEL COMP. FULL-TIME PERMANENT', '$120,000.00')); y += 8.3;
   p1.push(...sub26(y, 'PERSONNEL BENEFITS', '$30,000.00')); y += 8.3;
   p1.push(...sub26(y, 'Net Payroll Expenses', '$150,000.00')); y += 10;
@@ -203,6 +204,18 @@ test('a page printed as an image: its transcription is parsed, and without one i
   const bare = volume26();
   bare[1].lines = [label];
   assert.ok(parsePages(bare, source).problems.some((p) => /page 2: no text but its page label/.test(p)));
+});
+
+test('a memo subtotal of the staff pay lines never loads, and is listed', () => {
+  // PERSONNEL COMPENSATION over the person lines, outside the figures: the
+  // pay sub-class below it then covers nothing printed (unitemized).
+  const r = parsePages(volume26({ memo: true }), source);
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(r.discrepancies.map((d) => [d.kind, d.label, d.lines]), [['memo', 'PERSONNEL COMPENSATION', 12000000]]);
+  assert.equal(r.rows.length, 8);
+  assert.ok(!r.rows.some((x) => x.description === 'PERSONNEL COMPENSATION'));
+  assert.equal(JSON.parse(r.rows.find((x) => x.description === 'PERSONNEL COMP. FULL-TIME PERMANENT').extras).unitemized, true);
+  assert.equal(r.tally.keptCents, r.tally.orgCents);
 });
 
 test('a class total the summary leaves out, its money in another class', () => {

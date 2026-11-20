@@ -92,6 +92,9 @@
 // - lines: a class's lines differ from its printed total while that total
 //   equals the summary's figure: the report's two figures agree, the lines
 //   do not. At most one per block.
+// - memo: a subtotal of person lines printed outside the statement's
+//   figures (the committees' PERSONNEL COMPENSATION, Oct 2016 to Mar 2017).
+//   It does not load.
 
 import { readPages } from './senate-pdf.mjs';
 import { centsText } from './parse.mjs';
@@ -661,7 +664,7 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
           persons = [];
         } else if (!subs.length && sumOf(direct) + sumOf(persons) === it.cents) { direct.push(...persons); persons = []; }
       }
-      const total = sumOf(direct) + sumOf(subs);
+      let total = sumOf(direct) + sumOf(subs);
       it.covers = direct;
       it.subs = subs;
       const category = fold(it.labelText);
@@ -686,6 +689,24 @@ export function readDetail(block, header, subclassInDesc, volumeClasses = new Se
           // are listed and they cancel against ORGANIZATION TOTALS.
           s = { label: it.labelText, period: 0, omitted: true };
           header.classes.set(category, s);
+        }
+      }
+      // A memo of the committee's staff pay: Oct 2016 to Mar 2017 prints
+      // each committee's person lines under PERSONNEL COMPENSATION
+      // ($3,943,307.26 at B-2-110), outside the statement's own figures,
+      // which carry its pay as an unitemized PERSONNEL COMP. FULL-TIME
+      // PERMANENT ($599,533.17). Left in, it lands in the next class total
+      // and adds millions no ORGANIZATION TOTALS includes. A non-pay
+      // sub-class over person lines only, whose removal makes what the
+      // class total covers equal its printed figure, which the summary
+      // prints too, is that memo: it does not load, and is listed (`memo`).
+      if (classSpan.length && total !== it.cents && s && -(s.period ?? 0) === it.cents) {
+        const memo = subs.filter((x) => !PAY.has(fold(x.labelText)) && x.covers.length && x.covers.every((c) => c.kind === 'person') && total - x.cents === it.cents);
+        if (memo.length === 1) {
+          memo[0].memo = true;
+          subs.splice(subs.indexOf(memo[0]), 1);
+          total -= memo[0].cents;
+          discrepancies.push({ kind: 'memo', where, label: memo[0].labelText, page: memo[0].page, lines: memo[0].cents, printed: 0 });
         }
       }
       if (classSpan.length && total !== it.cents) {
@@ -793,7 +814,7 @@ export function keepItems(items, where) {
       if (it.covers.length) it.collapses = it.covers.length; else it.unitemized = true;
       kept.push(it);
     }
-    else if (it.kind === 'subtotal') {
+    else if (it.kind === 'subtotal' && !it.memo) {
       const covered = it.level === 1 ? it.covers : [...it.covers, ...(it.subs ?? [])];
       const persons = it.covers.filter((r) => r.kind === 'person');
       if (!covered.length) { it.unitemized = true; kept.push(it); }

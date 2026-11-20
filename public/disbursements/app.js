@@ -94,7 +94,7 @@ createExplorer({
       .sort().reverse().map((iso) => [quarterKey(iso), quarterLabel(iso)]),
     category: (stats.by_category || []).map((c) => c.category).filter(Boolean)
       .sort().map((c) => [c, c]),
-    // 1,221 names, too many for a select: suggestions for the office field.
+    // 1,221 names, too many for a select: the office combobox's list.
     office: (stats.office_list || []).map((o) => [o, o]),
   }),
   onStats: (stats) => {

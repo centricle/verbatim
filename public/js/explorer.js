@@ -27,10 +27,17 @@
 // same history entry, rather than left filtering invisibly. A refetch that
 // fails leaves the last answer drawn and is asked for again on the next change.
 //
+// A filter whose list is too long for a select (disbursements' 1,221
+// offices) is an `<input data-combobox>`, driven by combobox.js. Its value
+// comes from `state` and changes only when an option is picked or cleared, so
+// half-typed text never filters, and Enter in it never submits the form.
+//
 // A search can answer with `total_capped` (disbursements: 3.9 M rows, where an
 // exact count of a broad filter outlasts a function's 10 s). `total` is then
 // the cap, the count reads "10,000+", and paging stops at the cap's last page,
 // where the stored function stops too.
+
+import { combobox } from './combobox.js';
 
 const PAGE_SIZE = 50;
 
@@ -122,9 +129,8 @@ async function getJson(url, signal) {
  *                                How the endpoint takes paging. Default `{ page, pageSize }`.
  * @param {(stats: object) => Record<string, [string, string][]>} [cfg.options]
  *                                Options read from stats, as `[value, label]` pairs per
- *                                filter key, appended after the markup's own: to a
- *                                select, or to the <datalist> a text input names with
- *                                `list` (a type-ahead over a list too long for a select).
+ *                                filter key: appended after a select's own, or the whole
+ *                                list of a combobox.
  * @param {(stats: object, opts: { onFilter: Function }) => unknown} [cfg.charts]
  *                                Mount the charts. Start their imports before calling
  *                                `createExplorer`, so they load while stats is in flight.
@@ -150,6 +156,17 @@ export function createExplorer(cfg) {
   const controls = Object.fromEntries(
     cfg.filters.map((key) => [key, document.getElementById(`filter-${key}`)]),
   );
+  // Filters too long for a select. `onPick` runs only on a user's pick.
+  const boxes = {};
+  for (const [key, control] of Object.entries(controls)) {
+    if (control.dataset.combobox === undefined) continue;
+    boxes[key] = combobox(control, {
+      noun: control.dataset.combobox || key,
+      onPick: (value) => {
+        if (value !== state[key]) commit({ [key]: value, page: 1 });
+      },
+    });
+  }
   const keys = ['q', ...cfg.filters];
   const statsKeys = cfg.statsKeys ?? [];
   const pageParams = cfg.pageParams ?? ((page, pageSize) => ({ page, pageSize }));
@@ -182,7 +199,10 @@ export function createExplorer(cfg) {
 
   function syncControls() {
     searchInput.value = state.q;
-    for (const key of cfg.filters) controls[key].value = state[key];
+    for (const key of cfg.filters) {
+      if (boxes[key]) boxes[key].set(state[key]);
+      else controls[key].value = state[key];
+    }
   }
 
   // Every user action also takes the search box's current text, submitted or
@@ -269,6 +289,11 @@ export function createExplorer(cfg) {
     for (const [key, value] of pairs) {
       const control = controls[key];
       if (!control) continue;
+      if (boxes[key]) {
+        boxes[key].set(value);
+        changes[key] = value;
+        continue;
+      }
       control.value = value;
       changes[key] = control.value;
     }
@@ -279,20 +304,20 @@ export function createExplorer(cfg) {
     const lists = cfg.options?.(stats) ?? {};
     const cleared = {};
     for (const [key, pairs] of Object.entries(lists)) {
+      if (boxes[key]) {
+        boxes[key].setOptions(pairs);
+        continue;
+      }
       const control = controls[key];
-      // A type-ahead input keeps its typed value; only its suggestions change.
-      const typeAhead = control.tagName !== 'SELECT';
-      const target = typeAhead ? control.list : control;
-      for (const option of listed.get(target) ?? []) option.remove();
+      for (const option of listed.get(control) ?? []) option.remove();
       const added = pairs.map(([value, label]) => {
         const option = document.createElement('option');
         option.value = value;
-        if (!typeAhead || label !== value) option.textContent = label;
+        option.textContent = label;
         return option;
       });
-      target.append(...added);
-      listed.set(target, added);
-      if (typeAhead) continue;
+      control.append(...added);
+      listed.set(control, added);
       // The deep-linked value has an option to land on now.
       control.value = state[key];
       if (refetch && state[key] && control.value !== state[key]) cleared[key] = '';
@@ -342,7 +367,7 @@ export function createExplorer(cfg) {
   // change first, so typed controls are read here. Selects are not: before
   // stats arrive, one cannot yet hold a deep-linked value (top of this file).
   const typed = () => Object.fromEntries(cfg.filters
-    .filter((key) => controls[key].tagName !== 'SELECT')
+    .filter((key) => controls[key].tagName !== 'SELECT' && !boxes[key])
     .map((key) => [key, controls[key].value.trim()]));
 
   form.addEventListener('submit', (e) => {
@@ -350,6 +375,7 @@ export function createExplorer(cfg) {
     commit({ ...typed(), page: 1 });
   });
   for (const key of cfg.filters) {
+    if (boxes[key]) continue;
     const control = controls[key];
     // A typed control fires change on blur too, after Enter has already
     // submitted its value; asking again for the same state would only repeat
@@ -358,16 +384,6 @@ export function createExplorer(cfg) {
       const value = control.value.trim();
       if (value !== state[key]) commit({ [key]: value, page: 1 });
     });
-    // Picking a type-ahead suggestion is a choice made, like picking from a
-    // select, so it searches at once. Typing does not.
-    if (control.list) {
-      control.addEventListener('input', (e) => {
-        if (e.inputType === 'insertReplacementText' || e.inputType === undefined) {
-          const value = control.value.trim();
-          if (value !== state[key]) commit({ [key]: value, page: 1 });
-        }
-      });
-    }
   }
   prevBtn.addEventListener('click', () => {
     if (state.page > 1) commit({ page: state.page - 1 });

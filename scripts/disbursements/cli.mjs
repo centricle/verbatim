@@ -11,6 +11,8 @@
 //   npm run disbursements -- check [Q...] [--table t]  raw vs parsed vs loaded, every column
 //   npm run disbursements -- sample N              N random rows, spread over quarters, to tmp/disbursements/sample.json
 //
+//   npm run disbursements -- senate ...            the Senate's volumes (senate-cli.mjs)
+//
 // Q is a quarter like 2026q2; none means every quarter downloaded. E is the
 // Neon endpoint id DATABASE_URL points at (ep-...), named by the operator so a
 // branch load cannot reach main through an environment mixup.
@@ -35,7 +37,7 @@ const PACE_MS = 5000;
 const UA = { 'User-Agent': 'verbatim.fyi data loader (https://github.com/centricle/verbatim)' };
 
 const TYPES = { row_number: 'integer', org_year: 'integer', period_start: 'date', period_end: 'date', transaction_date: 'date', start_date: 'date', end_date: 'date', amount: 'numeric', extras: 'jsonb' };
-const LOAD_COLUMNS = COLUMNS.map((name) => [name, TYPES[name] ?? 'text']);
+export const LOAD_COLUMNS = COLUMNS.map((name) => [name, TYPES[name] ?? 'text']);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const quarters = (rest) => rest.filter((a) => /^\d{4}q[1-4]$/.test(a));
@@ -143,7 +145,7 @@ function endpoint() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
   return new URL(process.env.DATABASE_URL).hostname.split('.')[0].replace(/-pooler$/, '');
 }
-function requireTarget(rest) {
+export function requireTarget(rest) {
   const i = rest.indexOf('--target');
   const named = i >= 0 ? rest[i + 1] : null;
   const actual = endpoint();
@@ -160,7 +162,7 @@ async function schemaCmd(rest) {
 
 // The stats view (db/disbursements.sql) holds what /disbursements/ charts;
 // CONCURRENTLY keeps it readable while it rebuilds (33 s to 3 minutes at 0.25 CU).
-async function refreshStats(client) {
+export async function refreshStats(client) {
   const t0 = Date.now();
   await client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY disbursements_stats_mv');
   console.log(`stats refreshed  ${((Date.now() - t0) / 1000).toFixed(1)} s`);
@@ -229,7 +231,7 @@ async function checkCmd(rest) {
 // index-only scan, about a second). A quarter reissued in place with the same
 // count would pass; `load` always refreshes, so this catches a load that died
 // before its refresh, or a hand edit.
-async function checkStats(client) {
+export async function checkStats(client) {
   const { rows: [{ data }] } = await client.query('SELECT data FROM disbursements_stats_mv');
   const { rows } = await client.query(`SELECT chamber, period_start::text AS p, count(*)::int AS n FROM ${TABLE} GROUP BY 1, 2`);
   const want = new Map(rows.map((r) => [`${r.chamber} ${r.p}`, r.n]));
@@ -282,10 +284,17 @@ async function main(argv) {
     case 'stats': await statsCmd(rest); break;
     case 'check': await checkCmd(rest); break;
     case 'sample': await sampleCmd(rest); break;
+    case 'senate': await (await import('./senate-cli.mjs')).main(rest); break;
     default:
-      console.error('usage: cli.mjs links|fetch [--again] [Q...]|parse [Q...]|schema --target E|load --target E [Q...]|stats --target E|check [Q...] [--table t]|sample N');
+      console.error('usage: cli.mjs links|fetch [--again] [Q...]|parse [Q...]|schema --target E|load --target E [Q...]|stats --target E|check [Q...] [--table t]|sample N|senate ...');
       process.exitCode = 2;
   }
 }
 
-await main(process.argv.slice(2));
+// senate-cli.mjs imports the shared write guards from here, so the command
+// line runs only when this file is the one node was given, and without a
+// top-level await: `senate` imports senate-cli.mjs, which imports this
+// module, and an await here would leave that import waiting on itself.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main(process.argv.slice(2)).catch((err) => { console.error(err); process.exitCode = 1; });
+}

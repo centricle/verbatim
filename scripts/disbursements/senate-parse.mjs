@@ -281,6 +281,7 @@ export function readHeader(block) {
     classes,
     orgPeriod: org?.period ?? null,
     moneyCount: amounts.length,
+    moneySum: amounts.reduce((a, l) => a + moneyCents(l.text), 0),
     problems,
   };
 }
@@ -372,6 +373,7 @@ export function readDetail(block, header, subclassInDesc) {
   const items = [];
   const frags = [];
   let moneyCount = 0;
+  let moneySum = 0;
   for (const g of block.detail) {
     const c = cellsOf(g);
     for (const l of c.stray) problems.push(`${where}: page ${g.page}: text in no column: "${l.text}" at ${l.x0.toFixed(1)}`);
@@ -388,6 +390,7 @@ export function readDetail(block, header, subclassInDesc) {
     }
     moneyCount++;
     const cents = moneyCents(c.amount[0].text);
+    moneySum += cents;
     if (c.doc.length || c.posted.length || c.start.length || c.end.length) {
       if (c.label.length) problems.push(`${where}: page ${g.page}: entry with text in the subtotal column: ${text(c.label)}`);
       items.push({ ...base, kind: 'entry', cents, doc: c.doc, posted: c.posted, start: c.start, end: c.end, payee: [...c.payee], desc: [...c.desc] });
@@ -544,7 +547,7 @@ export function readDetail(block, header, subclassInDesc) {
   const classSum = out.filter((x) => (x.kind === 'subtotal' && x.level === 2) || x.kind === 'summary').reduce((a, x) => a + x.cents, 0);
   const allowed = discrepancies.filter((d) => d.kind === 'summary').reduce((a, d) => a + d.lines - d.summary, 0);
   if (header.orgPeriod != null && classSum !== -header.orgPeriod + allowed) problems.push(`${where}: class totals sum to ${centsText(classSum)}, ORGANIZATION TOTALS says ${centsText(-header.orgPeriod)}${allowed ? ` (${centsText(allowed)} of payroll difference allowed)` : ''}`);
-  return { items: out, problems, discrepancies, allowed, moneyCount, lineCount: block.detail.reduce((a, g) => a + g.lines.length, 0) };
+  return { items: out, problems, discrepancies, allowed, moneyCount, moneySum, lineCount: block.detail.reduce((a, g) => a + g.lines.length, 0) };
 }
 
 // Which items reach the table (see the header comment), with the reason.
@@ -642,18 +645,26 @@ export function parsePages(pages, source) {
   }
   const rows = [];
   const discrepancies = [];
-  const tally = { blocks: blocks.length, bPages: bPages.length, entries: 0, continuations: 0, persons: 0, subtotals: 0, summaries: 0, kept: 0, collapsedPersons: 0, unitemized: 0, keptCents: 0, orgCents: 0, discrepancyCents: 0, money: 0, subclassLabels: {} };
+  const tally = { blocks: blocks.length, bPages: bPages.length, entries: 0, continuations: 0, persons: 0, subtotals: 0, summaries: 0, kept: 0, collapsedPersons: 0, unitemized: 0, keptCents: 0, orgCents: 0, discrepancyCents: 0, money: 0, moneyCents: 0, subclassLabels: {} };
   let n = 0;
   for (const [i, b] of blocks.entries()) {
     const h = headers[i];
     problems.push(...h.problems);
     if (!h.classes) continue;
+    // Every block prints the volume's period; a volume filed under the
+    // wrong period, or a block from another, stops here.
+    const mdy = (d) => `${d.slice(5, 7)}/${d.slice(8, 10)}/${d.slice(0, 4)}`;
+    if (!h.periodText.includes(mdy(source.start)) || !h.periodText.includes(mdy(source.end))) {
+      problems.push(`block at page ${b.page} "${h.office}": prints the period "${h.periodText}", not ${mdy(source.start)} to ${mdy(source.end)}`);
+    }
     tally.money += h.moneyCount;
+    tally.moneyCents += h.moneySum;
     const d = readDetail(b, h, !subclassLeft);
     problems.push(...d.problems);
     discrepancies.push(...d.discrepancies);
     tally.discrepancyCents += d.allowed;
     tally.money += d.moneyCount;
+    tally.moneyCents += d.moneySum;
     const where = `block at page ${b.page} "${h.office}" FY ${h.fundingYear}`;
     const { kept, problems: kp } = keepItems(d.items, where);
     problems.push(...kp);

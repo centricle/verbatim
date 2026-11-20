@@ -103,7 +103,7 @@ export function reconcile(classified) {
 
 // Postgres returns dates as Date (local midnight), numeric as text, jsonb as
 // an object, integers as numbers. Compare on one footing.
-function norm(col, v) {
+export function norm(col, v) {
   if (v == null) return null;
   if (v instanceof Date) {
     return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;

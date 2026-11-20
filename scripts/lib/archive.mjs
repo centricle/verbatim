@@ -39,7 +39,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
@@ -299,5 +299,48 @@ export async function archiveCommand(sources, args = [], opts = {}) {
   const failures = await archive(sources, { ...opts, dryRun: args.includes('--dry-run'), ...(names.length && { names }) });
   for (const f of failures) console.log(`FAIL ${f}`);
   if (failures.length) process.exitCode = 1;
+  return failures;
+}
+
+// The bucket (or one prefix of it) to a local directory, laid out by key:
+// downloads what the directory lacks, then checks every file against the
+// object's size and MD5 ETag. A local file that differs is reported and left
+// alone, never overwritten, so a mirror can only gain files. For the HDD copy
+// (rig/runbooks/ARCHIVE_SYNC.md).
+export async function mirror(dir, { prefix = '', dryRun = false, config = DEFAULT_CONFIG } = {}) {
+  const s = await connect(config);
+  const remote = await listRemote(s, prefix);
+  const lacking = [];
+  const differs = [];
+  let same = 0;
+  for (const r of remote) {
+    const path = join(dir, ...r.key.split('/'));
+    let local;
+    try {
+      local = await hashFile(path);
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+      lacking.push({ ...r, path });
+      continue;
+    }
+    if (compare(local, r) === 'differs') differs.push(r.key);
+    else same++;
+  }
+  const bytes = lacking.reduce((n, r) => n + r.size, 0);
+  console.log(`mirror ${s.bucket}/${prefix} to ${dir}: ${remote.length.toLocaleString()} objects; ${same.toLocaleString()} already here, ${lacking.length.toLocaleString()} to download (${(bytes / 1e6).toFixed(1)} MB)`);
+  for (const k of differs) console.log(`DIFFERS ${k}: the local copy does not match the object; left alone`);
+  if (dryRun) return differs.map((k) => `differs ${k}`);
+  for (const r of lacking) {
+    await mkdir(dirname(r.path), { recursive: true });
+    const part = `${r.path}.part`;
+    await aws(s, ['s3api', 'get-object', '--bucket', s.bucket, '--key', r.key, part]);
+    await rename(part, r.path);
+  }
+  const failures = differs.map((k) => `differs ${k}`);
+  for (const r of lacking) {
+    const local = await hashFile(r.path);
+    if (compare(local, r) === 'differs') failures.push(`download differs ${r.key}`);
+  }
+  if (!failures.length) console.log(`PASS mirror: all ${remote.length.toLocaleString()} objects under ${prefix || '/'} are in ${dir}, size and MD5 matching ETag`);
   return failures;
 }

@@ -195,10 +195,7 @@
     transition: color 0.15s;
   }
   .nav-link:hover { color: var(--color-ink); }
-  .nav-link[aria-current="page"] {
-    color: var(--color-ink);
-    box-shadow: inset 0 -2px 0 var(--color-ink);
-  }
+  .nav-link[aria-current="page"] { color: var(--color-ink); }
   .menu-button {
     padding: 0.4rem;
     margin-right: -0.4rem;
@@ -216,7 +213,7 @@
     border-bottom: 1px solid var(--color-rule);
   }
   .mobile-menu > .nav-link:last-child { border-bottom: 0; }
-  .mobile-menu .nav-link[aria-current="page"] { box-shadow: none; font-weight: 600; }
+  .mobile-menu .nav-link[aria-current="page"] { font-weight: 600; }
   .mobile-menu-label { padding-block: 0.85rem 0.15rem; }
   .mobile-menu-group .nav-link { padding-left: 1rem; }
 
@@ -234,10 +231,7 @@
   .nav-menu > summary::-webkit-details-marker { display: none; }
   .nav-menu > summary:hover,
   .nav-menu[open] > summary { color: var(--color-ink); }
-  .nav-menu:has([aria-current="page"]) > summary {
-    color: var(--color-ink);
-    box-shadow: inset 0 -2px 0 var(--color-ink);
-  }
+  .nav-menu:has([aria-current="page"]) > summary { color: var(--color-ink); }
   .nav-caret {
     width: 0.55rem;
     height: 0.35rem;
@@ -262,7 +256,7 @@
     border-bottom: 1px solid var(--color-rule);
   }
   .nav-menu-panel .nav-link:last-child { border-bottom: 0; }
-  .nav-menu-panel .nav-link[aria-current="page"] { box-shadow: none; font-weight: 600; }
+  .nav-menu-panel .nav-link[aria-current="page"] { font-weight: 600; }
 
   /* ---------- Type: furniture ---------- */
   .kicker {
@@ -376,9 +370,9 @@
     font-weight: 500;
     font-size: 1.02rem;
     line-height: 1.2;
-    color: var(--color-source);
   }
-  a.byline-source { text-decoration: none; }
+  /* Ink, not violet: violet text reads as a link, so only a byline that is one gets it. */
+  a.byline-source { color: var(--color-source); text-decoration: none; }
   a.byline-source:hover { text-decoration: underline; text-underline-offset: 0.15em; }
   .byline-index {
     flex-basis: 100%;
@@ -386,9 +380,9 @@
     font-size: 0.6rem;
     color: var(--color-ink-dim);
   }
-  /* The story-header credit block: a violet rule marks the provenance slot. */
+  /* The story-header credit block, under a strong rule. */
   .credit {
-    border-top: 3px solid var(--color-source);
+    border-top: 3px solid var(--color-rule-strong);
     padding-top: 0.6rem;
   }
   .credit .byline-source { font-size: clamp(1.25rem, 1.05rem + 0.6vw, 1.6rem); }
@@ -1659,7 +1653,6 @@
     font-style: italic;
     font-size: 0.82rem;
     line-height: 1.35;
-    color: var(--color-source);
   }
   .quote-cite .quote-date {
     font-style: normal;

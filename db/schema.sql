@@ -9,9 +9,10 @@
 -- COMMENT ON SCHEMA statements (present in every new database) are removed,
 -- so the file runs cleanly on a fresh database with `psql -f`.
 --
--- The fts / tsv columns of the first five tables are plain tsvector columns,
--- filled when each dataset was loaded; no trigger maintains them. Tables
--- added since generate theirs (GENERATED ALWAYS AS ... STORED), and their
+-- The fts / tsv columns of fec_candidates, police_shootings and qi_cases
+-- (loaded once in May 2026) are plain tsvector columns, filled when each
+-- dataset was loaded; no trigger maintains them. Tables added since generate
+-- theirs (GENERATED ALWAYS AS ... STORED), and their
 -- authored DDL lives beside this file (db/crashes.sql, db/corpus.sql,
 -- db/executive.sql, db/clemency.sql, db/trades.sql, db/disbursements.sql).
 --
@@ -786,43 +787,6 @@ END; $$;
 
 
 --
--- Name: search_senate_trades(text, text, text, text, text, integer, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.search_senate_trades(search_text text DEFAULT NULL::text, filter_senator text DEFAULT NULL::text, filter_type text DEFAULT NULL::text, filter_asset_type text DEFAULT NULL::text, filter_ticker text DEFAULT NULL::text, filter_year integer DEFAULT NULL::integer, sort_col text DEFAULT 'transaction_date'::text, sort_dir text DEFAULT 'desc'::text, page_size integer DEFAULT 50, page_offset integer DEFAULT 0) RETURNS json
-    LANGUAGE plpgsql STABLE
-    AS $_$
-DECLARE result JSON;
-BEGIN
-  WITH filtered AS (
-    SELECT * FROM senate_trades
-    WHERE (search_text IS NULL OR fts @@ plainto_tsquery('english', search_text))
-      AND (filter_senator IS NULL OR senator = filter_senator)
-      AND (filter_type IS NULL OR type = filter_type)
-      AND (filter_asset_type IS NULL OR asset_type = filter_asset_type)
-      AND (filter_ticker IS NULL OR ticker = filter_ticker)
-      AND (filter_year IS NULL OR EXTRACT(YEAR FROM transaction_date) = filter_year)
-  ), total AS (SELECT COUNT(*) AS count FROM filtered)
-  SELECT json_build_object('total', (SELECT count FROM total),
-    'rows', COALESCE((SELECT json_agg(row_to_json(r)) FROM (
-      SELECT id, transaction_date, owner, ticker, asset_description, asset_type, type, amount, senator, office
-      FROM filtered
-      ORDER BY
-        CASE WHEN sort_col = 'transaction_date' AND sort_dir = 'desc' THEN transaction_date END DESC NULLS LAST,
-        CASE WHEN sort_col = 'transaction_date' AND sort_dir = 'asc' THEN transaction_date END ASC NULLS LAST,
-        CASE WHEN sort_col = 'senator' AND sort_dir = 'asc' THEN senator END ASC,
-        CASE WHEN sort_col = 'senator' AND sort_dir = 'desc' THEN senator END DESC,
-        CASE WHEN sort_col = 'amount' AND sort_dir = 'desc' THEN CASE amount WHEN 'Over $50,000,000' THEN 10 WHEN '$25,000,001 - $50,000,000' THEN 9 WHEN '$5,000,001 - $25,000,000' THEN 8 WHEN '$1,000,001 - $5,000,000' THEN 7 WHEN '$500,001 - $1,000,000' THEN 6 WHEN '$250,001 - $500,000' THEN 5 WHEN '$100,001 - $250,000' THEN 4 WHEN '$50,001 - $100,000' THEN 3 WHEN '$15,001 - $50,000' THEN 2 WHEN '$1,001 - $15,000' THEN 1 ELSE 0 END END DESC NULLS LAST,
-        CASE WHEN sort_col = 'amount' AND sort_dir = 'asc' THEN CASE amount WHEN 'Over $50,000,000' THEN 10 WHEN '$25,000,001 - $50,000,000' THEN 9 WHEN '$5,000,001 - $25,000,000' THEN 8 WHEN '$1,000,001 - $5,000,000' THEN 7 WHEN '$500,001 - $1,000,000' THEN 6 WHEN '$250,001 - $500,000' THEN 5 WHEN '$100,001 - $250,000' THEN 4 WHEN '$50,001 - $100,000' THEN 3 WHEN '$15,001 - $50,000' THEN 2 WHEN '$1,001 - $15,000' THEN 1 ELSE 0 END END ASC NULLS LAST,
-        id DESC
-      LIMIT page_size OFFSET page_offset
-    ) r), '[]'::json)
-  ) INTO result;
-  RETURN result;
-END; $_$;
-
-
---
 -- Name: search_sgo_crashes(text, text, text, text, integer, text, text, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -918,31 +882,6 @@ BEGIN
   ) INTO result;
   RETURN result;
 END; $$;
-
-
---
--- Name: senate_trades_stats(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.senate_trades_stats() RETURNS json
-    LANGUAGE plpgsql STABLE
-    AS $_$
-DECLARE result JSON;
-BEGIN
-  SELECT json_build_object(
-    'total', (SELECT COUNT(*) FROM senate_trades),
-    'senators', (SELECT COUNT(DISTINCT senator) FROM senate_trades),
-    'date_range', json_build_object('min', (SELECT MIN(transaction_date) FROM senate_trades), 'max', (SELECT MAX(transaction_date) FROM senate_trades)),
-    'by_type', (SELECT json_agg(json_build_object('type', type, 'count', cnt)) FROM (SELECT type, COUNT(*) as cnt FROM senate_trades GROUP BY type ORDER BY cnt DESC) t),
-    'by_year', (SELECT json_agg(json_build_object('year', yr, 'count', cnt, 'purchases', purchases, 'sales', sales)) FROM (SELECT EXTRACT(YEAR FROM transaction_date)::int as yr, COUNT(*) as cnt, COUNT(*) FILTER (WHERE type = 'Purchase') as purchases, COUNT(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) as sales FROM senate_trades WHERE transaction_date IS NOT NULL GROUP BY yr ORDER BY yr) t),
-    'top_traders', (SELECT json_agg(json_build_object('senator', senator, 'total_trades', cnt, 'purchases', purchases, 'sales', sales)) FROM (SELECT senator, COUNT(*) as cnt, COUNT(*) FILTER (WHERE type = 'Purchase') as purchases, COUNT(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) as sales FROM senate_trades GROUP BY senator ORDER BY cnt DESC LIMIT 20) t),
-    'top_tickers', (SELECT json_agg(json_build_object('ticker', ticker, 'count', cnt, 'purchases', purchases, 'sales', sales)) FROM (SELECT ticker, COUNT(*) as cnt, COUNT(*) FILTER (WHERE type = 'Purchase') as purchases, COUNT(*) FILTER (WHERE type IN ('Sale (Full)', 'Sale (Partial)')) as sales FROM senate_trades WHERE ticker IS NOT NULL GROUP BY ticker ORDER BY cnt DESC LIMIT 20) t),
-    'by_amount', (SELECT json_agg(json_build_object('amount', amount, 'count', cnt) ORDER BY rank) FROM (SELECT amount, COUNT(*) as cnt, CASE amount WHEN '$1,001 - $15,000' THEN 1 WHEN '$15,001 - $50,000' THEN 2 WHEN '$50,001 - $100,000' THEN 3 WHEN '$100,001 - $250,000' THEN 4 WHEN '$250,001 - $500,000' THEN 5 WHEN '$500,001 - $1,000,000' THEN 6 WHEN '$1,000,001 - $5,000,000' THEN 7 WHEN '$5,000,001 - $25,000,000' THEN 8 WHEN '$25,000,001 - $50,000,000' THEN 9 WHEN 'Over $50,000,000' THEN 10 ELSE 0 END as rank FROM senate_trades WHERE amount IS NOT NULL GROUP BY amount) t),
-    'by_asset_type', (SELECT json_agg(json_build_object('asset_type', asset_type, 'count', cnt)) FROM (SELECT COALESCE(NULLIF(asset_type, ''), 'Unknown') as asset_type, COUNT(*) as cnt FROM senate_trades GROUP BY asset_type ORDER BY cnt DESC) t),
-    'senator_list', (SELECT json_agg(senator ORDER BY senator) FROM (SELECT DISTINCT senator FROM senate_trades) t)
-  ) INTO result;
-  RETURN result;
-END; $_$;
 
 
 --
@@ -1565,47 +1504,6 @@ ALTER SEQUENCE public.qi_cases_id_seq OWNED BY public.qi_cases.id;
 
 
 --
--- Name: senate_trades; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.senate_trades (
-    id integer NOT NULL,
-    transaction_date date,
-    owner text,
-    ticker text,
-    asset_description text,
-    asset_type text,
-    type text,
-    amount text,
-    comment text,
-    senator text NOT NULL,
-    office text,
-    bioguide text,
-    fts tsvector
-);
-
-
---
--- Name: senate_trades_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.senate_trades_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: senate_trades_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.senate_trades_id_seq OWNED BY public.senate_trades.id;
-
-
---
 -- Name: sgo_crashes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1819,13 +1717,6 @@ ALTER TABLE ONLY public.qi_cases ALTER COLUMN id SET DEFAULT nextval('public.qi_
 
 
 --
--- Name: senate_trades id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.senate_trades ALTER COLUMN id SET DEFAULT nextval('public.senate_trades_id_seq'::regclass);
-
-
---
 -- Name: clemency_grants clemency_grants_page_position_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1919,14 +1810,6 @@ ALTER TABLE ONLY public.police_shootings
 
 ALTER TABLE ONLY public.qi_cases
     ADD CONSTRAINT qi_cases_pkey PRIMARY KEY (id);
-
-
---
--- Name: senate_trades senate_trades_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.senate_trades
-    ADD CONSTRAINT senate_trades_pkey PRIMARY KEY (id);
 
 
 --
@@ -2239,48 +2122,6 @@ CREATE INDEX idx_qi_violation ON public.qi_cases USING btree (violation_type);
 --
 
 CREATE INDEX idx_qi_year ON public.qi_cases USING btree (year);
-
-
---
--- Name: idx_senate_trades_asset_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_senate_trades_asset_type ON public.senate_trades USING btree (asset_type);
-
-
---
--- Name: idx_senate_trades_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_senate_trades_date ON public.senate_trades USING btree (transaction_date);
-
-
---
--- Name: idx_senate_trades_fts; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_senate_trades_fts ON public.senate_trades USING gin (fts);
-
-
---
--- Name: idx_senate_trades_senator; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_senate_trades_senator ON public.senate_trades USING btree (senator);
-
-
---
--- Name: idx_senate_trades_ticker; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_senate_trades_ticker ON public.senate_trades USING btree (ticker);
-
-
---
--- Name: idx_senate_trades_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_senate_trades_type ON public.senate_trades USING btree (type);
 
 
 --

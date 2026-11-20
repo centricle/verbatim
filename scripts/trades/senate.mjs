@@ -9,7 +9,7 @@
 // Two changes to what the file holds, both to what eFD showed rather than
 // away from it: eFD's own markup in a description is reduced to its text
 // (tags and <br> to a space, entities decoded), and a cell eFD printed as
-// "--" or left empty is NULL, as the existing senate_trades table has it.
+// "--" or left empty is NULL, as the old senate_trades table had it.
 import { usDate } from './house.mjs';
 import { efd } from './sources.mjs';
 

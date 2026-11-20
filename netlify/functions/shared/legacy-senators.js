@@ -1,8 +1,9 @@
 // The `senator` values /trades/ links carried before the House joined the
 // table (`?senator=Ron+L+Wyden`), each with the person it named and the
 // name trade_members gives them now. Read once from production's
-// senate_trades on 2026-11-18 (senator -> bioguide, 1:1 in all 53), which is
-// frozen as the rollback, so the list is closed. trades check holds each
+// senate_trades on 2026-11-18 (senator -> bioguide, 1:1 in all 53), which
+// was frozen as the rollback and dropped on 2026-11-20, so the list is
+// closed. trades check holds each
 // bioguide and name to trade_members.
 //
 // [senator as linked, bioguide, member]

@@ -93,9 +93,8 @@ export const FIRST_TRANSCRIPT_TERM = 1968;
 export const LAST_ARCHIVED_TERM = 1999;
 // The scans run about 9.6 MB a PDF, 4,256 of them (about 41 GB), against
 // about 1 GB for the 1,818 born-digital transcripts from OT2000. G1 fetches
-// the born-digital terms and one scanned term per decade, and none of it goes
-// to R2 until the design gate decides whether oral arguments ship (ksmith,
-// 2026-11-20).
+// the born-digital terms and one scanned term per decade. The born-digital
+// ones go to R2; the scans do not (design session, ksmith, 2026-11-20).
 export const TRANSCRIPT_SCAN_SAMPLE = [1968, 1978, 1988, 1998];
 export const transcriptPage = (term) => term <= LAST_ARCHIVED_TERM
   ? { file: `pages/archived_transcripts-${term}.html`, url: `${COURT}/oral_arguments/archived_transcripts/${term}`, term }
